@@ -1,0 +1,7 @@
+Loaded Prisma config from ..\..\..\sahan\educertn\backend\prisma.config.ts.
+
+Prisma schema loaded from ..\..\..\sahan\educertn\backend\prisma\schema.prisma.
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-1-ap-northeast-2.pooler.supabase.com:5432"
+
+Your database is now in sync with your Prisma schema. Done in 9.62s
+
