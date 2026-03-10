@@ -35,8 +35,8 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
 
         res.json({ message: 'OTP sent to email' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Student OTP send failed:', error);
+        res.status(500).json({ message: 'Unable to send OTP email. Please try again in a minute.' });
     }
 };
 
@@ -72,8 +72,8 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
 
         res.json({ message: 'OTP sent to company email' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Company OTP send failed:', error);
+        res.status(500).json({ message: 'Unable to send OTP email. Please try again in a minute.' });
     }
 };
 export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
