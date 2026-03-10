@@ -15,7 +15,34 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true }));
+const defaultAllowedOrigins = [
+    'http://localhost:3000',
+    'https://gat-verification-portal.vercel.app'
+];
+
+const allowedOrigins = Array.from(
+    new Set(
+        [
+            process.env.FRONTEND_URL,
+            ...(process.env.FRONTEND_URLS || '').split(','),
+            ...defaultAllowedOrigins
+        ]
+            .map((origin) => origin?.trim())
+            .filter((origin): origin is string => Boolean(origin))
+    )
+);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+        }
+
+        callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
+    credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 

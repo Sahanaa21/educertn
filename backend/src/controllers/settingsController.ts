@@ -1,10 +1,14 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
+const defaultFrontendUrl = process.env.FRONTEND_URL?.trim()
+    || process.env.FRONTEND_URLS?.split(',').map((url) => url.trim()).find(Boolean)
+    || 'https://gat-verification-portal.vercel.app';
+
 const DEFAULT_SETTINGS = {
     id: 1,
     supportEmail: 'support@gat.ac.in',
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    frontendUrl: defaultFrontendUrl,
     maintenanceMode: false,
     allowCompanySignup: true,
     smtpFromName: 'Global Academy of Technology'
