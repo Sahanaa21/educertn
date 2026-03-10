@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { API_BASE } from '@/lib/api';
 
 export default function StudentRequests() {
     const router = useRouter();
@@ -23,7 +24,7 @@ export default function StudentRequests() {
             }
 
             try {
-                const res = await fetch('http://localhost:5000/api/student/certificates', {
+                const res = await fetch(`${API_BASE}/api/student/certificates`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

@@ -2,10 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import multer from 'multer';
 import authRoutes from './routes/authRoutes';
 import certificateRoutes from './routes/certificateRoutes';
 import verificationRoutes from './routes/verificationRoutes';
 import adminRoutes from './routes/adminRoutes';
+import supportRoutes from './routes/supportRoutes';
+import { maintenanceModeGuard } from './middleware/maintenanceMode';
 
 dotenv.config();
 
@@ -16,13 +19,33 @@ app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000', cred
 app.use(express.json());
 app.use(cookieParser());
 
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', message: 'Backend is running' });
+});
+
+app.use(maintenanceModeGuard);
+
 app.use('/api/auth', authRoutes);
 app.use('/api', certificateRoutes);
 app.use('/api', verificationRoutes);
+app.use('/api', supportRoutes);
 app.use('/api/admin', adminRoutes);
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Backend is running' });
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ message: 'File too large. Maximum allowed size is 10MB.' });
+        }
+        return res.status(400).json({ message: err.message });
+    }
+
+    if (err) {
+        const message = typeof err.message === 'string' ? err.message : 'Internal server error';
+        const status = message.toLowerCase().includes('invalid file type') ? 400 : 500;
+        return res.status(status).json({ message });
+    }
+
+    return res.status(500).json({ message: 'Internal server error' });
 });
 
 app.listen(port, () => {

@@ -25,9 +25,16 @@ enum CertificateStatus {
 
 enum VerificationStatus {
   PENDING
-  VERIFIED
-  REJECTED
+  PROCESSING
   COMPLETED
+  REJECTED
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }
 
 enum CopyType {
@@ -64,6 +71,7 @@ model CertificateRequest {
   studentName          String
   branch               String
   yearOfPassing        String
+  phoneNumber          String?
   certificateType      String
   copyType             CopyType
   copies               Int
@@ -85,23 +93,43 @@ model CertificateRequest {
 
 model VerificationRequest {
   id               String             @id @default(uuid())
+  requestId        String             @unique
   companyName      String
   companyEmail     String
   contactPerson    String
-  phoneNumber      String
+  phone            String?
   studentName      String
   usn              String
-  branch           String
-  yearOfPassing    String
-  verificationType String
-  authLetterUrl    String?
-  consentLetterUrl String?
+  uploadedTemplate String
+  completedFile    String?
   paymentStatus    String             @default("PENDING")
-  amount           Float              @default(0)
-  stripeSessionId  String?
   status           VerificationStatus @default(PENDING)
-  reportUrl        String?
-  rejectionReason  String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+}
+
+model IssueReport {
+  id             String      @id @default(uuid())
+  title          String
+  description    String
+  category       String
+  pageUrl        String?
+  reportedByName String?
+  reportedByEmail String?
+  role           String?
+  deviceInfo     String?
+  status         IssueStatus @default(OPEN)
+  adminNotes     String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model PortalSettings {
+  id                 Int      @id
+  supportEmail       String
+  frontendUrl        String
+  maintenanceMode    Boolean  @default(false)
+  allowCompanySignup Boolean  @default(true)
+  smtpFromName       String
+  updatedAt          DateTime @updatedAt
 }

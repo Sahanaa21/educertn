@@ -31,7 +31,7 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        await sendEmail(email, 'Your OTP for Global Academy', `Your OTP is ${otp}. It expires in 10 minutes.`);
+        await sendEmail(email, 'Your OTP for Global Academy of Technology', `Your OTP is ${otp}. It expires in 10 minutes.`);
 
         res.json({ message: 'OTP sent to email' });
     } catch (error) {
@@ -68,7 +68,7 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        await sendEmail(email, 'Your Company OTP for Global Academy Verification', `Your verification OTP is ${otp}. It expires in 10 minutes.`);
+        await sendEmail(email, 'Your Company OTP for Global Academy of Technology Verification', `Your verification OTP is ${otp}. It expires in 10 minutes.`);
 
         res.json({ message: 'OTP sent to company email' });
     } catch (error) {

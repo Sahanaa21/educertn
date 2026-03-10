@@ -8,3 +8,4 @@
 {"stage":"start","id":"GAT-2026-0004","reqBody":{"action":"MARK_POSTED"},"requestCopyType":"BOTH","requestEmailed":false,"requestPosted":false}
 {"stage":"start","id":"GAT-2026-0006","reqBody":{"action":"UPLOAD_SOFT_COPY"},"reqFile":{"fieldname":"file","originalname":"tc.jpg","encoding":"7bit","mimetype":"image/jpeg","destination":"C:\\Users\\sahan\\educertn\\backend\\uploads\\","filename":"e7963e3985f947d009f6760241bb8c97","path":"C:\\Users\\sahan\\educertn\\backend\\uploads\\e7963e3985f947d009f6760241bb8c97","size":10982},"requestCopyType":"BOTH","requestEmailed":false,"requestPosted":false}
 {"stage":"start","id":"GAT-2026-0006","reqBody":{"action":"MARK_POSTED"},"requestCopyType":"BOTH","requestEmailed":true,"requestPosted":false}
+{"stage":"start","id":"GAT-2026-0007","reqBody":{"status":"PROCESSING"},"requestCopyType":"BOTH","requestEmailed":false,"requestPosted":false}

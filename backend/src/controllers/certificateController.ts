@@ -15,6 +15,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
         const studentName = body.studentName;
         const branch = body.branch;
         const yearOfPassing = body.yearOfPassing;
+        const phoneNumber = body.phoneNumber || undefined;
         const certificateType = body.certificateType;
         const copyType = body.copyType;
         const copies = Number(body.copies) || 1;
@@ -32,6 +33,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
                 studentName,
                 branch,
                 yearOfPassing,
+                phoneNumber,
                 certificateType,
                 copyType,
                 copies,

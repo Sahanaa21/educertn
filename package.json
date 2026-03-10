@@ -1,0 +1,14 @@
+{
+  "name": "educertn-workspace",
+  "private": true,
+  "scripts": {
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:start": "npm --prefix backend run start",
+    "backend:typecheck": "npm --prefix backend run typecheck",
+    "backend:build": "npm --prefix backend run build",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build",
+    "frontend:lint": "npm --prefix frontend run lint",
+    "check": "npm run backend:typecheck && npm run frontend:build"
+  }
+}

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export default function AdminLogin() {
     const router = useRouter();
@@ -22,7 +23,7 @@ export default function AdminLogin() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/admin/login', {
+            const res = await apiFetch('/api/auth/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })

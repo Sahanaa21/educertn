@@ -19,6 +19,7 @@ const menuItems = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Certificates', href: '/admin/certificates', icon: FileText },
     { name: 'Verifications', href: '/admin/verifications', icon: CheckSquare },
+    { name: 'Issues', href: '/admin/issues', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
 ];
@@ -55,7 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                     {isSidebarOpen ? (
                         <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 min-w-[8px]"></div>
+                            <div className="w-2 h-2 rounded-full bg-green-500 min-w-2"></div>
                             Admin Hub
                         </h2>
                     ) : (

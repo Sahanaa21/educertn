@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Building2, CreditCard, AlertCircle } from 'lucide-react';
+import { FileText, Building2, AlertCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -15,8 +16,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState({
         totalCerts: 0,
         pendingActions: 0,
-        totalVerifications: 0,
-        totalRevenue: 0
+        totalVerifications: 0
     });
     const [recentCertificates, setRecentCertificates] = useState<any[]>([]);
     const [recentVerifications, setRecentVerifications] = useState<any[]>([]);
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
             }
 
             try {
-                const res = await fetch('http://localhost:5000/api/admin/dashboard', {
+                const res = await fetch(`${API_BASE}/api/admin/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
                 }}>Logout</Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card className="border-t-4 border-t-blue-500 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-slate-600">Total Cert Requests</CardTitle>
@@ -97,16 +97,6 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-slate-900">{stats.totalVerifications}</div>
-                    </CardContent>
-                </Card>
-                <Card className="border-t-4 border-t-green-500 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-600">Total Revenue</CardTitle>
-                        <CreditCard className="h-4 w-4 text-green-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-slate-900">₹{stats.totalRevenue.toLocaleString()}</div>
-                        <p className="text-xs text-slate-500 mt-1">All time</p>
                     </CardContent>
                 </Card>
             </div>

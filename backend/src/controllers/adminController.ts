@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 
@@ -17,11 +18,12 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
         });
 
         const verifsRevenue = await prisma.verificationRequest.aggregate({
-            _sum: { amount: true },
+            _count: { id: true },
             where: { paymentStatus: 'PAID' }
         });
 
-        const totalRevenue = (certsRevenue._sum.amount || 0) + (verifsRevenue._sum.amount || 0);
+        const verificationRevenue = (verifsRevenue._count.id || 0) * 5000;
+        const totalRevenue = (certsRevenue._sum.amount || 0) + verificationRevenue;
 
         const recentCertificates = await prisma.certificateRequest.findMany({
             orderBy: { createdAt: 'desc' },
@@ -182,7 +184,20 @@ export const getAllVerifications = async (req: Request, res: Response): Promise<
 export const updateVerificationStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const id = String(req.params.id);
-        const { status } = req.body;
+        const { status } = req.body as { status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED' };
+
+        if (!status) {
+            return res.status(400).json({ message: 'Status is required' });
+        }
+
+        const existing = await prisma.verificationRequest.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ message: 'Verification request not found' });
+        }
+
+        if (status === 'COMPLETED' && (!existing.completedFile || !fs.existsSync(existing.completedFile))) {
+            return res.status(400).json({ message: 'Upload completed file before marking as completed' });
+        }
 
         const updated = await prisma.verificationRequest.update({
             where: { id },
@@ -191,18 +206,78 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
 
         if (status === 'COMPLETED' && updated.companyEmail) {
             const emailHtml = `
-                <h2>Verification Request Complete</h2>
+                <h2>Verification Completed</h2>
                 <p>Hello ${updated.contactPerson},</p>
-                <p>Your verification request for <strong>${updated.studentName}</strong> (Request ID: ${updated.id}) has been successfully completed.</p>
+                <p>Your verification request has been completed.</p>
+                <p><strong>Student Name:</strong> ${updated.studentName}</p>
+                <p><strong>USN:</strong> ${updated.usn}</p>
+                <p><strong>Request ID:</strong> ${updated.requestId}</p>
                 <p>Thank you,</p>
                 <p>Global Academy of Technology</p>
             `;
-            await sendEmail(updated.companyEmail, 'Verification Request Completed', emailHtml);
+
+            const attachments = updated.completedFile
+                ? [{ filename: `${updated.requestId}-completed-file`, path: updated.completedFile }]
+                : undefined;
+
+            await sendEmail(
+                updated.companyEmail,
+                'Verification Completed – Global Academy of Technology',
+                emailHtml,
+                attachments
+            );
         }
 
         res.json(updated);
     } catch (error) {
         console.error('Error updating verification status:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const downloadVerificationTemplate = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const id = String(req.params.id);
+
+        const verification = await prisma.verificationRequest.findUnique({
+            where: { id },
+            select: { requestId: true, uploadedTemplate: true }
+        });
+
+        if (!verification) {
+            return res.status(404).json({ message: 'Verification request not found' });
+        }
+
+        if (!verification.uploadedTemplate || !fs.existsSync(verification.uploadedTemplate)) {
+            return res.status(404).json({ message: 'Uploaded template file not found' });
+        }
+
+        return res.download(verification.uploadedTemplate, `${verification.requestId}-template`);
+    } catch (error) {
+        console.error('Error downloading verification template:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const uploadVerificationCompletedFile = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const id = String(req.params.id);
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Completed file is required' });
+        }
+
+        const updated = await prisma.verificationRequest.update({
+            where: { id },
+            data: {
+                completedFile: req.file.path,
+                status: 'PROCESSING'
+            }
+        });
+
+        return res.json(updated);
+    } catch (error) {
+        console.error('Error uploading completed verification file:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };

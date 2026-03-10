@@ -7,8 +7,11 @@ export default function Home() {
   return (
     <div className="flex flex-col w-full">
       {/* Hero Section */}
-      <section className="relative w-full bg-blue-900 overflow-hidden py-16 lg:py-24 flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent"></div>
+      <section
+        className="relative w-full overflow-hidden py-16 lg:py-24 flex items-center justify-center bg-center bg-cover"
+        style={{ backgroundImage: "url('/college.image.png')" }}
+      >
+        <div className="absolute inset-0 bg-slate-950/65"></div>
 
         <div className="container relative z-10 mx-auto px-4 text-center">
           <div className="inline-flex items-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-sm font-medium text-yellow-400 mb-6 transition-colors hover:bg-yellow-500/20">
@@ -54,7 +57,7 @@ export default function Home() {
                 </div>
                 <CardTitle className="text-xl">Student Services</CardTitle>
                 <CardDescription className="text-base mt-2 leading-relaxed">
-                  Request duplicate marks cards, transcripts, course completion certificates, bonafide letters, and other academic documents online.
+                  Apply for Grade Card Correction, Duplicate Grade Card, Transcript, PDC, Course Completion, No Backlog, and Other certificates online.
                 </CardDescription>
               </CardHeader>
               <CardFooter className="mt-auto pt-6 border-t bg-slate-50">

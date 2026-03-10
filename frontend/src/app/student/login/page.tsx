@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export default function StudentLogin() {
     const router = useRouter();
@@ -23,7 +24,7 @@ export default function StudentLogin() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/login', {
+            const res = await apiFetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -49,7 +50,7 @@ export default function StudentLogin() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+            const res = await apiFetch('/api/auth/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp })

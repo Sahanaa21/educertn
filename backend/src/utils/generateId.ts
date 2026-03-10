@@ -4,13 +4,8 @@ export const generateRequestId = async (): Promise<string> => {
     const year = new Date().getFullYear();
     const prefix = `GAT-${year}-`;
 
-    // We need to find the latest ID from both CertificateRequest and VerificationRequest for this year
+    // Certificate IDs are stored directly in certificateRequest.id.
     const lastCert = await prisma.certificateRequest.findFirst({
-        where: { id: { startsWith: prefix } },
-        orderBy: { id: 'desc' }
-    });
-
-    const lastVer = await prisma.verificationRequest.findFirst({
         where: { id: { startsWith: prefix } },
         orderBy: { id: 'desc' }
     });
@@ -25,8 +20,25 @@ export const generateRequestId = async (): Promise<string> => {
         }
     }
 
-    if (lastVer) {
-        const numStr = lastVer.id.replace(prefix, '');
+    const nextNumber = maxNumber + 1;
+    const formattedNumber = nextNumber.toString().padStart(4, '0');
+
+    return `${prefix}${formattedNumber}`;
+};
+
+export const generateVerificationRequestId = async (): Promise<string> => {
+    const year = new Date().getFullYear();
+    const prefix = `GAT-VER-${year}-`;
+
+    const lastVerification = await prisma.verificationRequest.findFirst({
+        where: { requestId: { startsWith: prefix } },
+        orderBy: { requestId: 'desc' }
+    });
+
+    let maxNumber = 0;
+
+    if (lastVerification?.requestId) {
+        const numStr = lastVerification.requestId.replace(prefix, '');
         const num = parseInt(numStr, 10);
         if (!isNaN(num) && num > maxNumber) {
             maxNumber = num;
@@ -35,6 +47,5 @@ export const generateRequestId = async (): Promise<string> => {
 
     const nextNumber = maxNumber + 1;
     const formattedNumber = nextNumber.toString().padStart(4, '0');
-
     return `${prefix}${formattedNumber}`;
 };

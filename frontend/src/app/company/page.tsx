@@ -1,22 +1,39 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, LayoutDashboard, ClipboardList, FilePlus, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { apiFetch, API_BASE } from '@/lib/api';
+
+type VerificationRequest = {
+    id: string;
+    requestId: string;
+    companyName: string;
+    studentName: string;
+    usn: string;
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+    paymentStatus: string;
+    createdAt: string;
+};
+
+const VERIFICATION_FEE = 5000;
+const MAX_TEMPLATE_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_TEMPLATE_EXTENSIONS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
 
 export default function CompanyVerification() {
     const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
-    const [view, setView] = useState<'dashboard' | 'form'>('dashboard');
+    const [panelView, setPanelView] = useState<'dashboard' | 'requests' | 'application'>('dashboard');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // Auth States
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,29 +48,36 @@ export default function CompanyVerification() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [studentName, setStudentName] = useState('');
     const [usn, setUsn] = useState('');
-    const [branch, setBranch] = useState('');
-    const [yearOfPassing, setYearOfPassing] = useState('');
-    const [verificationType, setVerificationType] = useState('');
+    const [verificationTemplate, setVerificationTemplate] = useState<File | null>(null);
 
     // Dashboard States
-    const [requests, setRequests] = useState<any[]>([]);
+    const [requests, setRequests] = useState<VerificationRequest[]>([]);
     const [mainLoading, setMainLoading] = useState(true);
+
+    const handleUnauthorized = () => {
+        localStorage.removeItem('companyToken');
+        localStorage.removeItem('companyEmail');
+        setIsAuthenticated(false);
+        setStep(1);
+        setPanelView('dashboard');
+        setMainLoading(false);
+        toast.error('Session expired. Please login again.');
+        router.push('/company');
+    };
 
     const fetchRequests = async (token: string) => {
         try {
-            const res = await fetch('http://localhost:5000/api/company/verifications', {
+            const res = await apiFetch('/api/company/verifications', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
                 setRequests(data);
-                setView(data.length > 0 ? 'dashboard' : 'form');
-            } else {
-                setView('form');
+            } else if (res.status === 401 || res.status === 403) {
+                handleUnauthorized();
             }
         } catch (err) {
             console.error("Fetch requests failed", err);
-            setView('form');
         } finally {
             setMainLoading(false);
         }
@@ -61,13 +85,30 @@ export default function CompanyVerification() {
 
     useEffect(() => {
         const token = localStorage.getItem('companyToken');
+        const savedCompanyEmail = localStorage.getItem('companyEmail');
         if (token) {
             setIsAuthenticated(true);
+            if (savedCompanyEmail) {
+                setCompanyEmail(savedCompanyEmail);
+            }
             fetchRequests(token);
         } else {
             setMainLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        if (pathname === '/company/requests') {
+            setPanelView('requests');
+            return;
+        }
+        if (pathname === '/company/apply') {
+            setPanelView('application');
+            return;
+        }
+        // Default /company route: show dashboard when requests exist, else show apply form.
+        setPanelView(requests.length > 0 ? 'dashboard' : 'application');
+    }, [pathname, requests.length]);
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,7 +116,7 @@ export default function CompanyVerification() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/company/login', {
+            const res = await apiFetch('/api/auth/company/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: loginEmail })
@@ -100,7 +141,7 @@ export default function CompanyVerification() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/company/verify-otp', {
+            const res = await apiFetch('/api/auth/company/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: loginEmail, otp })
@@ -110,9 +151,11 @@ export default function CompanyVerification() {
             if (res.ok) {
                 toast.success('Login successful!');
                 localStorage.setItem('companyToken', data.token);
+                localStorage.setItem('companyEmail', loginEmail);
                 setCompanyEmail(loginEmail); // Pre-fill
                 setIsAuthenticated(true);
                 fetchRequests(data.token);
+                router.push('/company');
             } else {
                 toast.error(data.message || 'Invalid OTP.');
             }
@@ -125,28 +168,49 @@ export default function CompanyVerification() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!verificationTemplate) {
+            return toast.error('Please upload the verification template file.');
+        }
+
+        const extension = verificationTemplate.name.split('.').pop()?.toLowerCase() || '';
+        if (!ALLOWED_TEMPLATE_EXTENSIONS.includes(extension)) {
+            return toast.error('Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG');
+        }
+
+        if (verificationTemplate.size > MAX_TEMPLATE_SIZE_BYTES) {
+            return toast.error('File too large. Maximum allowed size is 10MB.');
+        }
+
+        if (phoneNumber && phoneNumber.length !== 10) {
+            return toast.error('Phone number must be exactly 10 digits.');
+        }
+
         setLoading(true);
 
         try {
             const token = localStorage.getItem('companyToken');
-            const res = await fetch('http://localhost:5000/api/company/verifications', {
+            const effectiveEmail = companyEmail || localStorage.getItem('companyEmail') || '';
+
+            if (!effectiveEmail) {
+                setLoading(false);
+                return toast.error('Unable to resolve company email. Please login again.');
+            }
+
+            const formData = new FormData();
+            formData.append('companyName', companyName);
+            formData.append('contactPerson', contactPerson);
+            formData.append('companyEmail', effectiveEmail);
+            formData.append('phone', phoneNumber);
+            formData.append('studentName', studentName);
+            formData.append('usn', usn);
+            formData.append('verificationTemplate', verificationTemplate);
+
+            const res = await apiFetch('/api/company/verifications', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    companyName,
-                    contactPerson,
-                    companyEmail,
-                    phoneNumber,
-                    studentName,
-                    usn,
-                    branch,
-                    yearOfPassing,
-                    verificationType,
-                    amount: 1500
-                })
+                body: formData
             });
 
             if (res.ok) {
@@ -157,13 +221,17 @@ export default function CompanyVerification() {
                     // Reset form and show dashboard
                     setStudentName('');
                     setUsn('');
-                    setBranch('');
-                    setYearOfPassing('');
-                    setVerificationType('');
+                    setVerificationTemplate(null);
 
                     if (token) fetchRequests(token);
+                    router.push('/company/requests');
                 }, 2000);
             } else {
+                if (res.status === 401 || res.status === 403) {
+                    handleUnauthorized();
+                    setLoading(false);
+                    return;
+                }
                 const data = await res.json();
                 toast.error(data.message || 'Failed to submit verification request.');
                 setLoading(false);
@@ -174,10 +242,45 @@ export default function CompanyVerification() {
         }
     };
 
+    const handleDownloadResponse = async (id: string, requestId: string) => {
+        const token = localStorage.getItem('companyToken');
+        if (!token) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/company/verifications/${id}/response`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                if (res.status === 401 || res.status === 403) {
+                    handleUnauthorized();
+                    return;
+                }
+                const data = await res.json();
+                toast.error(data.message || 'Response file not available');
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${requestId}-completed-file`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            toast.error('Download failed');
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem('companyToken');
+        localStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
         setStep(1);
+        router.push('/company');
     };
 
     if (mainLoading) {
@@ -256,9 +359,79 @@ export default function CompanyVerification() {
     }
 
     return (
-        <div className="bg-slate-50 py-12 min-h-[80vh]">
-            <div className="max-w-5xl mx-auto px-4 space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex min-h-[calc(100vh-176px)] relative">
+            <div className="md:hidden p-4 bg-white border-b border-slate-200 flex items-center justify-between w-full">
+                <span className="font-bold text-yellow-700">Company Panel</span>
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-600">
+                    <Menu />
+                </button>
+            </div>
+
+            <aside className={`transition-all duration-300 border-r bg-white z-40 absolute md:relative ${isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20'} flex flex-col h-full min-h-screen md:min-h-0`}>
+                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                    {isSidebarOpen ? (
+                        <h2 className="text-lg font-bold text-yellow-700 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500 min-w-2"></div>
+                            Company Panel
+                        </h2>
+                    ) : (
+                        <div className="w-full flex justify-center">
+                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className="hidden md:flex p-1 rounded-md hover:bg-slate-100 text-slate-500"
+                    >
+                        {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                    </button>
+                </div>
+
+                <nav className="flex flex-col gap-1 px-3 py-4 flex-1">
+                    <button
+                        onClick={() => router.push('/company')}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'dashboard' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
+                    >
+                        <LayoutDashboard size={20} className={panelView === 'dashboard' ? 'text-yellow-700' : 'text-slate-400'} />
+                        {isSidebarOpen && <span className="truncate">Dashboard</span>}
+                    </button>
+                    <button
+                        onClick={() => router.push('/company/requests')}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'requests' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
+                    >
+                        <ClipboardList size={20} className={panelView === 'requests' ? 'text-yellow-700' : 'text-slate-400'} />
+                        {isSidebarOpen && <span className="truncate">My Requests</span>}
+                    </button>
+                    <button
+                        onClick={() => router.push('/company/apply')}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'application' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
+                    >
+                        <FilePlus size={20} className={panelView === 'application' ? 'text-yellow-700' : 'text-slate-400'} />
+                        {isSidebarOpen && <span className="truncate">New Application</span>}
+                    </button>
+                </nav>
+
+                <div className="p-4 border-t border-slate-200">
+                    <button
+                        title="Logout"
+                        onClick={handleLogout}
+                        className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 transition-colors ${!isSidebarOpen && 'justify-center px-0'}`}
+                    >
+                        <LogOut size={20} />
+                        {isSidebarOpen && <span>Logout</span>}
+                    </button>
+                </div>
+            </aside>
+
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                ></div>
+            )}
+
+            <main className={`flex-1 p-4 md:p-8 bg-slate-50 overflow-x-auto transition-all ${isSidebarOpen ? 'w-[calc(100vw-16rem)]' : 'w-full md:w-[calc(100vw-5rem)]'}`}>
+                <div className="max-w-5xl mx-auto space-y-8">
                     <div className="flex items-center gap-4">
                         <div className="inline-flex items-center justify-center p-3 bg-yellow-100 rounded-full">
                             <Building2 className="h-8 w-8 text-yellow-700" />
@@ -268,18 +441,8 @@ export default function CompanyVerification() {
                             <p className="text-slate-500 text-sm">Manage background verifications & academic records.</p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        {view === 'form' && requests.length > 0 && (
-                            <Button variant="outline" onClick={() => setView('dashboard')}>View Dashboard</Button>
-                        )}
-                        {view === 'dashboard' && (
-                            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setView('form')}>New Verification Request</Button>
-                        )}
-                        <Button variant="ghost" className="text-slate-500" onClick={handleLogout}>Logout</Button>
-                    </div>
-                </div>
 
-                {view === 'dashboard' ? (
+                {panelView === 'dashboard' ? (
                     <div className="space-y-6">
                         <div className="grid gap-4 md:grid-cols-3">
                             <Card className="border-t-4 border-t-yellow-500 shadow-sm">
@@ -320,20 +483,19 @@ export default function CompanyVerification() {
                                     <TableHeader className="bg-slate-50 border-y">
                                         <TableRow>
                                             <TableHead className="whitespace-nowrap">Request ID</TableHead>
-                                            <TableHead className="whitespace-nowrap">Candidate Name</TableHead>
+                                            <TableHead className="whitespace-nowrap">Student Name</TableHead>
                                             <TableHead className="whitespace-nowrap">USN</TableHead>
-                                            <TableHead className="whitespace-nowrap">Type</TableHead>
                                             <TableHead className="whitespace-nowrap">Status</TableHead>
                                             <TableHead className="whitespace-nowrap">Date</TableHead>
+                                            <TableHead className="whitespace-nowrap">Download Response</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {requests.map((req) => (
                                             <TableRow key={req.id}>
-                                                <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.id}</TableCell>
+                                                <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{req.verificationType.replace('_', ' ').toUpperCase()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <Badge variant="outline" className={
                                                         req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
@@ -345,6 +507,20 @@ export default function CompanyVerification() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {req.status === 'COMPLETED' ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleDownloadResponse(req.id, req.requestId)}
+                                                        >
+                                                            Download
+                                                        </Button>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-sm">Not available</span>
+                                                    )}
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                         {requests.length === 0 && (
@@ -360,6 +536,67 @@ export default function CompanyVerification() {
                         </Card>
                     </div>
                 ) : (
+                    panelView === 'requests' ? (
+                        <Card className="overflow-hidden shadow-sm">
+                            <CardHeader>
+                                <CardTitle>All Verification Requests</CardTitle>
+                                <CardDescription>Track all requests and download completed responses.</CardDescription>
+                            </CardHeader>
+                            <div className="overflow-x-auto w-full">
+                                <Table>
+                                    <TableHeader className="bg-slate-50 border-y">
+                                        <TableRow>
+                                            <TableHead className="whitespace-nowrap">Request ID</TableHead>
+                                            <TableHead className="whitespace-nowrap">Student Name</TableHead>
+                                            <TableHead className="whitespace-nowrap">USN</TableHead>
+                                            <TableHead className="whitespace-nowrap">Status</TableHead>
+                                            <TableHead className="whitespace-nowrap">Date</TableHead>
+                                            <TableHead className="whitespace-nowrap">Download Response</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {requests.map((req) => (
+                                            <TableRow key={req.id}>
+                                                <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
+                                                <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
+                                                <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <Badge variant="outline" className={
+                                                        req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
+                                                            req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                                                                req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
+                                                                    'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                                    }>
+                                                        {req.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {req.status === 'COMPLETED' ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleDownloadResponse(req.id, req.requestId)}
+                                                        >
+                                                            Download
+                                                        </Button>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-sm">Not available</span>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {requests.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">No requests found.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </Card>
+                    ) : (
                     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
                         <Card className="shadow-md border-t-4 border-t-yellow-500">
                             <CardHeader>
@@ -382,7 +619,16 @@ export default function CompanyVerification() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="phone">Phone Number</Label>
-                                        <Input id="phone" type="tel" placeholder="+91 9876543210" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} required />
+                                        <Input
+                                            id="phone"
+                                            type="tel"
+                                            placeholder="9876543210"
+                                            value={phoneNumber}
+                                            inputMode="numeric"
+                                            maxLength={10}
+                                            pattern="[0-9]{10}"
+                                            onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                        />
                                     </div>
                                 </div>
                             </CardContent>
@@ -403,74 +649,47 @@ export default function CompanyVerification() {
                                         <Label htmlFor="usn">Candidate USN <span className="text-red-500">*</span></Label>
                                         <Input id="usn" placeholder="1GA..." value={usn} onChange={e => setUsn(e.target.value)} required />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="branch">Branch</Label>
-                                        <Select onValueChange={(val: any) => setBranch(val)} required>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Branch" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="CSE">Computer Science & Engineering</SelectItem>
-                                                <SelectItem value="ISE">Information Science</SelectItem>
-                                                <SelectItem value="ECE">Electronics & Communication</SelectItem>
-                                                <SelectItem value="EEE">Electrical & Electronics</SelectItem>
-                                                <SelectItem value="ME">Mechanical Engineering</SelectItem>
-                                                <SelectItem value="CE">Civil Engineering</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="year">Year of Passing</Label>
-                                        <Input id="year" type="number" placeholder="2023" value={yearOfPassing} onChange={e => setYearOfPassing(e.target.value)} required />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="verificationType">Verification Type <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val: any) => setVerificationType(val)} required>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Verification Type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="degree">Degree Verification</SelectItem>
-                                                <SelectItem value="marks">Marks Verification</SelectItem>
-                                                <SelectItem value="enrollment">Enrollment Verification</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
 
                         <Card className="shadow-md">
                             <CardHeader>
-                                <CardTitle>Mandatory Documents</CardTitle>
-                                <CardDescription>Upload necessary authorization files.</CardDescription>
+                                <CardTitle>Verification Template Upload</CardTitle>
+                                <CardDescription>Upload your company verification format file (PDF, DOC, DOCX, JPG, PNG up to 10MB).</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>Agency Authorization Letter <span className="text-red-500">*</span></Label>
-                                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer bg-white">
-                                            <UploadCloud className="h-8 w-8 mb-2 text-yellow-600" />
-                                            <span className="text-sm font-medium text-center">Upload Official Letter</span>
-                                            <span className="text-xs mt-1">PDF only (Max 5MB)</span>
-                                            <input type="file" className="hidden" accept=".pdf" />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Student Consent Letter <span className="text-red-500">*</span></Label>
-                                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer bg-white">
-                                            <UploadCloud className="h-8 w-8 mb-2 text-yellow-600" />
-                                            <span className="text-sm font-medium text-center">Upload Signed Consent</span>
-                                            <span className="text-xs mt-1">PDF or Image (Max 5MB)</span>
-                                            <input type="file" className="hidden" />
-                                        </div>
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="template-upload">Upload Verification Template <span className="text-red-500">*</span></Label>
+                                    <Label
+                                        htmlFor="template-upload"
+                                        className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+                                    >
+                                        <UploadCloud className="h-8 w-8 mb-2 text-yellow-600" />
+                                        {verificationTemplate ? (
+                                            <span className="text-sm font-medium text-slate-900 text-center">{verificationTemplate.name}</span>
+                                        ) : (
+                                            <span className="text-sm font-medium text-center">Click to upload company template</span>
+                                        )}
+                                        <span className="text-xs mt-1">Allowed: PDF, DOC, DOCX, JPG, PNG | Max 10MB</span>
+                                        <input
+                                            id="template-upload"
+                                            type="file"
+                                            className="hidden"
+                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                            required
+                                            onChange={(e) => {
+                                                const selected = e.target.files?.[0] || null;
+                                                setVerificationTemplate(selected);
+                                            }}
+                                        />
+                                    </Label>
                                 </div>
                             </CardContent>
                             <CardFooter className="bg-slate-100 border-t flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
                                 <div className="flex flex-col text-center sm:text-left">
                                     <span className="text-sm text-slate-500">Verification Fee</span>
-                                    <span className="text-2xl font-bold text-slate-900">₹ 1500.00 <span className="text-sm font-normal text-slate-500">+ GST</span></span>
+                                    <span className="text-2xl font-bold text-slate-900">₹ {VERIFICATION_FEE.toFixed(2)}</span>
                                 </div>
                                 <Button type="submit" size="lg" className="bg-yellow-500 hover:bg-yellow-400 text-yellow-950 font-bold w-full sm:w-auto px-8" disabled={loading}>
                                     {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
@@ -479,8 +698,10 @@ export default function CompanyVerification() {
                             </CardFooter>
                         </Card>
                     </form>
+                    )
                 )}
+                </div>
+            </main>
             </div>
-        </div>
     );
 }

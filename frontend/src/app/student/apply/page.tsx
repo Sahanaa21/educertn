@@ -10,6 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE } from '@/lib/api';
+
+const CERTIFICATE_OPTIONS = [
+    { value: 'grade_card_correction', label: 'Grade Card Correction', fee: 1200 },
+    { value: 'duplicate_grade_card', label: 'Duplicate Grade Card', fee: 1200 },
+    { value: 'transcript', label: 'Transcript', fee: 500 },
+    { value: 'provisional_degree_certificate_pdc', label: 'Provisional Degree Certificate (PDC)', fee: 1000 },
+    { value: 'course_completion_certificate', label: 'Course Completion Certificate', fee: 200 },
+    { value: 'no_backlog_certificate', label: 'No Backlog Certificate', fee: 200 },
+    { value: 'other', label: 'Others', fee: 200 },
+] as const;
 
 export default function ApplyCertificate() {
     const router = useRouter();
@@ -20,6 +31,7 @@ export default function ApplyCertificate() {
     const [name, setName] = useState('');
     const [branch, setBranch] = useState('');
     const [year, setYear] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [type, setType] = useState('');
     const [mode, setMode] = useState('');
     const [copies, setCopies] = useState(1);
@@ -34,20 +46,22 @@ export default function ApplyCertificate() {
         }
     }, [router]);
 
+    const selectedCertificate = CERTIFICATE_OPTIONS.find(option => option.value === type);
+
     const getFee = () => {
-        let base = 500;
-        if (type === 'transcript') base = 300;
-        else if (type === 'course_completion') base = 400;
-        else if (type === 'bonafide') base = 200;
-        else if (type === 'grade_correction') base = 250;
-        return base * copies;
+        if (!selectedCertificate) return 0;
+        return selectedCertificate.fee * copies;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!usn || !name || !branch || !year || !type || !mode || !copies) {
+        if (!usn || !name || !branch || !year || !phoneNumber || !type || !mode || !copies) {
             return toast.error('Please fill all required fields.');
+        }
+
+        if (phoneNumber.length !== 10) {
+            return toast.error('Phone number must be exactly 10 digits.');
         }
 
         if (type === 'other' && !otherType) {
@@ -69,6 +83,7 @@ export default function ApplyCertificate() {
             formData.append('studentName', name);
             formData.append('branch', branch);
             formData.append('yearOfPassing', year);
+            formData.append('phoneNumber', phoneNumber);
             formData.append('certificateType', type === 'other' ? otherType : type);
             formData.append('copyType', mode === 'soft' ? 'SOFT_COPY' : mode === 'hard' ? 'HARD_COPY' : 'BOTH');
             formData.append('copies', copies.toString());
@@ -77,7 +92,7 @@ export default function ApplyCertificate() {
             if (address) formData.append('address', address);
             formData.append('idProof', file as File);
 
-            const res = await fetch('http://localhost:5000/api/student/certificates', {
+            const res = await fetch(`${API_BASE}/api/student/certificates`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -147,6 +162,20 @@ export default function ApplyCertificate() {
                                 <Label htmlFor="year">Year of Passing</Label>
                                 <Input id="year" type="number" placeholder="2023" value={year} onChange={e => setYear(e.target.value)} required />
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phoneNumber">Phone Number</Label>
+                                <Input
+                                    id="phoneNumber"
+                                    type="tel"
+                                    placeholder="9876543210"
+                                    value={phoneNumber}
+                                    inputMode="numeric"
+                                    maxLength={10}
+                                    pattern="[0-9]{10}"
+                                    onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    required
+                                />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -159,17 +188,16 @@ export default function ApplyCertificate() {
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="type">Certificate Type</Label>
-                            <Select onValueChange={(val: any) => setType(val)} required>
+                            <Select onValueChange={(val) => setType(String(val ?? ''))} required>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select Certificate" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="duplicate_marks">Duplicate Marks Card</SelectItem>
-                                    <SelectItem value="transcript">Transcript</SelectItem>
-                                    <SelectItem value="course_completion">Course Completion Certificate</SelectItem>
-                                    <SelectItem value="bonafide">Bonafide Certificate</SelectItem>
-                                    <SelectItem value="grade_correction">Grade Correction</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
+                                    {CERTIFICATE_OPTIONS.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -184,7 +212,7 @@ export default function ApplyCertificate() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="mode">Delivery Mode</Label>
-                                <Select onValueChange={(val: any) => setMode(val)} required>
+                                <Select onValueChange={(val) => setMode(String(val ?? ''))} required>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Mode" />
                                     </SelectTrigger>
@@ -197,7 +225,14 @@ export default function ApplyCertificate() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="copies">Number of Copies</Label>
-                                <Input id="copies" type="number" min="1" value={copies} onChange={e => setCopies(parseInt(e.target.value))} required />
+                                <Input
+                                    id="copies"
+                                    type="number"
+                                    min="1"
+                                    value={copies}
+                                    onChange={e => setCopies(Math.max(1, Number(e.target.value) || 1))}
+                                    required
+                                />
                             </div>
                         </div>
 
@@ -247,6 +282,9 @@ export default function ApplyCertificate() {
                     </CardContent>
                     <CardFooter className="bg-slate-50 border-t flex items-center justify-between p-6">
                         <div className="flex flex-col">
+                            <span className="text-sm text-slate-500">
+                                Certificate Fee: {selectedCertificate ? `Rs ${selectedCertificate.fee.toFixed(2)}` : 'Select certificate type'}
+                            </span>
                             <span className="text-sm text-slate-500">Total Amount Payable</span>
                             <span className="text-2xl font-bold text-slate-900">₹ {getFee().toFixed(2)}</span>
                         </div>

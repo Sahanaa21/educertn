@@ -1,47 +1,65 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
 import { prisma } from '../config/prisma';
-import { generateRequestId } from '../utils/generateId';
+import { generateVerificationRequestId } from '../utils/generateId';
+import { AuthRequest } from '../middleware/authMiddleware';
 
-export const createVerificationRequest = async (req: Request, res: Response): Promise<any> => {
+const VERIFICATION_FEE = 5000;
+
+const getAuthenticatedCompanyEmail = async (req: AuthRequest): Promise<string | null> => {
+    const userId = req.user?.id as string | undefined;
+    if (!userId) return null;
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
+    if (!user || user.role !== 'COMPANY') return null;
+    return user.email;
+};
+
+export const createVerificationRequest = async (req: AuthRequest, res: Response): Promise<any> => {
     try {
-        const { companyName, companyEmail, contactPerson, phoneNumber, studentName, usn, branch, yearOfPassing, verificationType, amount } = req.body;
+        const authEmail = await getAuthenticatedCompanyEmail(req);
+        if (!authEmail) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
 
-        const id = await generateRequestId();
+        const { companyName, companyEmail, contactPerson, phone, studentName, usn } = req.body as Record<string, string>;
+        const templateFile = req.file;
 
-        const verificationRequest = await prisma.verificationRequest.create({
+        if (!companyName || !contactPerson || !studentName || !usn) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        if (!templateFile) {
+            return res.status(400).json({ message: 'Verification template file is required' });
+        }
+
+        const requestId = await generateVerificationRequestId();
+
+        const created = await prisma.verificationRequest.create({
             data: {
-                id,
+                requestId,
                 companyName,
-                companyEmail,
+                companyEmail: authEmail,
                 contactPerson,
-                phoneNumber,
+                phone: phone || null,
                 studentName,
                 usn,
-                branch,
-                yearOfPassing,
-                verificationType,
-                amount: Number(amount),
-                paymentStatus: 'PENDING',
+                uploadedTemplate: templateFile.path,
+                paymentStatus: 'PAID',
                 status: 'PENDING'
             }
         });
 
-        // Simulate immediate payment success for this flow
-        const updatedRequest = await prisma.verificationRequest.update({
-            where: { id: verificationRequest.id },
-            data: { paymentStatus: 'PAID' }
-        });
-
-        res.status(201).json(updatedRequest);
+        res.status(201).json({ ...created, amount: VERIFICATION_FEE });
     } catch (error) {
         console.error('Error creating verification request:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
 
-export const getCompanyVerifications = async (req: Request, res: Response): Promise<any> => {
+export const getCompanyVerifications = async (req: AuthRequest, res: Response): Promise<any> => {
     try {
-        const companyEmail = (req as any).user?.email;
+        const companyEmail = await getAuthenticatedCompanyEmail(req);
         if (!companyEmail) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
@@ -55,6 +73,35 @@ export const getCompanyVerifications = async (req: Request, res: Response): Prom
     } catch (error) {
         console.error('Error fetching company verifications:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const companyEmail = await getAuthenticatedCompanyEmail(req);
+        if (!companyEmail) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const id = String(req.params.id);
+
+        const request = await prisma.verificationRequest.findUnique({
+            where: { id },
+            select: { requestId: true, companyEmail: true, completedFile: true, status: true }
+        });
+
+        if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (request.status !== 'COMPLETED' || !request.completedFile || !fs.existsSync(request.completedFile)) {
+            return res.status(400).json({ message: 'Completed response file not available yet' });
+        }
+
+        return res.download(request.completedFile, `${request.requestId}-completed-file`);
+    } catch (error) {
+        console.error('Error downloading completed verification file:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };
 

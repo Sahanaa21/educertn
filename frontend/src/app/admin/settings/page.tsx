@@ -1,13 +1,177 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { API_BASE } from '@/lib/api';
+
+type AdminSettingsState = {
+    supportEmail: string;
+    frontendUrl: string;
+    maintenanceMode: boolean;
+    allowCompanySignup: boolean;
+    smtpFromName: string;
+};
+
 export default function AdminSettingsPage() {
+    const [settings, setSettings] = useState<AdminSettingsState>({
+        supportEmail: 'support@gat.ac.in',
+        frontendUrl: 'http://localhost:3000',
+        maintenanceMode: false,
+        allowCompanySignup: true,
+        smtpFromName: 'Global Academy of Technology',
+    });
+    const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/settings`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setSettings({
+                        supportEmail: data.supportEmail,
+                        frontendUrl: data.frontendUrl,
+                        maintenanceMode: data.maintenanceMode,
+                        allowCompanySignup: data.allowCompanySignup,
+                        smtpFromName: data.smtpFromName,
+                    });
+                }
+            } catch {
+                toast.error('Unable to fetch saved settings.');
+            }
+        };
+
+        const checkHealth = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/health`);
+                setBackendStatus(res.ok ? 'online' : 'offline');
+            } catch {
+                setBackendStatus('offline');
+            }
+        };
+
+        fetchSettings();
+        checkHealth();
+    }, []);
+
+    const saveSettings = async () => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            toast.error('Admin session not found. Please login again.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(settings)
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.message || 'Failed to save settings');
+                return;
+            }
+
+            toast.success('Settings saved successfully');
+        } catch {
+            toast.error('Network error while saving settings');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-slate-800 mb-6">Settings</h1>
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </div>
-                <h2 className="text-xl font-semibold text-slate-700 mb-2">Platform Settings</h2>
-                <p className="text-slate-500">The settings module is currently under active development. Configuration options for platform variables and integrations will be available here soon.</p>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+                <p className="text-slate-500">Manage portal preferences and operational toggles.</p>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>System Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-slate-600">
+                        Backend API: <span className={`font-semibold ${backendStatus === 'online' ? 'text-green-600' : backendStatus === 'offline' ? 'text-red-600' : 'text-slate-700'}`}>
+                            {backendStatus === 'checking' ? 'Checking...' : backendStatus.toUpperCase()}
+                        </span>
+                    </p>
+                </CardContent>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>General Configuration</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="supportEmail">Support Email</Label>
+                            <Input id="supportEmail" value={settings.supportEmail} onChange={(e) => setSettings((s) => ({ ...s, supportEmail: e.target.value }))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="frontendUrl">Frontend URL</Label>
+                            <Input id="frontendUrl" value={settings.frontendUrl} onChange={(e) => setSettings((s) => ({ ...s, frontendUrl: e.target.value }))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="smtpFromName">Email Sender Name</Label>
+                            <Input id="smtpFromName" value={settings.smtpFromName} onChange={(e) => setSettings((s) => ({ ...s, smtpFromName: e.target.value }))} />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Access Controls</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="font-medium">Maintenance Mode</p>
+                                <p className="text-sm text-slate-500">Temporarily restrict portal operations.</p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={settings.maintenanceMode}
+                                onChange={(e) => setSettings((s) => ({ ...s, maintenanceMode: e.target.checked }))}
+                                className="h-4 w-4"
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="font-medium">Allow Company Login/Signup</p>
+                                <p className="text-sm text-slate-500">Enable or disable company-side access.</p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={settings.allowCompanySignup}
+                                onChange={(e) => setSettings((s) => ({ ...s, allowCompanySignup: e.target.checked }))}
+                                className="h-4 w-4"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="flex justify-end">
+                <Button onClick={saveSettings} disabled={saving}>{saving ? 'Saving...' : 'Save Settings'}</Button>
             </div>
         </div>
     );

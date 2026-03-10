@@ -14,6 +14,7 @@ export default function Footer() {
                     <ul className="space-y-2 text-sm text-slate-300">
                         <li><a href="/student" className="hover:text-white hover:underline transition-all">Student Portal</a></li>
                         <li><a href="/company" className="hover:text-white hover:underline transition-all">Company Verification</a></li>
+                        <li><a href="/report-issue" className="hover:text-white hover:underline transition-all">Report an Issue</a></li>
                         <li><a href="/admin/login" className="hover:text-white hover:underline transition-all">Admin Login</a></li>
                     </ul>
                 </div>

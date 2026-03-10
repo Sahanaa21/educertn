@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async (to: string, subject: string, html: string, attachments?: any[]) => {
     return transporter.sendMail({
-        from: '"Global Academy" <no-reply@globalacademy.edu>',
+        from: '"Global Academy of Technology" <gatvarificationportal@gmail.com>',
         to,
         subject,
         html,

@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { API_BASE } from '@/lib/api';
 
 export default function StudentDashboard() {
     const router = useRouter();
@@ -23,7 +24,7 @@ export default function StudentDashboard() {
             }
 
             try {
-                const res = await fetch('http://localhost:5000/api/student/certificates', {
+                const res = await fetch(`${API_BASE}/api/student/certificates`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

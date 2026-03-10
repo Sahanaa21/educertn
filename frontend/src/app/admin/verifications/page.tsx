@@ -7,14 +7,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, CheckCircle, XCircle, Download, Upload, RefreshCw, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE } from '@/lib/api';
+
+type VerificationRequest = {
+    id: string;
+    requestId: string;
+    companyName: string;
+    companyEmail: string;
+    studentName: string;
+    usn: string;
+    uploadedTemplate: string;
+    completedFile: string | null;
+    paymentStatus: string;
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+    createdAt: string;
+};
 
 export default function AdminVerifications() {
     const router = useRouter();
-    const [requests, setRequests] = useState<any[]>([]);
+    const [requests, setRequests] = useState<VerificationRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
     const fetchRequests = async () => {
         const token = localStorage.getItem('adminToken');
@@ -24,7 +42,7 @@ export default function AdminVerifications() {
         }
 
         try {
-            const res = await fetch('http://localhost:5000/api/admin/verifications', {
+            const res = await fetch(`${API_BASE}/api/admin/verifications`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -46,9 +64,10 @@ export default function AdminVerifications() {
     }, [router]);
 
     const updateStatus = async (id: string, status: string) => {
+        setProcessingId(id);
         const token = localStorage.getItem('adminToken');
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/verifications/${id}/status`, {
+            const res = await fetch(`${API_BASE}/api/admin/verifications/${id}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,95 +84,233 @@ export default function AdminVerifications() {
             }
         } catch (error) {
             toast.error('Network error');
+        } finally {
+            setProcessingId(null);
         }
     };
 
-    const filteredRequests = requests.filter(req =>
-        req.companyName.toLowerCase().includes(search.toLowerCase()) ||
-        req.studentName.toLowerCase().includes(search.toLowerCase()) ||
-        req.usn.toLowerCase().includes(search.toLowerCase()) ||
-        req.id.toLowerCase().includes(search.toLowerCase())
-    );
+    const downloadTemplate = async (id: string, requestId: string) => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
 
-    if (loading) {
-        return <div className="p-8 text-center text-slate-500">Loading requests...</div>;
-    }
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/verifications/${id}/template`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                toast.error(data.message || 'Unable to download template');
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${requestId}-template`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            toast.error('Template download failed');
+        }
+    };
+
+    const uploadCompletedFile = async (id: string, file: File | null) => {
+        const token = localStorage.getItem('adminToken');
+        if (!token || !file) return;
+
+        setProcessingId(id);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch(`${API_BASE}/api/admin/verifications/${id}/completed-file`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            if (res.ok) {
+                toast.success('Completed file uploaded');
+                fetchRequests();
+            } else {
+                const data = await res.json();
+                toast.error(data.message || 'Upload failed');
+            }
+        } catch (error) {
+            toast.error('Upload failed');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const filteredRequests = requests.filter(req => {
+        const matchesSearch =
+            req.companyName.toLowerCase().includes(search.toLowerCase()) ||
+            req.studentName.toLowerCase().includes(search.toLowerCase()) ||
+            req.usn.toLowerCase().includes(search.toLowerCase()) ||
+            req.requestId.toLowerCase().includes(search.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' || req.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Company Verifications</h1>
-                    <p className="text-slate-500 mt-1">Manage and respond to background check requests.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+                <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-orange-400" />
+                    <h1 className="text-xl font-bold tracking-tight">Company Verifications</h1>
+                    <span className="text-sm text-slate-400">{requests.length} requests</span>
                 </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                        onClick={fetchRequests}
+                    >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                    </Button>
+                </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">Filter by Status:</span>
+                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'ALL')}>
+                        <SelectTrigger className="w-40 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                            <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                            <SelectItem value="ALL">All</SelectItem>
+                            <SelectItem value="PENDING">Pending</SelectItem>
+                            <SelectItem value="PROCESSING">Processing</SelectItem>
+                            <SelectItem value="COMPLETED">Completed</SelectItem>
+                            <SelectItem value="REJECTED">Rejected</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex gap-4 text-xs font-semibold">
+                    <span className="flex items-center text-yellow-500"><CheckCircle className="h-3 w-3 mr-1" /> PENDING: {requests.filter((r) => r.status === 'PENDING').length}</span>
+                    <span className="flex items-center text-blue-500"><CheckCircle className="h-3 w-3 mr-1" /> PROCESSING: {requests.filter((r) => r.status === 'PROCESSING').length}</span>
+                    <span className="flex items-center text-green-500"><CheckCircle className="h-3 w-3 mr-1" /> COMPLETED: {requests.filter((r) => r.status === 'COMPLETED').length}</span>
+                    <span className="flex items-center text-red-500"><XCircle className="h-3 w-3 mr-1" /> REJECTED: {requests.filter((r) => r.status === 'REJECTED').length}</span>
+                </div>
+
                 <div className="relative w-full sm:w-72">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search by Company or USN..."
-                        className="pl-9 h-10 border-slate-300"
+                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
             </div>
 
-            <Card className="overflow-hidden shadow-sm border-t-4 border-t-purple-600">
-                <div className="overflow-x-auto w-full">
-                    <Table>
-                        <TableHeader className="bg-slate-50 border-b">
-                            <TableRow>
-                                <TableHead className="whitespace-nowrap">ID / Date</TableHead>
-                                <TableHead className="whitespace-nowrap">Agency / Company</TableHead>
-                                <TableHead className="whitespace-nowrap">Candidate</TableHead>
-                                <TableHead className="whitespace-nowrap">Target Type</TableHead>
-                                <TableHead className="whitespace-nowrap">Payment</TableHead>
-                                <TableHead className="whitespace-nowrap">Status</TableHead>
-                                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
+            <Card className="overflow-hidden shadow-md border border-slate-200">
+                <div className="overflow-x-auto w-full pb-2">
+                    <Table className="w-full min-w-7xl text-sm">
+                        <TableHeader className="bg-slate-900 border-b">
+                            <TableRow className="hover:bg-slate-900 border-slate-700">
+                                <TableHead className="min-w-48 whitespace-nowrap text-slate-200 font-semibold">Request</TableHead>
+                                <TableHead className="min-w-56 whitespace-nowrap text-slate-200 font-semibold">Company</TableHead>
+                                <TableHead className="min-w-52 whitespace-nowrap text-slate-200 font-semibold">Student</TableHead>
+                                <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Template</TableHead>
+                                <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
+                                <TableHead className="min-w-32 whitespace-nowrap text-slate-200 font-semibold">Payment</TableHead>
+                                <TableHead className="min-w-72 whitespace-nowrap text-slate-200 font-semibold">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredRequests.map((req) => (
-                                <TableRow key={req.id}>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div className="font-medium text-slate-900">{req.id}</div>
-                                        <div className="text-xs text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</div>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-8 text-slate-500">Loading requests...</TableCell>
+                                </TableRow>
+                            ) : filteredRequests.map((req) => (
+                                <TableRow key={req.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 align-top">
+                                    <TableCell className="align-top py-3">
+                                        <div className="font-semibold text-slate-900">{req.requestId}</div>
+                                        <div className="text-xs text-slate-500">Applied: {new Date(req.createdAt).toLocaleDateString()}</div>
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div className="font-medium">{req.companyName}</div>
+                                    <TableCell className="align-top py-3">
+                                        <div className="font-medium text-slate-900">{req.companyName}</div>
+                                        <div className="text-xs text-blue-700 break-all">{req.companyEmail}</div>
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div className="font-medium">{req.studentName}</div>
-                                        <div className="text-xs text-slate-500">{req.usn} · {req.branch}</div>
+                                    <TableCell className="align-top py-3">
+                                        <div className="font-medium text-slate-900">{req.studentName}</div>
+                                        <div className="text-xs text-slate-600">USN: {req.usn}</div>
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div>{req.verificationType.replace('_', ' ').toUpperCase()}</div>
+                                    <TableCell className="align-top py-3">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-slate-700 border-slate-300 hover:bg-slate-50"
+                                            onClick={() => downloadTemplate(req.id, req.requestId)}
+                                        >
+                                            <Download className="h-4 w-4 mr-2" /> Download
+                                        </Button>
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap">
+                                    <TableCell className="whitespace-nowrap align-top py-3">
+                                        <Badge variant="outline" className={
+                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50 font-bold tracking-wider' :
+                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50 font-bold tracking-wider' :
+                                                req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50 font-bold tracking-wider' :
+                                                    'border-yellow-500 text-yellow-700 bg-yellow-50 font-bold tracking-wider'
+                                        }>
+                                            {req.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="align-top py-3">
                                         <Badge variant={req.paymentStatus === 'PAID' ? 'default' : 'secondary'} className={req.paymentStatus === 'PAID' ? 'bg-green-600' : 'bg-slate-200 text-slate-700'}>
                                             {req.paymentStatus}
                                         </Badge>
+                                        <div className="mt-1 text-xs text-slate-500">Amount: Rs 5000.00</div>
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap">
-                                        <Badge variant="outline" className={
-                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
-                                                req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
-                                                    'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                        }>
-                                            {req.status === 'COMPLETED' ? 'VERIFIED' : req.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right whitespace-nowrap">
-                                        <div className="flex justify-end gap-2">
-                                            {req.status === 'PENDING' && req.paymentStatus === 'PAID' && (
-                                                <>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50" title="Verify & Complete" onClick={() => updateStatus(req.id, 'COMPLETED')}>
-                                                        <CheckCircle className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50" title="Reject Request" onClick={() => updateStatus(req.id, 'REJECTED')}>
-                                                        <XCircle className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            )}
+                                    <TableCell className="p-2 align-top min-w-72">
+                                        <div className="flex w-68 flex-col gap-2">
+                                            <label className="inline-flex items-center justify-center gap-2 h-8 px-3 rounded-md border border-slate-300 bg-white text-sm cursor-pointer hover:bg-slate-50">
+                                                <Upload className="h-4 w-4" /> Upload
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                                    disabled={processingId === req.id}
+                                                    onChange={(e) => uploadCompletedFile(req.id, e.target.files?.[0] || null)}
+                                                />
+                                            </label>
+
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-1/2 text-green-700 border-green-300 hover:bg-green-50"
+                                                    title="Mark Completed"
+                                                    onClick={() => updateStatus(req.id, 'COMPLETED')}
+                                                    disabled={processingId === req.id || req.paymentStatus !== 'PAID' || req.status === 'COMPLETED'}
+                                                >
+                                                    {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                                                    Complete
+                                                </Button>
+
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-1/2 text-red-600 border-red-200 hover:bg-red-50"
+                                                    title="Reject Request"
+                                                    onClick={() => updateStatus(req.id, 'REJECTED')}
+                                                    disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
+                                                >
+                                                    {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
+                                                    Reject
+                                                </Button>
+                                            </div>
                                         </div>
                                     </TableCell>
                                 </TableRow>
