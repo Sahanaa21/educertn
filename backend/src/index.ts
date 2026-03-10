@@ -20,6 +20,8 @@ const defaultAllowedOrigins = [
     'https://gat-verification-portal.vercel.app'
 ];
 
+const vercelDeploymentOriginPattern = /^https:\/\/gat-verification-portal(?:-[a-z0-9-]+)?\.vercel\.app$/i;
+
 const allowedOrigins = Array.from(
     new Set(
         [
@@ -34,7 +36,9 @@ const allowedOrigins = Array.from(
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        const isAllowedVercelDeployment = typeof origin === 'string' && vercelDeploymentOriginPattern.test(origin);
+
+        if (!origin || allowedOrigins.includes(origin) || isAllowedVercelDeployment) {
             callback(null, true);
             return;
         }
