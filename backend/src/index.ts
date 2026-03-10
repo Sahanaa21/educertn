@@ -23,6 +23,14 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Backend is running' });
 });
 
+app.get('/', (_req, res) => {
+    res.status(200).json({
+        service: 'Global Academy of Technology Verification Backend',
+        status: 'ok',
+        health: '/api/health'
+    });
+});
+
 app.use(maintenanceModeGuard);
 
 app.use('/api/auth', authRoutes);
