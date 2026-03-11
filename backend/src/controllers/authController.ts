@@ -5,8 +5,17 @@ import { sendEmail } from '../utils/email';
 
 const otpFallbackEnabled = process.env.OTP_FALLBACK_ENABLED === 'true';
 const otpIncludeInResponse = process.env.OTP_INCLUDE_IN_RESPONSE === 'true';
+const otpTryEmailFirst = process.env.OTP_TRY_EMAIL_FIRST === 'true';
 
 async function sendOtpOrFallback(email: string, subject: string, body: string, otp: string) {
+    if (otpFallbackEnabled && !otpTryEmailFirst) {
+        // In fallback-only mode we skip SMTP entirely to avoid repeated timeout delays.
+        return {
+            delivered: false as const,
+            otpPreview: otpIncludeInResponse ? otp : undefined,
+        };
+    }
+
     try {
         await sendEmail(email, subject, body);
         return { delivered: true as const };
