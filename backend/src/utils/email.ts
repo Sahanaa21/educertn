@@ -4,10 +4,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const smtpPort = Number(process.env.SMTP_PORT || 587);
-const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+const smtpSecureEnv = (process.env.SMTP_SECURE || '').toLowerCase();
+const smtpSecure = smtpPort === 465
+    ? true
+    : smtpSecureEnv === 'true' && smtpPort !== 587;
 const smtpUser = process.env.SMTP_USER;
 const fromAddress = process.env.SMTP_FROM_EMAIL || smtpUser || 'gatvarificationportal@gmail.com';
-const fromName = process.env.SMTP_FROM_NAME || 'Global Academy of Technology';
+const fromName = (process.env.SMTP_FROM_NAME || 'Global Academy of Technology').replace(/^['"]|['"]$/g, '');
 const smtpForceIPv4 = process.env.SMTP_FORCE_IPV4 === 'true';
 const smtpHost = process.env.SMTP_HOST || '';
 const smtpConnectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 20000);
