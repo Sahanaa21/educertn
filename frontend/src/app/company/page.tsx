@@ -39,7 +39,6 @@ export default function CompanyVerification() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loginEmail, setLoginEmail] = useState('');
     const [otp, setOtp] = useState('');
-    const [fallbackOtp, setFallbackOtp] = useState('');
     const [step, setStep] = useState(1);
 
     // Form States
@@ -125,7 +124,6 @@ export default function CompanyVerification() {
             const data = await res.json();
 
             if (res.ok) {
-                setFallbackOtp(typeof data?.otp === 'string' ? data.otp : '');
                 toast.success(`OTP sent to ${loginEmail}`);
                 setStep(2);
             } else {
@@ -320,9 +318,6 @@ export default function CompanyVerification() {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex flex-col gap-4 pb-8">
-                                    {fallbackOtp && (
-                                        <p className="mt-2 text-sm text-amber-700">Temporary OTP: {fallbackOtp}</p>
-                                    )}
                                 <Button type="submit" className="w-full h-12 bg-blue-900 hover:bg-blue-800 text-white text-base" disabled={loading}>
                                     {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : 'Send OTP'}
                                 </Button>

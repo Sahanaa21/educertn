@@ -3,37 +3,6 @@ import { prisma } from '../config/prisma';
 import { generateToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
-const otpFallbackEnabled = process.env.OTP_FALLBACK_ENABLED === 'true';
-const otpIncludeInResponse = process.env.OTP_INCLUDE_IN_RESPONSE === 'true';
-const otpTryEmailFirst = process.env.OTP_TRY_EMAIL_FIRST === 'true';
-
-async function sendOtpOrFallback(email: string, subject: string, body: string, otp: string) {
-    if (otpFallbackEnabled && !otpTryEmailFirst) {
-        // In fallback-only mode we skip SMTP entirely to avoid repeated timeout delays.
-        return {
-            delivered: false as const,
-            otpPreview: otpIncludeInResponse ? otp : undefined,
-        };
-    }
-
-    try {
-        await sendEmail(email, subject, body);
-        return { delivered: true as const };
-    } catch (error) {
-        console.error('OTP email send failed:', error);
-
-        if (!otpFallbackEnabled) {
-            throw error;
-        }
-
-        // Keep authentication usable during SMTP outages when explicitly enabled.
-        return {
-            delivered: false as const,
-            otpPreview: otpIncludeInResponse ? otp : undefined,
-        };
-    }
-}
-
 export const studentLogin = async (req: Request, res: Response): Promise<any> => {
     const { email } = req.body;
 
@@ -62,25 +31,20 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        const delivery = await sendOtpOrFallback(
+        // Send OTP via email
+        await sendEmail(
             email,
             'Your OTP for Global Academy of Technology',
-            `Your OTP is ${otp}. It expires in 10 minutes.`,
-            otp
+            `<p>Your One-Time Password (OTP) for Global Academy of Technology is:</p>
+             <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
+             <p>This OTP expires in 10 minutes.</p>
+             <p>If you did not request this, please ignore this email.</p>`
         );
 
-        if (delivery.delivered) {
-            res.json({ message: 'OTP sent to email' });
-            return;
-        }
-
-        res.json({
-            message: 'Email delivery is temporarily unavailable. OTP fallback is active.',
-            ...(delivery.otpPreview ? { otp: delivery.otpPreview } : {}),
-        });
+        res.json({ message: 'OTP sent to your email. Check your inbox.' });
     } catch (error) {
-        console.error('Student OTP send failed:', error);
-        res.status(500).json({ message: 'Unable to send OTP email. Please try again in a minute.' });
+        console.error('Student login OTP send failed:', error);
+        res.status(500).json({ message: 'Failed to send OTP. Please check your email address and try again.' });
     }
 };
 
@@ -112,25 +76,20 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        const delivery = await sendOtpOrFallback(
+        // Send OTP via email
+        await sendEmail(
             email,
-            'Your Company OTP for Global Academy of Technology Verification',
-            `Your verification OTP is ${otp}. It expires in 10 minutes.`,
-            otp
+            'Your Company Verification OTP - Global Academy of Technology',
+            `<p>Your One-Time Password (OTP) for company verification is:</p>
+             <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
+             <p>This OTP expires in 10 minutes.</p>
+             <p>If you did not request this, please ignore this email.</p>`
         );
 
-        if (delivery.delivered) {
-            res.json({ message: 'OTP sent to company email' });
-            return;
-        }
-
-        res.json({
-            message: 'Email delivery is temporarily unavailable. OTP fallback is active.',
-            ...(delivery.otpPreview ? { otp: delivery.otpPreview } : {}),
-        });
+        res.json({ message: 'OTP sent to your company email. Check your inbox.' });
     } catch (error) {
-        console.error('Company OTP send failed:', error);
-        res.status(500).json({ message: 'Unable to send OTP email. Please try again in a minute.' });
+        console.error('Company login OTP send failed:', error);
+        res.status(500).json({ message: 'Failed to send OTP to company email. Please verify the email address.' });
     }
 };
 export const verifyOtp = async (req: Request, res: Response): Promise<any> => {

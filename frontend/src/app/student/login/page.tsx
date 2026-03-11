@@ -17,7 +17,6 @@ export default function StudentLogin() {
     const [otp, setOtp] = useState('');
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [fallbackOtp, setFallbackOtp] = useState('');
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +33,6 @@ export default function StudentLogin() {
 
             if (res.ok) {
                 toast.success(`OTP sent to ${email}`);
-                setFallbackOtp(typeof data?.otp === 'string' ? data.otp : '');
                 setStep(2);
             } else {
                 toast.error(data.message || 'Failed to send OTP.');
@@ -114,9 +112,6 @@ export default function StudentLogin() {
                             <div className="space-y-2 text-center text-sm text-slate-600 mb-6">
                                 <p>We've sent a one-time password to</p>
                                 <p className="font-semibold text-slate-900">{email}</p>
-                                {fallbackOtp && (
-                                    <p className="text-amber-700 font-semibold">Temporary OTP: {fallbackOtp}</p>
-                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="otp" className="text-slate-700">Enter OTP</Label>
