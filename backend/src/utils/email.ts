@@ -20,32 +20,6 @@ type SmtpCandidate = {
     secure: boolean;
 };
 
-async function sendViaResend(to: string, subject: string, html: string): Promise<boolean> {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return false;
-
-    const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            from: `${fromName} <${fromAddress}>`,
-            to: [to],
-            subject,
-            html,
-        }),
-    });
-
-    if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`Resend API failed (${response.status}): ${body}`);
-    }
-
-    return true;
-}
-
 async function resolveSmtpHost(host: string): Promise<{ host: string; servername?: string }> {
     if (!smtpForceIPv4 || !host) {
         return { host };
@@ -79,13 +53,6 @@ function getSmtpCandidates(): SmtpCandidate[] {
 }
 
 export const sendEmail = async (to: string, subject: string, html: string, attachments?: any[]) => {
-    try {
-        const sent = await sendViaResend(to, subject, html);
-        if (sent) return;
-    } catch (error) {
-        console.error('Resend delivery failed, falling back to SMTP:', error);
-    }
-
     const candidates = getSmtpCandidates();
     let lastError: unknown;
 
