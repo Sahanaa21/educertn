@@ -16,11 +16,20 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     const pathname = usePathname();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setIsSidebarOpen(true);
+        }
     }, []);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            setIsSidebarOpen(false);
+        }
+    }, [pathname]);
 
     if (!mounted) return null;
 
@@ -29,16 +38,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     }
 
     return (
-        <div className="flex min-h-[calc(100vh-176px)] relative">
+        <div className="relative flex min-h-[calc(100vh-176px)] w-full overflow-x-clip">
             {/* Mobile Sidebar Toggle Header */}
-            <div className="md:hidden p-4 bg-white border-b border-slate-200 flex items-center justify-between">
-                <span className="font-bold text-blue-900">Student Panel</span>
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-600">
-                    <Menu />
-                </button>
+            <div className="fixed left-0 right-0 top-[72px] z-20 border-b border-slate-200 bg-white p-4 md:hidden">
+                <div className="flex items-center justify-between">
+                    <span className="font-bold text-blue-900">Student Panel</span>
+                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-600">
+                        <Menu />
+                    </button>
+                </div>
             </div>
 
-            <aside className={`transition-all duration-300 border-r bg-white z-40 absolute md:relative ${isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20'} flex flex-col h-full min-h-screen md:min-h-0`}>
+            <aside className={`fixed inset-y-0 left-0 z-40 flex h-full min-h-screen w-64 flex-col border-r bg-white pt-[72px] transition-transform duration-300 md:static md:min-h-0 md:pt-0 ${isSidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-20'}`}>
                 <div className="p-4 border-b border-slate-200 flex items-center justify-between">
                     {isSidebarOpen ? (
                         <h2 className="text-lg font-bold text-blue-900 flex items-center gap-2">
@@ -98,7 +109,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                     className="fixed inset-0 bg-black/50 z-30 md:hidden"
                     onClick={() => setIsSidebarOpen(false)}
                 ></div>
-            )}
+            )}"w-full flex-1 overflow-x-auto bg-slate-50 p-4 pt-20 transition-all md:p-8 md:pt-8"
 
             <main className={`flex-1 p-4 md:p-8 bg-slate-50 overflow-x-auto transition-all ${isSidebarOpen ? 'w-[calc(100vw-16rem)]' : 'w-full md:w-[calc(100vw-5rem)]'}`}>
                 {children}

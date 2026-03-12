@@ -33,7 +33,7 @@ export default function CompanyVerification() {
     const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [panelView, setPanelView] = useState<'dashboard' | 'requests' | 'application'>('dashboard');
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Auth States
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -84,6 +84,10 @@ export default function CompanyVerification() {
     };
 
     useEffect(() => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setIsSidebarOpen(true);
+        }
+
         const token = localStorage.getItem('companyToken');
         const savedCompanyEmail = localStorage.getItem('companyEmail');
         if (token) {
@@ -100,14 +104,16 @@ export default function CompanyVerification() {
     useEffect(() => {
         if (pathname === '/company/requests') {
             setPanelView('requests');
-            return;
-        }
-        if (pathname === '/company/apply') {
+        } else if (pathname === '/company/apply') {
             setPanelView('application');
-            return;
+        } else {
+            // Default /company route: show dashboard when requests exist, else show apply form.
+            setPanelView(requests.length > 0 ? 'dashboard' : 'application');
         }
-        // Default /company route: show dashboard when requests exist, else show apply form.
-        setPanelView(requests.length > 0 ? 'dashboard' : 'application');
+
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            setIsSidebarOpen(false);
+        }
     }, [pathname, requests.length]);
 
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -376,15 +382,17 @@ export default function CompanyVerification() {
     }
 
     return (
-        <div className="flex min-h-[calc(100vh-176px)] relative">
-            <div className="md:hidden p-4 bg-white border-b border-slate-200 flex items-center justify-between w-full">
-                <span className="font-bold text-yellow-700">Company Panel</span>
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-600">
-                    <Menu />
-                </button>
+        <div className="relative flex min-h-[calc(100vh-176px)] w-full overflow-x-clip">
+            <div className="fixed left-0 right-0 top-[72px] z-20 border-b border-slate-200 bg-white p-4 md:hidden">
+                <div className="flex items-center justify-between">
+                    <span className="font-bold text-yellow-700">Company Panel</span>
+                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-600">
+                        <Menu />
+                    </button>
+                </div>
             </div>
 
-            <aside className={`transition-all duration-300 border-r bg-white z-40 absolute md:relative ${isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20'} flex flex-col h-full min-h-screen md:min-h-0`}>
+            <aside className={`fixed inset-y-0 left-0 z-40 flex h-full min-h-screen w-64 flex-col border-r bg-white pt-[72px] transition-transform duration-300 md:static md:min-h-0 md:pt-0 ${isSidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-20'}`}>
                 <div className="p-4 border-b border-slate-200 flex items-center justify-between">
                     {isSidebarOpen ? (
                         <h2 className="text-lg font-bold text-yellow-700 flex items-center gap-2">
@@ -447,8 +455,8 @@ export default function CompanyVerification() {
                 ></div>
             )}
 
-            <main className={`flex-1 p-4 md:p-8 bg-slate-50 overflow-x-auto transition-all ${isSidebarOpen ? 'w-[calc(100vw-16rem)]' : 'w-full md:w-[calc(100vw-5rem)]'}`}>
-                <div className="max-w-5xl mx-auto space-y-8">
+            <main className="w-full flex-1 overflow-x-auto bg-slate-50 p-4 pt-20 transition-all md:p-8 md:pt-8">
+                <div className="mx-auto max-w-5xl space-y-8">
                     <div className="flex items-center gap-4">
                         <div className="inline-flex items-center justify-center p-3 bg-yellow-100 rounded-full">
                             <Building2 className="h-8 w-8 text-yellow-700" />
