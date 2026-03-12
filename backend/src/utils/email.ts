@@ -3,7 +3,9 @@ dotenv.config();
 
 import nodemailer from 'nodemailer';
 
-const fromAddress = process.env.SMTP_FROM_EMAIL || 'noreply@gat-verification-portal.com';
+const configuredFrom = (process.env.SMTP_FROM_EMAIL || '').trim();
+const smtpUser = (process.env.SMTP_USER || '').trim();
+const fromAddress = configuredFrom || smtpUser || 'noreply@gat-verification-portal.com';
 const fromName = process.env.SMTP_FROM_NAME || 'Global Academy of Technology';
 const configuredHost = (process.env.SMTP_HOST || '').trim();
 const smtpHost = configuredHost.toLowerCase() === 'mtp-relay.brevo.com'
@@ -12,6 +14,14 @@ const smtpHost = configuredHost.toLowerCase() === 'mtp-relay.brevo.com'
 
 if (configuredHost.toLowerCase() === 'mtp-relay.brevo.com') {
     console.warn('SMTP_HOST typo detected (mtp-relay.brevo.com). Auto-correcting to smtp-relay.brevo.com.');
+}
+
+if (!configuredFrom && smtpUser) {
+    console.warn('SMTP_FROM_EMAIL not set. Using SMTP_USER as sender address.');
+}
+
+if (!configuredFrom && !smtpUser) {
+    console.warn('SMTP_FROM_EMAIL and SMTP_USER are not set. Using fallback sender address.');
 }
 
 const transporter = nodemailer.createTransport({
