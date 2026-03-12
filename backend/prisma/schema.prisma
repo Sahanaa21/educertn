@@ -104,6 +104,7 @@ model VerificationRequest {
   completedFile    String?
   paymentStatus    String             @default("PENDING")
   status           VerificationStatus @default(PENDING)
+  rejectionReason  String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 }

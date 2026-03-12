@@ -8,7 +8,7 @@ export default function StudentProfile() {
     const [email, setEmail] = useState('student@gat.ac.in');
 
     useEffect(() => {
-        const userEmail = localStorage.getItem('studentEmail') || localStorage.getItem('email');
+        const userEmail = sessionStorage.getItem('studentEmail') || sessionStorage.getItem('email');
         if (userEmail) setEmail(userEmail);
     }, []);
 

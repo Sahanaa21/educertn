@@ -41,7 +41,7 @@ export default function ApplyCertificate() {
     const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) {
+        if (!sessionStorage.getItem('token')) {
             router.push('/student/login');
         }
     }, [router]);
@@ -77,7 +77,7 @@ export default function ApplyCertificate() {
         const amount = getFee();
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const formData = new FormData();
             formData.append('usn', usn);
             formData.append('studentName', name);

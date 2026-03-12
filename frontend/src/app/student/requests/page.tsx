@@ -17,7 +17,7 @@ export default function StudentRequests() {
 
     useEffect(() => {
         const fetchRequests = async () => {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             if (!token) {
                 router.push('/student/login');
                 return;
@@ -32,7 +32,7 @@ export default function StudentRequests() {
                     setRequests(data);
                 } else {
                     if (res.status === 401) {
-                        localStorage.removeItem('token');
+                        sessionStorage.removeItem('token');
                         router.push('/student/login');
                     }
                 }

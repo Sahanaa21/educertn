@@ -39,22 +39,29 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
             }
         });
 
-        const settings = await (prisma as any).portalSettings.findUnique({ where: { id: 1 } });
-        const notifyEmail = settings?.supportEmail || process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER;
-        if (notifyEmail) {
-            const html = `
-                <h2>New Issue Report Submitted</h2>
-                <p><strong>Title:</strong> ${issue.title}</p>
-                <p><strong>Category:</strong> ${issue.category}</p>
-                <p><strong>Status:</strong> ${issue.status}</p>
-                <p><strong>Reported By:</strong> ${issue.reportedByName || 'Anonymous'} (${issue.reportedByEmail || 'Email not provided'})</p>
-                <p><strong>Role:</strong> ${issue.role || 'Unknown'}</p>
-                <p><strong>Page:</strong> ${issue.pageUrl || 'N/A'}</p>
-                <p><strong>Description:</strong></p>
-                <p>${issue.description}</p>
-            `;
-            await sendEmail(notifyEmail, '[GAT Portal] New Issue Report', html);
-        }
+        // Fire-and-forget email alert so SMTP errors don't fail the request
+        void (async () => {
+            try {
+                const settings = await (prisma as any).portalSettings.findUnique({ where: { id: 1 } });
+                const notifyEmail = settings?.supportEmail || process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER;
+                if (notifyEmail) {
+                    const html = `
+                        <h2>New Issue Report Submitted</h2>
+                        <p><strong>Title:</strong> ${issue.title}</p>
+                        <p><strong>Category:</strong> ${issue.category}</p>
+                        <p><strong>Status:</strong> ${issue.status}</p>
+                        <p><strong>Reported By:</strong> ${issue.reportedByName || 'Anonymous'} (${issue.reportedByEmail || 'Email not provided'})</p>
+                        <p><strong>Role:</strong> ${issue.role || 'Unknown'}</p>
+                        <p><strong>Page:</strong> ${issue.pageUrl || 'N/A'}</p>
+                        <p><strong>Description:</strong></p>
+                        <p>${issue.description}</p>
+                    `;
+                    await sendEmail(notifyEmail, '[GAT Portal] New Issue Report', html);
+                }
+            } catch (emailErr) {
+                console.error('Failed to send issue report notification email:', emailErr);
+            }
+        })();
 
         return res.status(201).json(issue);
     } catch (error) {

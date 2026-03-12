@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, Clock, Settings, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const menuItems = [
     { name: 'Dashboard', href: '/student', icon: LayoutDashboard },
     { name: 'Apply Certificate', href: '/student/apply', icon: FileText },
     { name: 'My Requests', href: '/student/requests', icon: Clock },
-    { name: 'Profile Settings', href: '/student/profile', icon: Settings },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -117,7 +116,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                         <button
                             title="Logout"
                             onClick={() => {
-                                localStorage.removeItem('token');
+                                sessionStorage.removeItem('token');
                                 router.push('/student/login');
                             }}
                             className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"

@@ -33,9 +33,11 @@ export default function AdminVerifications() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [rejectingId, setRejectingId] = useState<string | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('');
 
     const fetchRequests = async () => {
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         if (!token) {
             router.push('/admin/login');
             return;
@@ -63,9 +65,9 @@ export default function AdminVerifications() {
         fetchRequests();
     }, [router]);
 
-    const updateStatus = async (id: string, status: string) => {
+    const updateStatus = async (id: string, status: string, rejReason?: string) => {
         setProcessingId(id);
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         try {
             const res = await fetch(`${API_BASE}/api/admin/verifications/${id}/status`, {
                 method: 'PUT',
@@ -73,7 +75,7 @@ export default function AdminVerifications() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ status })
+                body: JSON.stringify({ status, ...(status === 'REJECTED' && rejReason ? { rejectionReason: rejReason } : {}) })
             });
 
             if (res.ok) {
@@ -90,7 +92,7 @@ export default function AdminVerifications() {
     };
 
     const downloadTemplate = async (id: string, requestId: string) => {
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         if (!token) return;
 
         try {
@@ -119,7 +121,7 @@ export default function AdminVerifications() {
     };
 
     const uploadCompletedFile = async (id: string, file: File | null) => {
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         if (!token || !file) return;
 
         setProcessingId(id);
@@ -299,18 +301,56 @@ export default function AdminVerifications() {
                                                     Complete
                                                 </Button>
 
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-1/2 text-red-600 border-red-200 hover:bg-red-50"
-                                                    title="Reject Request"
-                                                    onClick={() => updateStatus(req.id, 'REJECTED')}
-                                                    disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
-                                                >
-                                                    {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
-                                                    Reject
-                                                </Button>
+                                                {rejectingId !== req.id && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="w-1/2 text-red-600 border-red-200 hover:bg-red-50"
+                                                        title="Reject Request"
+                                                        onClick={() => { setRejectingId(req.id); setRejectionReason(''); }}
+                                                        disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
+                                                    >
+                                                        <XCircle className="h-4 w-4 mr-1" />
+                                                        Reject
+                                                    </Button>
+                                                )}
                                             </div>
+
+                                            {rejectingId === req.id && req.status !== 'REJECTED' && req.status !== 'COMPLETED' && (
+                                                <div className="border border-red-200 rounded-md p-2 bg-red-50 flex flex-col gap-2 mt-2">
+                                                    <span className="text-[11px] text-red-700 font-semibold">Reason for rejection (required):</span>
+                                                    <textarea
+                                                        className="w-full text-xs border border-red-200 rounded p-1 resize-none focus:outline-none focus:ring-1 focus:ring-red-400"
+                                                        rows={2}
+                                                        placeholder="Enter reason..."
+                                                        value={rejectionReason}
+                                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            className="w-1/2 h-7 bg-red-600 hover:bg-red-700 text-white text-xs disabled:opacity-50"
+                                                            disabled={processingId === req.id || !rejectionReason.trim()}
+                                                            onClick={() => {
+                                                                updateStatus(req.id, 'REJECTED', rejectionReason.trim());
+                                                                setRejectingId(null);
+                                                                setRejectionReason('');
+                                                            }}
+                                                        >
+                                                            {processingId === req.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : 'Confirm Reject'}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-1/2 h-7 text-xs"
+                                                            onClick={() => { setRejectingId(null); setRejectionReason(''); }}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>

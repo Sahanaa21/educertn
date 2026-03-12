@@ -67,7 +67,7 @@ export const getAllCertificates = async (req: Request, res: Response): Promise<a
 export const updateCertificateStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const id = String(req.params.id);
-        const { status, action } = req.body;
+        const { status, action, rejectionReason } = req.body;
 
         const request = await prisma.certificateRequest.findUnique({ where: { id }, include: { user: true } }) as any;
         if (!request) return res.status(404).json({ message: 'Not found' });
@@ -84,6 +84,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 
         let updateData: any = {};
         if (status) updateData.status = status;
+        if (status === 'REJECTED' && rejectionReason) updateData.rejectionReason = rejectionReason;
 
         let finalStatus = status || request.status;
         const copyType = request.copyType;
@@ -184,7 +185,7 @@ export const getAllVerifications = async (req: Request, res: Response): Promise<
 export const updateVerificationStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const id = String(req.params.id);
-        const { status } = req.body as { status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED' };
+        const { status, rejectionReason } = req.body as { status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED'; rejectionReason?: string };
 
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
@@ -201,7 +202,10 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
 
         const updated = await prisma.verificationRequest.update({
             where: { id },
-            data: { status }
+            data: {
+                status,
+                ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {})
+            }
         }) as any;
 
         if (status === 'COMPLETED' && updated.companyEmail) {

@@ -152,3 +152,34 @@ export const adminLogin = async (req: Request, res: Response): Promise<any> => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+export const changeAdminPassword = async (req: Request, res: Response): Promise<any> => {
+    const adminId = (req as any).user?.id;
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Current and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({ where: { id: adminId } });
+        if (!user || user.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+
+        if (user.password !== currentPassword) {
+            return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+
+        await prisma.user.update({ where: { id: adminId }, data: { password: newPassword } });
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

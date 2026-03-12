@@ -37,7 +37,7 @@ export default function AdminIssuesPage() {
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const fetchIssues = useCallback(async () => {
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         if (!token) {
             router.push('/admin/login');
             return;
@@ -67,7 +67,7 @@ export default function AdminIssuesPage() {
     }, [fetchIssues]);
 
     const updateIssueStatus = async (id: string, status: IssueReport['status']) => {
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         if (!token) return;
 
         setProcessingId(id);

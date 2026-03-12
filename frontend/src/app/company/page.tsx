@@ -55,8 +55,8 @@ export default function CompanyVerification() {
     const [mainLoading, setMainLoading] = useState(true);
 
     const handleUnauthorized = () => {
-        localStorage.removeItem('companyToken');
-        localStorage.removeItem('companyEmail');
+        sessionStorage.removeItem('companyToken');
+        sessionStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
         setStep(1);
         setPanelView('dashboard');
@@ -88,8 +88,8 @@ export default function CompanyVerification() {
             setIsSidebarOpen(true);
         }
 
-        const token = localStorage.getItem('companyToken');
-        const savedCompanyEmail = localStorage.getItem('companyEmail');
+        const token = sessionStorage.getItem('companyToken');
+        const savedCompanyEmail = sessionStorage.getItem('companyEmail');
         if (token) {
             setIsAuthenticated(true);
             if (savedCompanyEmail) {
@@ -173,8 +173,8 @@ export default function CompanyVerification() {
 
             if (res.ok) {
                 toast.success('Login successful!');
-                localStorage.setItem('companyToken', data.token);
-                localStorage.setItem('companyEmail', loginEmail);
+                sessionStorage.setItem('companyToken', data.token);
+                sessionStorage.setItem('companyEmail', loginEmail);
                 setCompanyEmail(loginEmail); // Pre-fill
                 setIsAuthenticated(true);
                 fetchRequests(data.token);
@@ -211,8 +211,8 @@ export default function CompanyVerification() {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem('companyToken');
-            const effectiveEmail = companyEmail || localStorage.getItem('companyEmail') || '';
+            const token = sessionStorage.getItem('companyToken');
+            const effectiveEmail = companyEmail || sessionStorage.getItem('companyEmail') || '';
 
             if (!effectiveEmail) {
                 setLoading(false);
@@ -266,7 +266,7 @@ export default function CompanyVerification() {
     };
 
     const handleDownloadResponse = async (id: string, requestId: string) => {
-        const token = localStorage.getItem('companyToken');
+        const token = sessionStorage.getItem('companyToken');
         if (!token) return;
 
         try {
@@ -299,8 +299,8 @@ export default function CompanyVerification() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('companyToken');
-        localStorage.removeItem('companyEmail');
+        sessionStorage.removeItem('companyToken');
+        sessionStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
         setStep(1);
         router.push('/company');
@@ -652,10 +652,6 @@ export default function CompanyVerification() {
                                     <div className="space-y-2">
                                         <Label htmlFor="contactPerson">Contact Person <span className="text-red-500">*</span></Label>
                                         <Input id="contactPerson" placeholder="Jane Doe" value={contactPerson} onChange={e => setContactPerson(e.target.value)} required />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="companyEmail">Official Email ID <span className="text-red-500">*</span></Label>
-                                        <Input id="companyEmail" type="email" placeholder="hr@techcorp.com" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} required />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="phone">Phone Number</Label>

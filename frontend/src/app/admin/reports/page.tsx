@@ -33,7 +33,7 @@ export default function AdminReportsPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const token = localStorage.getItem('adminToken');
+            const token = sessionStorage.getItem('adminToken');
             if (!token) {
                 router.push('/admin/login');
                 return;
@@ -56,10 +56,6 @@ export default function AdminReportsPage() {
     }, [router]);
 
     const summary = useMemo(() => {
-        const certPaid = certificates.filter((c) => c.paymentStatus === 'PAID');
-        const certRevenue = certPaid.reduce((acc, c) => acc + (c.amount || 0), 0);
-        const verRevenue = verifications.filter((v) => v.paymentStatus === 'PAID').length * 5000;
-
         return {
             totalCertificates: certificates.length,
             totalVerifications: verifications.length,
@@ -67,7 +63,6 @@ export default function AdminReportsPage() {
             completedVerifications: verifications.filter((v) => v.status === 'COMPLETED').length,
             pendingCertificates: certificates.filter((c) => c.status === 'PENDING' || c.status === 'PROCESSING').length,
             pendingVerifications: verifications.filter((v) => v.status === 'PENDING' || v.status === 'PROCESSING').length,
-            totalRevenue: certRevenue + verRevenue,
         };
     }, [certificates, verifications]);
 
@@ -125,10 +120,7 @@ export default function AdminReportsPage() {
                     <CardHeader className="pb-2"><CardTitle className="text-sm">Pending Work</CardTitle></CardHeader>
                     <CardContent><div className="text-3xl font-bold">{summary.pendingCertificates + summary.pendingVerifications}</div></CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Revenue Snapshot</CardTitle></CardHeader>
-                    <CardContent><div className="text-3xl font-bold">Rs {summary.totalRevenue.toLocaleString()}</div></CardContent>
-                </Card>
+
             </div>
 
             <Card>

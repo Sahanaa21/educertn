@@ -75,8 +75,8 @@ export default function StudentLogin() {
 
             if (res.ok) {
                 toast.success('Login successful!');
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                sessionStorage.setItem('token', data.token);
+                sessionStorage.setItem('user', JSON.stringify(data.user));
                 router.push('/student');
             } else {
                 toast.error(data.message || 'Invalid OTP. Try again.');

@@ -23,7 +23,7 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
-            const token = localStorage.getItem('adminToken');
+            const token = sessionStorage.getItem('adminToken');
             if (!token) {
                 router.push('/admin/login');
                 return;
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
                     setRecentCertificates(data.recentCertificates);
                     setRecentVerifications(data.recentVerifications);
                 } else if (res.status === 401 || res.status === 403) {
-                    localStorage.removeItem('adminToken');
+                    sessionStorage.removeItem('adminToken');
                     router.push('/admin/login');
                 }
             } catch (error) {
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
                     <p className="text-slate-500 mt-1">Overview of all system activities and pending requests.</p>
                 </div>
                 <Button variant="outline" onClick={() => {
-                    localStorage.removeItem('adminToken');
+                    sessionStorage.removeItem('adminToken');
                     router.push('/admin/login');
                 }}>Logout</Button>
             </div>

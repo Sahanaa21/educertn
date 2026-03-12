@@ -21,10 +21,12 @@ export default function AdminCertificates() {
     const [uploadFiles, setUploadFiles] = useState<Record<string, File>>({});
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+    const [rejectingId, setRejectingId] = useState<string | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('');
 
     const fetchRequests = async () => {
         setLoading(true);
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         if (!token) {
             router.push('/admin/login');
             return;
@@ -52,9 +54,9 @@ export default function AdminCertificates() {
         fetchRequests();
     }, [router]);
 
-    const updateStatus = async (id: string, status?: string, action?: string) => {
+    const updateStatus = async (id: string, status?: string, action?: string, reason?: string) => {
         setProcessingId(id);
-        const token = localStorage.getItem('adminToken');
+        const token = sessionStorage.getItem('adminToken');
         try {
             let body: any;
             let headers: any = {
@@ -70,7 +72,7 @@ export default function AdminCertificates() {
                 body = formData;
             } else {
                 headers['Content-Type'] = 'application/json';
-                body = JSON.stringify({ status, action });
+                body = JSON.stringify({ status, action, rejectionReason: status === 'REJECTED' ? reason : undefined });
             }
 
             const res = await fetch(`${API_BASE}/api/admin/certificates/${id}/status`, {
@@ -299,18 +301,54 @@ export default function AdminCertificates() {
                                                         Complete
                                                     </Button>
 
-                                                    {!req.softCopyEmailed && (
+                                                    {!req.softCopyEmailed && rejectingId !== req.id && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
                                                             className="w-1/2 text-red-600 border-red-200 hover:bg-red-50 font-medium disabled:opacity-50"
                                                             disabled={processingId === req.id}
-                                                            onClick={() => updateStatus(req.id, 'REJECTED')}
+                                                            onClick={() => { setRejectingId(req.id); setRejectionReason(''); }}
                                                         >
-                                                            {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
+                                                            <XCircle className="h-4 w-4 mr-1" />
                                                             Reject
                                                         </Button>
                                                     )}
+                                                </div>
+                                            )}
+
+                                            {rejectingId === req.id && req.status !== 'REJECTED' && req.status !== 'COMPLETED' && (
+                                                <div className="border border-red-200 rounded-md p-2 bg-red-50 flex flex-col gap-2 mb-2">
+                                                    <span className="text-[11px] text-red-700 font-semibold">Reason for rejection (required):</span>
+                                                    <textarea
+                                                        className="w-full text-xs border border-red-200 rounded p-1 resize-none focus:outline-none focus:ring-1 focus:ring-red-400"
+                                                        rows={2}
+                                                        placeholder="Enter reason..."
+                                                        value={rejectionReason}
+                                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            className="w-1/2 h-7 bg-red-600 hover:bg-red-700 text-white text-xs disabled:opacity-50"
+                                                            disabled={processingId === req.id || !rejectionReason.trim()}
+                                                            onClick={() => {
+                                                                updateStatus(req.id, 'REJECTED', undefined, rejectionReason.trim());
+                                                                setRejectingId(null);
+                                                                setRejectionReason('');
+                                                            }}
+                                                        >
+                                                            {processingId === req.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : 'Confirm Reject'}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-1/2 h-7 text-xs"
+                                                            onClick={() => { setRejectingId(null); setRejectionReason(''); }}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )}
 

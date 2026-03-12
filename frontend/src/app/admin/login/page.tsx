@@ -33,7 +33,7 @@ export default function AdminLogin() {
 
             if (res.ok) {
                 toast.success('Admin Login successful!');
-                localStorage.setItem('adminToken', data.token);
+                sessionStorage.setItem('adminToken', data.token);
                 router.push('/admin');
             } else {
                 toast.error(data.message || 'Invalid credentials.');

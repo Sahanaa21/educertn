@@ -10,6 +10,7 @@ import {
 } from '../controllers/adminController';
 import { getAllIssueReports, updateIssueReport } from '../controllers/supportController';
 import { getPortalSettings, updatePortalSettings } from '../controllers/settingsController';
+import { changeAdminPassword } from '../controllers/authController';
 import { requireRole, authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
@@ -43,5 +44,7 @@ router.put('/issues/:id', authenticate, requireRole('ADMIN'), adminMutationLimit
 
 router.get('/settings', authenticate, requireRole('ADMIN'), getPortalSettings);
 router.put('/settings', authenticate, requireRole('ADMIN'), adminMutationLimiter, updatePortalSettings);
+
+router.post('/change-password', authenticate, requireRole('ADMIN'), adminMutationLimiter, changeAdminPassword);
 
 export default router;
