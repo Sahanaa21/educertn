@@ -382,17 +382,33 @@ export default function CompanyVerification() {
     }
 
     return (
-        <div className="relative flex min-h-[calc(100vh-176px)] w-full overflow-x-clip">
-            <div className="fixed left-0 right-0 top-[72px] z-20 border-b border-slate-200 bg-white p-4 md:hidden">
-                <div className="flex items-center justify-between">
-                    <span className="font-bold text-yellow-700">Company Panel</span>
-                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-600">
-                        <Menu />
-                    </button>
-                </div>
+        <div className="flex min-h-[calc(100vh-176px)] flex-col">
+            {/* Mobile-only top bar */}
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+                <span className="font-bold text-yellow-700">Company Panel</span>
+                <button
+                    aria-label="Open navigation menu"
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="rounded-md p-1 text-slate-600 hover:bg-slate-100"
+                >
+                    <Menu className="h-5 w-5" />
+                </button>
             </div>
 
-            <aside className={`fixed inset-y-0 left-0 z-40 flex h-full min-h-screen w-64 flex-col border-r bg-white pt-[72px] transition-transform duration-300 md:static md:min-h-0 md:pt-0 ${isSidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-20'}`}>
+            <div className="relative flex flex-1 overflow-hidden">
+                {isSidebarOpen && (
+                    <div
+                        className="fixed inset-0 z-30 bg-black/50 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    />
+                )}
+
+            <aside className={[
+                'flex w-64 flex-shrink-0 flex-col border-r bg-white transition-transform duration-300',
+                'fixed inset-y-0 left-0 z-40',
+                'md:static md:inset-y-auto md:z-auto',
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+            ].join(' ')}>
                 <div className="p-4 border-b border-slate-200 flex items-center justify-between">
                     {isSidebarOpen ? (
                         <h2 className="text-lg font-bold text-yellow-700 flex items-center gap-2">
@@ -405,6 +421,12 @@ export default function CompanyVerification() {
                         </div>
                     )}
                     <button
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="rounded-md p-1 text-slate-400 hover:bg-slate-100 md:hidden"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <button
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                         className="hidden md:flex p-1 rounded-md hover:bg-slate-100 text-slate-500"
                     >
@@ -414,21 +436,21 @@ export default function CompanyVerification() {
 
                 <nav className="flex flex-col gap-1 px-3 py-4 flex-1">
                     <button
-                        onClick={() => router.push('/company')}
+                        onClick={() => { router.push('/company'); if (window.innerWidth < 768) setIsSidebarOpen(false); }}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'dashboard' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
                     >
                         <LayoutDashboard size={20} className={panelView === 'dashboard' ? 'text-yellow-700' : 'text-slate-400'} />
                         {isSidebarOpen && <span className="truncate">Dashboard</span>}
                     </button>
                     <button
-                        onClick={() => router.push('/company/requests')}
+                        onClick={() => { router.push('/company/requests'); if (window.innerWidth < 768) setIsSidebarOpen(false); }}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'requests' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
                     >
                         <ClipboardList size={20} className={panelView === 'requests' ? 'text-yellow-700' : 'text-slate-400'} />
                         {isSidebarOpen && <span className="truncate">My Requests</span>}
                     </button>
                     <button
-                        onClick={() => router.push('/company/apply')}
+                        onClick={() => { router.push('/company/apply'); if (window.innerWidth < 768) setIsSidebarOpen(false); }}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'application' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
                     >
                         <FilePlus size={20} className={panelView === 'application' ? 'text-yellow-700' : 'text-slate-400'} />
@@ -448,14 +470,7 @@ export default function CompanyVerification() {
                 </div>
             </aside>
 
-            {isSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
-
-            <main className="w-full flex-1 overflow-x-auto bg-slate-50 p-4 pt-20 transition-all md:p-8 md:pt-8">
+            <main className="min-w-0 flex-1 overflow-x-auto bg-slate-50 p-4 md:p-8">
                 <div className="mx-auto max-w-5xl space-y-8">
                     <div className="flex items-center gap-4">
                         <div className="inline-flex items-center justify-center p-3 bg-yellow-100 rounded-full">
@@ -728,5 +743,6 @@ export default function CompanyVerification() {
                 </div>
             </main>
             </div>
+        </div>
     );
 }
