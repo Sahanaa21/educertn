@@ -31,15 +31,17 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        // Send OTP via email
-        await sendEmail(
+        // Do not block login flow on SMTP latency.
+        void sendEmail(
             email,
             'Your OTP for Global Academy of Technology',
             `<p>Your One-Time Password (OTP) for Global Academy of Technology is:</p>
              <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
              <p>This OTP expires in 10 minutes.</p>
              <p>If you did not request this, please ignore this email.</p>`
-        );
+        ).catch((error) => {
+            console.error('Student OTP email dispatch failed:', error);
+        });
 
         res.json({ message: 'OTP sent to your email. Check your inbox.' });
     } catch (error) {
@@ -76,15 +78,17 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        // Send OTP via email
-        await sendEmail(
+        // Do not block login flow on SMTP latency.
+        void sendEmail(
             email,
             'Your Company Verification OTP - Global Academy of Technology',
             `<p>Your One-Time Password (OTP) for company verification is:</p>
              <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
              <p>This OTP expires in 10 minutes.</p>
              <p>If you did not request this, please ignore this email.</p>`
-        );
+        ).catch((error) => {
+            console.error('Company OTP email dispatch failed:', error);
+        });
 
         res.json({ message: 'OTP sent to your company email. Check your inbox.' });
     } catch (error) {

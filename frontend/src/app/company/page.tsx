@@ -121,7 +121,7 @@ export default function CompanyVerification() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: loginEmail })
             }, {
-                timeoutMs: 90000,
+                timeoutMs: 25000,
                 retries: 0,
             });
             let data: any = null;
@@ -138,7 +138,12 @@ export default function CompanyVerification() {
                 toast.error(data?.message || 'Failed to send OTP.');
             }
         } catch (error) {
-            toast.error('Request timed out while server is waking up. If OTP arrived in mail, click Send OTP once more.');
+            if (error instanceof Error && error.name === 'AbortError') {
+                setStep(2);
+                toast.message('Server is slow, but OTP may still arrive. Enter OTP once received.');
+            } else {
+                toast.error('Network error.');
+            }
         } finally {
             setLoading(false);
         }
