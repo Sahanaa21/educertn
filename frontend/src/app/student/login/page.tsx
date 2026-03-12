@@ -28,17 +28,25 @@ export default function StudentLogin() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
+            }, {
+                timeoutMs: 90000,
+                retries: 0,
             });
-            const data = await res.json();
+            let data: any = null;
+            try {
+                data = await res.json();
+            } catch {
+                data = null;
+            }
 
             if (res.ok) {
                 toast.success(`OTP sent to ${email}`);
                 setStep(2);
             } else {
-                toast.error(data.message || 'Failed to send OTP.');
+                toast.error(data?.message || 'Failed to send OTP.');
             }
         } catch (error) {
-            toast.error('Network error. Failed to send OTP.');
+            toast.error('Request timed out while server is waking up. If you received OTP in mail, click Send OTP once more to continue.');
         } finally {
             setLoading(false);
         }
@@ -54,6 +62,9 @@ export default function StudentLogin() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp })
+            }, {
+                timeoutMs: 45000,
+                retries: 0,
             });
             const data = await res.json();
 

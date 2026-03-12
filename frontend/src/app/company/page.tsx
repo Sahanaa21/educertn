@@ -120,8 +120,16 @@ export default function CompanyVerification() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: loginEmail })
+            }, {
+                timeoutMs: 90000,
+                retries: 0,
             });
-            const data = await res.json();
+            let data: any = null;
+            try {
+                data = await res.json();
+            } catch {
+                data = null;
+            }
 
             if (res.ok) {
                 toast.success(`OTP sent to ${loginEmail}`);
@@ -130,7 +138,7 @@ export default function CompanyVerification() {
                 toast.error(data?.message || 'Failed to send OTP.');
             }
         } catch (error) {
-            toast.error('Network error.');
+            toast.error('Request timed out while server is waking up. If OTP arrived in mail, click Send OTP once more.');
         } finally {
             setLoading(false);
         }
@@ -146,6 +154,9 @@ export default function CompanyVerification() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: loginEmail, otp })
+            }, {
+                timeoutMs: 45000,
+                retries: 0,
             });
             const data = await res.json();
 
