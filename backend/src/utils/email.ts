@@ -5,9 +5,17 @@ import nodemailer from 'nodemailer';
 
 const fromAddress = process.env.SMTP_FROM_EMAIL || 'noreply@gat-verification-portal.com';
 const fromName = process.env.SMTP_FROM_NAME || 'Global Academy of Technology';
+const configuredHost = (process.env.SMTP_HOST || '').trim();
+const smtpHost = configuredHost.toLowerCase() === 'mtp-relay.brevo.com'
+    ? 'smtp-relay.brevo.com'
+    : (configuredHost || 'smtp-relay.brevo.com');
+
+if (configuredHost.toLowerCase() === 'mtp-relay.brevo.com') {
+    console.warn('SMTP_HOST typo detected (mtp-relay.brevo.com). Auto-correcting to smtp-relay.brevo.com.');
+}
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    host: smtpHost,
     port: Number(process.env.SMTP_PORT) || 587,
     secure: false,
     auth: {
