@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE } from '@/lib/api';
+import DemoPaymentDialog from '@/components/payments/DemoPaymentDialog';
 
 const CERTIFICATE_OPTIONS = [
     { value: 'grade_card_correction', label: 'Grade Card Correction', fee: 1200 },
@@ -21,6 +22,9 @@ const CERTIFICATE_OPTIONS = [
     { value: 'no_backlog_certificate', label: 'No Backlog Certificate', fee: 200 },
     { value: 'other', label: 'Others', fee: 200 },
 ] as const;
+
+const MAX_ID_PROOF_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ID_PROOF_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
 
 export default function ApplyCertificate() {
     const router = useRouter();
@@ -39,6 +43,7 @@ export default function ApplyCertificate() {
     const [reason, setReason] = useState('');
     const [otherType, setOtherType] = useState('');
     const [file, setFile] = useState<File | null>(null);
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
     useEffect(() => {
         if (!sessionStorage.getItem('token')) {
@@ -53,24 +58,76 @@ export default function ApplyCertificate() {
         return selectedCertificate.fee * copies;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
+    const validateForm = () => {
         if (!usn || !name || !branch || !year || !phoneNumber || !type || !mode || !copies) {
-            return toast.error('Please fill all required fields.');
+            toast.error('Please fill all required fields.');
+            return false;
+        }
+
+        if (!/^[A-Za-z0-9]{6,20}$/.test(usn.trim())) {
+            toast.error('Enter a valid USN.');
+            return false;
+        }
+
+        if (name.trim().length < 3) {
+            toast.error('Enter the full student name.');
+            return false;
+        }
+
+        const passingYear = Number(year);
+        const currentYear = new Date().getFullYear();
+        if (!Number.isInteger(passingYear) || passingYear < 1990 || passingYear > currentYear + 1) {
+            toast.error('Enter a valid year of passing.');
+            return false;
         }
 
         if (phoneNumber.length !== 10) {
-            return toast.error('Phone number must be exactly 10 digits.');
+            toast.error('Phone number must be exactly 10 digits.');
+            return false;
         }
 
-        if (type === 'other' && !otherType) {
-            return toast.error('Please specify the custom certificate name.');
+        if (type === 'other' && !otherType.trim()) {
+            toast.error('Please specify the custom certificate name.');
+            return false;
+        }
+
+        if ((mode === 'hard' || mode === 'both') && address.trim().length < 12) {
+            toast.error('Enter a complete postal address for hard copy delivery.');
+            return false;
+        }
+
+        if (reason.trim().length < 8) {
+            toast.error('Please provide a short reason for this request.');
+            return false;
         }
 
         if (!file) {
-            return toast.error('Please upload your Government ID proof.');
+            toast.error('Please upload your Government ID proof.');
+            return false;
         }
+
+        const extension = file.name.split('.').pop()?.toLowerCase() || '';
+        if (!ALLOWED_ID_PROOF_EXTENSIONS.includes(extension)) {
+            toast.error('Invalid ID proof format. Allowed: PDF, JPG, JPEG, PNG.');
+            return false;
+        }
+
+        if (file.size > MAX_ID_PROOF_SIZE_BYTES) {
+            toast.error('ID proof file is too large. Maximum allowed size is 10MB.');
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleOpenPayment = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validateForm()) return;
+        setShowPaymentDialog(true);
+    };
+
+    const submitApplication = async (): Promise<void> => {
+        if (!validateForm()) return;
 
         setLoading(true);
 
@@ -101,21 +158,17 @@ export default function ApplyCertificate() {
             });
 
             if (res.ok) {
-                toast.success('Redirecting to secure payment gateway...');
-                setTimeout(() => {
-                    setLoading(false);
-                    router.push('/student/requests');
-                    toast.success('Payment successful. Request submitted!');
-                }, 2000);
+                setShowPaymentDialog(false);
+                toast.success('Demo payment successful. Request submitted.');
+                router.push('/student/requests');
             } else {
                 const data = await res.json();
                 toast.error(data.message || 'Failed to submit application.');
-                setLoading(false);
             }
         } catch (error) {
             toast.error('Network error. Failed to submit.');
-            setLoading(false);
         }
+        setLoading(false);
     };
 
     return (
@@ -125,7 +178,7 @@ export default function ApplyCertificate() {
                 <p className="text-slate-500 mt-1">Fill out the form below to request a new certificate or document.</p>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleOpenPayment}>
                 <Card className="shadow-sm">
                     <CardHeader>
                         <CardTitle>Student Details</CardTitle>
@@ -271,7 +324,19 @@ export default function ApplyCertificate() {
                                     className="hidden"
                                     onChange={(e) => {
                                         if (e.target.files && e.target.files[0]) {
-                                            setFile(e.target.files[0]);
+                                            const selectedFile = e.target.files[0];
+                                            const extension = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+                                            if (!ALLOWED_ID_PROOF_EXTENSIONS.includes(extension)) {
+                                                toast.error('Invalid ID proof format. Allowed: PDF, JPG, JPEG, PNG.');
+                                                e.currentTarget.value = '';
+                                                return;
+                                            }
+                                            if (selectedFile.size > MAX_ID_PROOF_SIZE_BYTES) {
+                                                toast.error('ID proof file is too large. Maximum allowed size is 10MB.');
+                                                e.currentTarget.value = '';
+                                                return;
+                                            }
+                                            setFile(selectedFile);
                                             toast.success('File prepared successfully.');
                                         }
                                     }}
@@ -295,6 +360,17 @@ export default function ApplyCertificate() {
                     </CardFooter>
                 </Card>
             </form>
+
+            <DemoPaymentDialog
+                amount={getFee()}
+                open={showPaymentDialog}
+                processing={loading}
+                title="Certificate Payment"
+                description="Choose a payment method to complete this demo payment and submit the certificate request."
+                payerHint={name.trim() || usn.trim()}
+                onConfirm={submitApplication}
+                onOpenChange={setShowPaymentDialog}
+            />
         </div>
     );
 }

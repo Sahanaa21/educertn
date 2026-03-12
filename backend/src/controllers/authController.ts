@@ -3,19 +3,27 @@ import { prisma } from '../config/prisma';
 import { generateToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
-export const studentLogin = async (req: Request, res: Response): Promise<any> => {
-    const { email } = req.body;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!email) {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const studentLogin = async (req: Request, res: Response): Promise<any> => {
+    const normalizedEmail = String(req.body?.email || '').trim().toLowerCase();
+
+    if (!normalizedEmail) {
         return res.status(400).json({ message: 'Email is required' });
     }
 
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+        return res.status(400).json({ message: 'Enter a valid email address' });
+    }
+
     try {
-        let user = await prisma.user.findUnique({ where: { email } });
+        let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
         if (!user) {
             user = await prisma.user.create({
-                data: { email, role: 'STUDENT' }
+                data: { email: normalizedEmail, role: 'STUDENT' }
             });
         }
 
@@ -25,7 +33,7 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
 
         await prisma.oTP.create({
             data: {
-                email,
+                email: normalizedEmail,
                 otp,
                 expiresAt
             }
@@ -33,7 +41,7 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
 
         // Do not block login flow on SMTP latency.
         void sendEmail(
-            email,
+            normalizedEmail,
             'Your OTP for Global Academy of Technology',
             `<p>Your One-Time Password (OTP) for Global Academy of Technology is:</p>
              <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
@@ -51,18 +59,22 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
 };
 
 export const companyLogin = async (req: Request, res: Response): Promise<any> => {
-    const { email } = req.body;
+    const normalizedEmail = String(req.body?.email || '').trim().toLowerCase();
 
-    if (!email) {
+    if (!normalizedEmail) {
         return res.status(400).json({ message: 'Email is required' });
     }
 
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+        return res.status(400).json({ message: 'Enter a valid company email address' });
+    }
+
     try {
-        let user = await prisma.user.findUnique({ where: { email } });
+        let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
         if (!user) {
             user = await prisma.user.create({
-                data: { email, role: 'COMPANY' }
+                data: { email: normalizedEmail, role: 'COMPANY' }
             });
         }
 
@@ -72,7 +84,7 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
 
         await prisma.oTP.create({
             data: {
-                email,
+                email: normalizedEmail,
                 otp,
                 expiresAt
             }
@@ -80,7 +92,7 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
 
         // Do not block login flow on SMTP latency.
         void sendEmail(
-            email,
+            normalizedEmail,
             'Your Company Verification OTP - Global Academy of Technology',
             `<p>Your One-Time Password (OTP) for company verification is:</p>
              <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
@@ -97,10 +109,19 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
     }
 };
 export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
-    const { email, otp } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp || '').trim();
 
     if (!email || !otp) {
         return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ message: 'Enter a valid email address' });
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+        return res.status(400).json({ message: 'OTP must be exactly 6 digits' });
     }
 
     try {
@@ -131,20 +152,26 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
 };
 
 export const adminLogin = async (req: Request, res: Response): Promise<any> => {
-    const { email, password } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
 
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password required' });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ message: 'Enter a valid email address' });
     }
 
     try {
         const user = await prisma.user.findUnique({ where: { email, role: 'ADMIN' } });
 
         if (!user || user.password !== password) {
+            await sleep(400);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = generateToken({ id: user.id, role: user.role });
+        const token = generateToken({ id: user.id, role: user.role }, '8h');
 
         res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     } catch (error) {
@@ -155,14 +182,15 @@ export const adminLogin = async (req: Request, res: Response): Promise<any> => {
 
 export const changeAdminPassword = async (req: Request, res: Response): Promise<any> => {
     const adminId = (req as any).user?.id;
-    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
 
     if (!currentPassword || !newPassword) {
         return res.status(400).json({ message: 'Current and new password are required' });
     }
 
-    if (newPassword.length < 8) {
-        return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+        return res.status(400).json({ message: 'New password must be at least 8 characters and include letters and numbers' });
     }
 
     try {

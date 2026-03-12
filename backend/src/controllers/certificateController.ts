@@ -23,6 +23,32 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
         const address = body.address || undefined;
         const amount = Number(body.amount) || 0;
 
+        if (!usn || !studentName || !branch || !yearOfPassing || !phoneNumber || !certificateType || !copyType) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        if (!/^\d{10}$/.test(String(phoneNumber))) {
+            return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+        }
+
+        const parsedYear = Number(yearOfPassing);
+        const currentYear = new Date().getFullYear();
+        if (!Number.isInteger(parsedYear) || parsedYear < 1990 || parsedYear > currentYear + 1) {
+            return res.status(400).json({ message: 'Enter a valid year of passing' });
+        }
+
+        if ((copyType === 'HARD_COPY' || copyType === 'BOTH') && !String(address || '').trim()) {
+            return res.status(400).json({ message: 'Postal address is required for hard copy delivery' });
+        }
+
+        if (!String(reason || '').trim()) {
+            return res.status(400).json({ message: 'Reason for request is required' });
+        }
+
+        if (!file) {
+            return res.status(400).json({ message: 'Government ID proof is required' });
+        }
+
         const id = await generateRequestId();
 
         const certificateRequest = await prisma.certificateRequest.create({

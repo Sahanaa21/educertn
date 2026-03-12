@@ -4,6 +4,7 @@ import { simpleRateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 const authLimiter = simpleRateLimit({ windowMs: 60 * 1000, max: 12, keyPrefix: 'auth' });
+const adminAuthLimiter = simpleRateLimit({ windowMs: 15 * 60 * 1000, max: 6, keyPrefix: 'admin-auth' });
 
 // Student routes
 router.post('/login', authLimiter, studentLogin);
@@ -14,6 +15,6 @@ router.post('/company/login', authLimiter, companyLogin);
 router.post('/company/verify-otp', authLimiter, verifyOtp);
 
 // Admin routes
-router.post('/admin/login', authLimiter, adminLogin);
+router.post('/admin/login', adminAuthLimiter, adminLogin);
 
 export default router;

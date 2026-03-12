@@ -4,12 +4,39 @@ import { authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
 
-// Setup basic multer upload destination
-const upload = multer({ dest: path.join(__dirname, '../../uploads/') });
+const upload = multer({
+	dest: path.join(__dirname, '../../uploads/'),
+	limits: { fileSize: 10 * 1024 * 1024 },
+	fileFilter: (_req, file, cb) => {
+		const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+		const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+		const ext = path.extname(file.originalname || '').toLowerCase();
+		const isValidExt = allowedExtensions.includes(ext);
+		const isValidMime = allowedMimeTypes.includes(file.mimetype);
+
+		if (isValidExt || isValidMime) {
+			cb(null, true);
+		} else {
+			cb(new Error('Invalid file type. Allowed: PDF, JPG, JPEG, PNG'));
+		}
+	}
+});
 
 const router = Router();
 
-router.post('/student/certificates', authenticate, upload.single('idProof'), createCertificateRequest);
+const certificateUploadHandler = (req: any, res: any, next: any) => {
+	upload.single('idProof')(req, res, (err: any) => {
+		if (err) {
+			const message = err.code === 'LIMIT_FILE_SIZE'
+				? 'File too large. Maximum allowed size is 10MB.'
+				: (err.message || 'File upload failed');
+			return res.status(400).json({ message });
+		}
+		next();
+	});
+};
+
+router.post('/student/certificates', authenticate, certificateUploadHandler, createCertificateRequest);
 router.get('/student/certificates', authenticate, getStudentRequests);
 
 // Admin routes

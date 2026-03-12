@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function StudentLogin() {
     const router = useRouter();
     const [email, setEmail] = useState('');
@@ -20,14 +22,15 @@ export default function StudentLogin() {
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email) return toast.error('Please enter your email.');
+        if (!email.trim()) return toast.error('Please enter your email.');
+        if (!EMAIL_REGEX.test(email.trim())) return toast.error('Enter a valid email address.');
         setLoading(true);
 
         try {
             const res = await apiFetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email: email.trim().toLowerCase() })
             }, {
                 timeoutMs: 25000,
                 retries: 0,
@@ -60,13 +63,14 @@ export default function StudentLogin() {
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!otp) return toast.error('Please enter the OTP.');
+        if (!/^\d{6}$/.test(otp.trim())) return toast.error('OTP must be exactly 6 digits.');
         setLoading(true);
 
         try {
             const res = await apiFetch('/api/auth/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp })
+                body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() })
             }, {
                 timeoutMs: 45000,
                 retries: 0,

@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function AdminLogin() {
     const router = useRouter();
     const [email, setEmail] = useState('');
@@ -19,14 +21,15 @@ export default function AdminLogin() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password) return toast.error('Check credentials.');
+        if (!email.trim() || !password) return toast.error('Enter your admin email and password.');
+        if (!EMAIL_REGEX.test(email.trim())) return toast.error('Enter a valid admin email address.');
         setLoading(true);
 
         try {
             const res = await apiFetch('/api/auth/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email: email.trim().toLowerCase(), password })
             });
 
             const data = await res.json();

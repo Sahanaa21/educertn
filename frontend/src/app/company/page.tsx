@@ -12,6 +12,7 @@ import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, Check
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
+import DemoPaymentDialog from '@/components/payments/DemoPaymentDialog';
 
 type VerificationRequest = {
     id: string;
@@ -27,6 +28,7 @@ type VerificationRequest = {
 const VERIFICATION_FEE = 5000;
 const MAX_TEMPLATE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TEMPLATE_EXTENSIONS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CompanyVerification() {
     const router = useRouter();
@@ -49,6 +51,7 @@ export default function CompanyVerification() {
     const [studentName, setStudentName] = useState('');
     const [usn, setUsn] = useState('');
     const [verificationTemplate, setVerificationTemplate] = useState<File | null>(null);
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
     // Dashboard States
     const [requests, setRequests] = useState<VerificationRequest[]>([]);
@@ -118,14 +121,15 @@ export default function CompanyVerification() {
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!loginEmail) return toast.error('Please enter your official email.');
+        if (!loginEmail.trim()) return toast.error('Please enter your official email.');
+        if (!EMAIL_REGEX.test(loginEmail.trim())) return toast.error('Enter a valid company email address.');
         setLoading(true);
 
         try {
             const res = await apiFetch('/api/auth/company/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: loginEmail })
+                body: JSON.stringify({ email: loginEmail.trim().toLowerCase() })
             }, {
                 timeoutMs: 25000,
                 retries: 0,
@@ -158,13 +162,14 @@ export default function CompanyVerification() {
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!otp) return toast.error('Please enter the OTP.');
+        if (!/^\d{6}$/.test(otp.trim())) return toast.error('OTP must be exactly 6 digits.');
         setLoading(true);
 
         try {
             const res = await apiFetch('/api/auth/company/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: loginEmail, otp })
+                body: JSON.stringify({ email: loginEmail.trim().toLowerCase(), otp: otp.trim() })
             }, {
                 timeoutMs: 45000,
                 retries: 0,
@@ -174,8 +179,8 @@ export default function CompanyVerification() {
             if (res.ok) {
                 toast.success('Login successful!');
                 sessionStorage.setItem('companyToken', data.token);
-                sessionStorage.setItem('companyEmail', loginEmail);
-                setCompanyEmail(loginEmail); // Pre-fill
+                sessionStorage.setItem('companyEmail', loginEmail.trim().toLowerCase());
+                setCompanyEmail(loginEmail.trim().toLowerCase());
                 setIsAuthenticated(true);
                 fetchRequests(data.token);
                 router.push('/company');
@@ -189,34 +194,72 @@ export default function CompanyVerification() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const validateVerificationForm = () => {
+        if (!companyName.trim() || !contactPerson.trim() || !studentName.trim() || !usn.trim()) {
+            toast.error('Please fill all required fields.');
+            return false;
+        }
+
+        if (companyName.trim().length < 2 || contactPerson.trim().length < 2 || studentName.trim().length < 2) {
+            toast.error('Enter valid names for company, contact person, and candidate.');
+            return false;
+        }
+
+        if (!/^[A-Za-z0-9]{6,20}$/.test(usn.trim())) {
+            toast.error('Enter a valid candidate USN.');
+            return false;
+        }
+
         if (!verificationTemplate) {
-            return toast.error('Please upload the verification template file.');
+            toast.error('Please upload the verification template file.');
+            return false;
         }
 
         const extension = verificationTemplate.name.split('.').pop()?.toLowerCase() || '';
         if (!ALLOWED_TEMPLATE_EXTENSIONS.includes(extension)) {
-            return toast.error('Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG');
+            toast.error('Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG.');
+            return false;
         }
 
         if (verificationTemplate.size > MAX_TEMPLATE_SIZE_BYTES) {
-            return toast.error('File too large. Maximum allowed size is 10MB.');
+            toast.error('File too large. Maximum allowed size is 10MB.');
+            return false;
         }
 
         if (phoneNumber && phoneNumber.length !== 10) {
-            return toast.error('Phone number must be exactly 10 digits.');
+            toast.error('Phone number must be exactly 10 digits.');
+            return false;
         }
+
+        return true;
+    };
+
+    const handleOpenPayment = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validateVerificationForm()) return;
+        setShowPaymentDialog(true);
+    };
+
+    const handleSubmit = async (): Promise<void> => {
+        if (!validateVerificationForm()) return;
 
         setLoading(true);
 
         try {
             const token = sessionStorage.getItem('companyToken');
             const effectiveEmail = companyEmail || sessionStorage.getItem('companyEmail') || '';
+            const templateFile = verificationTemplate;
 
             if (!effectiveEmail) {
                 setLoading(false);
-                return toast.error('Unable to resolve company email. Please login again.');
+                toast.error('Unable to resolve company email. Please login again.');
+                return;
+            }
+
+            if (!templateFile) {
+                setLoading(false);
+                toast.error('Please upload the verification template file.');
+                return;
             }
 
             const formData = new FormData();
@@ -226,7 +269,7 @@ export default function CompanyVerification() {
             formData.append('phone', phoneNumber);
             formData.append('studentName', studentName);
             formData.append('usn', usn);
-            formData.append('verificationTemplate', verificationTemplate);
+            formData.append('verificationTemplate', templateFile);
 
             const res = await apiFetch('/api/company/verifications', {
                 method: 'POST',
@@ -237,32 +280,26 @@ export default function CompanyVerification() {
             });
 
             if (res.ok) {
-                toast.success('Redirecting to secure payment gateway...');
-                setTimeout(() => {
-                    setLoading(false);
-                    toast.success('Payment successful. Request Submitted!');
-                    // Reset form and show dashboard
-                    setStudentName('');
-                    setUsn('');
-                    setVerificationTemplate(null);
+                setShowPaymentDialog(false);
+                toast.success('Demo payment successful. Request submitted.');
+                setStudentName('');
+                setUsn('');
+                setVerificationTemplate(null);
 
-                    if (token) fetchRequests(token);
-                    router.push('/company/requests');
-                }, 2000);
+                if (token) fetchRequests(token);
+                router.push('/company/requests');
             } else {
                 if (res.status === 401 || res.status === 403) {
                     handleUnauthorized();
-                    setLoading(false);
                     return;
                 }
                 const data = await res.json();
                 toast.error(data.message || 'Failed to submit verification request.');
-                setLoading(false);
             }
         } catch (error) {
             toast.error('Network error. Failed to submit.');
-            setLoading(false);
         }
+        setLoading(false);
     };
 
     const handleDownloadResponse = async (id: string, requestId: string) => {
@@ -637,7 +674,7 @@ export default function CompanyVerification() {
                             </div>
                         </Card>
                     ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
+                    <form onSubmit={handleOpenPayment} className="space-y-6 max-w-4xl mx-auto">
                         <Card className="shadow-md border-t-4 border-t-yellow-500">
                             <CardHeader>
                                 <CardTitle>Agency / Company Details</CardTitle>
@@ -716,6 +753,19 @@ export default function CompanyVerification() {
                                             required
                                             onChange={(e) => {
                                                 const selected = e.target.files?.[0] || null;
+                                                if (selected) {
+                                                    const extension = selected.name.split('.').pop()?.toLowerCase() || '';
+                                                    if (!ALLOWED_TEMPLATE_EXTENSIONS.includes(extension)) {
+                                                        toast.error('Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG.');
+                                                        e.currentTarget.value = '';
+                                                        return;
+                                                    }
+                                                    if (selected.size > MAX_TEMPLATE_SIZE_BYTES) {
+                                                        toast.error('File too large. Maximum allowed size is 10MB.');
+                                                        e.currentTarget.value = '';
+                                                        return;
+                                                    }
+                                                }
                                                 setVerificationTemplate(selected);
                                             }}
                                         />
@@ -736,6 +786,17 @@ export default function CompanyVerification() {
                     </form>
                     )
                 )}
+
+                <DemoPaymentDialog
+                    amount={VERIFICATION_FEE}
+                    open={showPaymentDialog}
+                    processing={loading}
+                    title="Verification Payment"
+                    description="Choose a payment method to complete this demo payment and submit the verification request."
+                    payerHint={companyName.trim() || companyEmail}
+                    onConfirm={handleSubmit}
+                    onOpenChange={setShowPaymentDialog}
+                />
                 </div>
             </main>
             </div>

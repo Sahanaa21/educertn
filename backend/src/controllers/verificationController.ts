@@ -22,11 +22,15 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
             return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        const { companyName, companyEmail, contactPerson, phone, studentName, usn } = req.body as Record<string, string>;
+        const { companyName, contactPerson, phone, studentName, usn } = req.body as Record<string, string>;
         const templateFile = req.file;
 
         if (!companyName || !contactPerson || !studentName || !usn) {
             return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        if (phone && !/^\d{10}$/.test(String(phone))) {
+            return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
         }
 
         if (!templateFile) {
