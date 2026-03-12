@@ -23,6 +23,16 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         setIsSidebarOpen(window.innerWidth >= 768);
     }, []);
 
+    useEffect(() => {
+        const clearStudentSession = () => {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+        };
+
+        window.addEventListener('beforeunload', clearStudentSession);
+        return () => window.removeEventListener('beforeunload', clearStudentSession);
+    }, []);
+
     // close on mobile when route changes
     useEffect(() => {
         if (window.innerWidth < 768) setIsSidebarOpen(false);
@@ -117,6 +127,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             title="Logout"
                             onClick={() => {
                                 sessionStorage.removeItem('token');
+                                sessionStorage.removeItem('user');
                                 router.push('/student/login');
                             }}
                             className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"

@@ -36,6 +36,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setMounted(true);
     }, []);
 
+    useEffect(() => {
+        const clearAdminSession = () => {
+            sessionStorage.removeItem('adminToken');
+        };
+
+        window.addEventListener('beforeunload', clearAdminSession);
+        return () => window.removeEventListener('beforeunload', clearAdminSession);
+    }, []);
+
     if (!mounted) return null;
 
     if (pathname === '/admin/login') {

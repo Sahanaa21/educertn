@@ -105,6 +105,16 @@ export default function CompanyVerification() {
     }, []);
 
     useEffect(() => {
+        const clearCompanySession = () => {
+            sessionStorage.removeItem('companyToken');
+            sessionStorage.removeItem('companyEmail');
+        };
+
+        window.addEventListener('beforeunload', clearCompanySession);
+        return () => window.removeEventListener('beforeunload', clearCompanySession);
+    }, []);
+
+    useEffect(() => {
         if (pathname === '/company/requests') {
             setPanelView('requests');
         } else if (pathname === '/company/apply') {
