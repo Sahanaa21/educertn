@@ -18,28 +18,30 @@ export default function Header() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-white text-slate-800 shadow-sm">
-            <div className="container mx-auto flex h-18 items-center justify-between gap-3 px-3 sm:px-6 lg:h-24 lg:px-8">
-                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="container mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
+                {/* Logo and Title Section */}
+                <div className="flex items-center gap-3 min-w-0">
                     <Link href="/" className="shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div className="relative h-12 w-36 sm:h-14 sm:w-44 lg:h-20 lg:w-72">
+                        <div className="relative h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16">
                             <Image
                                 src="/logo.png?v=20260310"
                                 alt="Global Academy of Technology Logo"
                                 fill
                                 unoptimized
-                                className="object-contain object-left"
+                                className="object-contain"
                                 priority
                             />
                         </div>
                     </Link>
 
-                    <div className="hidden md:flex flex-col justify-center leading-tight whitespace-nowrap">
-                        <span className="text-base font-bold text-blue-950 uppercase tracking-wide lg:text-xl">Global Academy of Technology</span>
-                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide lg:text-sm">Certificate & Verification Portal</span>
+                    <div className="flex flex-col justify-center leading-tight">
+                        <span className="text-sm sm:text-base lg:text-lg font-bold text-blue-950 uppercase tracking-tight lg:tracking-wide">Global Academy of Technology</span>
+                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-tight lg:tracking-wide">Certificate & Verification Portal</span>
                     </div>
                 </div>
 
-                <nav className="ml-auto hidden lg:flex items-center gap-6 font-semibold text-sm">
+                {/* Desktop Navigation */}
+                <nav className="ml-auto hidden lg:flex items-center gap-8 font-semibold text-sm">
                     {navLinks.map((link) => (
                         <Link key={link.href} href={link.href} className="hover:text-yellow-500 transition-colors">
                             {link.label}
@@ -47,6 +49,7 @@ export default function Header() {
                     ))}
                 </nav>
 
+                {/* Mobile Menu Button */}
                 <button
                     type="button"
                     className="inline-flex items-center justify-center rounded-md border border-slate-200 p-2 text-slate-700 lg:hidden"
@@ -58,6 +61,7 @@ export default function Header() {
                 </button>
             </div>
 
+            {/* Mobile Menu */}
             {isMobileMenuOpen && (
                 <nav className="border-t bg-white px-4 py-3 shadow-sm lg:hidden">
                     <div className="flex flex-col gap-2">
