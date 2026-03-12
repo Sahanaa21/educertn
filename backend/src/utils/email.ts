@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import dns from 'dns';
 import nodemailer from 'nodemailer';
 
 const configuredFrom = (process.env.SMTP_FROM_EMAIL || '').trim();
@@ -24,18 +25,47 @@ if (!configuredFrom && !smtpUser) {
     console.warn('SMTP_FROM_EMAIL and SMTP_USER are not set. Using fallback sender address.');
 }
 
-const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
+const smtpPort = Number(process.env.SMTP_PORT) || 587;
+
+let cachedSmtpIpv4: string | null = null;
+
+const resolveSmtpHost = async () => {
+    if (cachedSmtpIpv4) {
+        return cachedSmtpIpv4;
+    }
+
+    try {
+        const ipv4List = await dns.promises.resolve4(smtpHost);
+        if (ipv4List.length > 0) {
+            cachedSmtpIpv4 = ipv4List[0];
+            return cachedSmtpIpv4;
+        }
+    } catch (error) {
+        console.warn(`IPv4 resolution failed for ${smtpHost}. Falling back to hostname.`, error instanceof Error ? error.message : error);
+    }
+
+    return smtpHost;
+};
 
 export const sendEmail = async (to: string, subject: string, html: string, attachments?: any[]) => {
     try {
+        const smtpConnectionHost = await resolveSmtpHost();
+        const transporter = nodemailer.createTransport({
+            host: smtpConnectionHost,
+            port: smtpPort,
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+            connectionTimeout: 20000,
+            greetingTimeout: 20000,
+            socketTimeout: 30000,
+            tls: {
+                servername: smtpHost,
+            },
+        });
+
         const info = await transporter.sendMail({
             from: `"${fromName}" <${fromAddress}>`,
             to,
