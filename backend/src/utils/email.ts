@@ -12,6 +12,8 @@ const configuredHost = (process.env.SMTP_HOST || '').trim();
 const smtpHost = configuredHost.toLowerCase() === 'mtp-relay.brevo.com'
     ? 'smtp-relay.brevo.com'
     : (configuredHost || 'smtp-relay.brevo.com');
+const forceIpv4 = (process.env.SMTP_FORCE_IPV4 || 'false').toLowerCase() === 'true';
+const smtpSecureEnv = (process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
 
 if (configuredHost.toLowerCase() === 'mtp-relay.brevo.com') {
     console.warn('SMTP_HOST typo detected (mtp-relay.brevo.com). Auto-correcting to smtp-relay.brevo.com.');
@@ -25,56 +27,75 @@ if (!configuredFrom && !smtpUser) {
     console.warn('SMTP_FROM_EMAIL and SMTP_USER are not set. Using fallback sender address.');
 }
 
-const smtpPort = Number(process.env.SMTP_PORT) || 587;
+const configuredPrimaryPort = Number(process.env.SMTP_PORT) || 587;
+const smtpPorts = Array.from(new Set([configuredPrimaryPort, 2525, 465]));
 
-let cachedSmtpIpv4: string | null = null;
+let cachedSmtpIpv4List: string[] | null = null;
 
-const resolveSmtpHost = async () => {
-    if (cachedSmtpIpv4) {
-        return cachedSmtpIpv4;
+const resolveSmtpHosts = async () => {
+    if (cachedSmtpIpv4List) {
+        return forceIpv4 ? cachedSmtpIpv4List : [smtpHost, ...cachedSmtpIpv4List];
     }
 
     try {
         const ipv4List = await dns.promises.resolve4(smtpHost);
+        cachedSmtpIpv4List = ipv4List;
+        if (forceIpv4 && ipv4List.length > 0) {
+            return ipv4List;
+        }
         if (ipv4List.length > 0) {
-            cachedSmtpIpv4 = ipv4List[0];
-            return cachedSmtpIpv4;
+            return [smtpHost, ...ipv4List];
         }
     } catch (error) {
         console.warn(`IPv4 resolution failed for ${smtpHost}. Falling back to hostname.`, error instanceof Error ? error.message : error);
     }
 
-    return smtpHost;
+    return [smtpHost];
 };
 
 export const sendEmail = async (to: string, subject: string, html: string, attachments?: any[]) => {
-    try {
-        const smtpConnectionHost = await resolveSmtpHost();
-        const transporter = nodemailer.createTransport({
-            host: smtpConnectionHost,
-            port: smtpPort,
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-            connectionTimeout: 20000,
-            greetingTimeout: 20000,
-            socketTimeout: 30000,
-            tls: {
-                servername: smtpHost,
-            },
-        });
+    const smtpHosts = await resolveSmtpHosts();
+    let lastError: unknown = null;
 
-        const info = await transporter.sendMail({
-            from: `"${fromName}" <${fromAddress}>`,
-            to,
-            subject,
-            html,
-            ...(attachments && attachments.length > 0 ? { attachments } : {}),
-        });
-        console.log(`Email sent successfully to ${to}:`, info.messageId);
-        return info;
+    try {
+        for (const host of smtpHosts) {
+            for (const port of smtpPorts) {
+                try {
+                    const isSecure = smtpSecureEnv || port === 465;
+                    const transporter = nodemailer.createTransport({
+                        host,
+                        port,
+                        secure: isSecure,
+                        auth: {
+                            user: process.env.SMTP_USER,
+                            pass: process.env.SMTP_PASS,
+                        },
+                        connectionTimeout: 12000,
+                        greetingTimeout: 12000,
+                        socketTimeout: 15000,
+                        tls: {
+                            servername: smtpHost,
+                        },
+                    });
+
+                    const info = await transporter.sendMail({
+                        from: `"${fromName}" <${fromAddress}>`,
+                        to,
+                        subject,
+                        html,
+                        ...(attachments && attachments.length > 0 ? { attachments } : {}),
+                    });
+
+                    console.log(`Email sent successfully to ${to} via ${host}:${port}:`, info.messageId);
+                    return info;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`SMTP attempt failed on ${host}:${port}. Trying next route...`, error instanceof Error ? error.message : error);
+                }
+            }
+        }
+
+        throw lastError || new Error('All SMTP attempts failed');
     } catch (error) {
         console.error(`Email send failed for ${to}:`, error instanceof Error ? error.message : error);
         throw error;
