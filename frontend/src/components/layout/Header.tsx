@@ -33,9 +33,9 @@ export default function Header() {
                         </div>
                     </Link>
 
-                    <div className="hidden min-w-0 md:flex flex-col justify-center leading-tight">
-                        <span className="truncate text-base font-bold text-blue-950 uppercase tracking-wide lg:text-xl">Global Academy of Technology</span>
-                        <span className="truncate text-xs font-semibold text-slate-600 uppercase tracking-wide lg:text-sm">Certificate & Verification Portal</span>
+                    <div className="hidden md:flex flex-col justify-center leading-tight whitespace-nowrap">
+                        <span className="text-base font-bold text-blue-950 uppercase tracking-wide lg:text-xl">Global Academy of Technology</span>
+                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide lg:text-sm">Certificate & Verification Portal</span>
                     </div>
                 </div>
 
