@@ -200,13 +200,23 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
             return res.status(400).json({ message: 'Upload completed file before marking as completed' });
         }
 
-        const updated = await prisma.verificationRequest.update({
-            where: { id },
-            data: {
-                status,
-                ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {})
+        let updated: any;
+        try {
+            updated = await prisma.verificationRequest.update({
+                where: { id },
+                data: {
+                    status,
+                    ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {})
+                }
+            }) as any;
+        } catch (updateErr: any) {
+            // Fallback: column may not exist yet in DB, retry without rejectionReason
+            if (updateErr?.message?.includes('rejectionReason') || updateErr?.code === 'P2009') {
+                updated = await prisma.verificationRequest.update({ where: { id }, data: { status } }) as any;
+            } else {
+                throw updateErr;
             }
-        }) as any;
+        }
 
         if (status === 'COMPLETED' && updated.companyEmail) {
             const emailHtml = `
