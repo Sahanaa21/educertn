@@ -86,6 +86,19 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
     }
 
     try {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+        await sendEmail(
+            normalizedEmail,
+            'Your Company Verification OTP - Global Academy of Technology',
+            `<p>Your One-Time Password (OTP) for company verification is:</p>
+             <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
+             <p>This OTP expires in 10 minutes.</p>
+               <p>If you did not request this, please ignore this email.</p>`
+           );
+
         let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
         if (!user) {
@@ -93,10 +106,6 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
                 data: { email: normalizedEmail, role: 'COMPANY' }
             });
         }
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
         await prisma.oTP.create({
             data: {
@@ -106,21 +115,12 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        // Do not block login flow on SMTP latency.
-        void sendEmail(
-            normalizedEmail,
-            'Your Company Verification OTP - Global Academy of Technology',
-            `<p>Your One-Time Password (OTP) for company verification is:</p>
-             <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
-             <p>This OTP expires in 10 minutes.</p>
-             <p>If you did not request this, please ignore this email.</p>`
-        ).catch((error) => {
-            console.error('Company OTP email dispatch failed:', error);
-        });
-
         res.json({ message: 'OTP sent to your company email. Check your inbox.' });
     } catch (error) {
         console.error('Company login OTP send failed:', error);
+        if (isInvalidRecipientError(error)) {
+            return res.status(400).json({ message: 'Invalid email entered. Please check and try again.' });
+        }
         res.status(500).json({ message: 'Failed to send OTP to company email. Please verify the email address.' });
     }
 };
