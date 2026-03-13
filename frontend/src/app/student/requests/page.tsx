@@ -77,13 +77,21 @@ export default function StudentRequests() {
                                     <TableCell>{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
                                     <TableCell>{req.copyType.replace('_', ' ')} ({req.copies})</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={
-                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
-                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                                                    'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                        }>
-                                            {req.status}
-                                        </Badge>
+                                        <div className="space-y-1">
+                                            <Badge variant="outline" className={
+                                                req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
+                                                    req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                                                        req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
+                                                            'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                            }>
+                                                {req.status}
+                                            </Badge>
+                                            {req.status === 'REJECTED' && req.rejectionReason ? (
+                                                <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                    Reason: {req.rejectionReason}
+                                                </p>
+                                            ) : null}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
@@ -149,6 +157,13 @@ export default function StudentRequests() {
                                                                         <p className="text-sm text-slate-700 bg-slate-50 p-2 rounded-md mt-1 leading-relaxed">{req.address}</p>
                                                                     </div>
                                                                 )}
+                                                            </div>
+                                                        )}
+
+                                                        {req.status === 'REJECTED' && req.rejectionReason && (
+                                                            <div className="pt-4 border-t">
+                                                                <p className="text-sm font-medium text-red-700">Rejection Reason</p>
+                                                                <p className="mt-1 rounded-md bg-red-50 p-2 text-sm text-red-800">{req.rejectionReason}</p>
                                                             </div>
                                                         )}
                                                     </div>

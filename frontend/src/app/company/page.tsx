@@ -21,6 +21,7 @@ type VerificationRequest = {
     studentName: string;
     usn: string;
     status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+    rejectionReason?: string | null;
     paymentStatus: string;
     createdAt: string;
 };
@@ -594,14 +595,21 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    <Badge variant="outline" className={
-                                                        req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
-                                                            req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                                                                req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
-                                                                    'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                    }>
-                                                        {req.status}
-                                                    </Badge>
+                                                    <div className="space-y-1">
+                                                        <Badge variant="outline" className={
+                                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
+                                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                                                                    req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
+                                                                        'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                                        }>
+                                                            {req.status}
+                                                        </Badge>
+                                                        {req.status === 'REJECTED' && req.rejectionReason ? (
+                                                            <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                                Reason: {req.rejectionReason}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
@@ -658,14 +666,21 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    <Badge variant="outline" className={
-                                                        req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
-                                                            req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                                                                req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
-                                                                    'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                    }>
-                                                        {req.status}
-                                                    </Badge>
+                                                    <div className="space-y-1">
+                                                        <Badge variant="outline" className={
+                                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
+                                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
+                                                                    req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
+                                                                        'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                                        }>
+                                                            {req.status}
+                                                        </Badge>
+                                                        {req.status === 'REJECTED' && req.rejectionReason ? (
+                                                            <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                                Reason: {req.rejectionReason}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
