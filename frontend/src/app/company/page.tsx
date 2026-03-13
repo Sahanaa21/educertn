@@ -879,7 +879,8 @@ export default function CompanyVerification() {
                                         ) : (
                                             <span className="text-sm font-medium text-center">Click to upload company template</span>
                                         )}
-                                        <span className="text-xs mt-1">Allowed: PDF, DOC, DOCX, JPG, PNG | Max 10MB</span>
+                                        <span className="text-xs mt-1">Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG</span>
+                                        <span className="text-xs">Maximum size: 10MB</span>
                                         <input
                                             id="template-upload"
                                             type="file"

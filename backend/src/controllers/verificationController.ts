@@ -125,7 +125,8 @@ export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Respon
             return res.status(400).json({ message: 'Completed response file not available yet' });
         }
 
-        return res.download(resolvedCompletedFilePath, `${request.requestId}-completed-file`);
+        const extension = path.extname(resolvedCompletedFilePath || '') || '';
+        return res.download(resolvedCompletedFilePath, `${request.requestId}-completed-file${extension}`);
     } catch (error) {
         console.error('Error downloading completed verification file:', error);
         return res.status(500).json({ message: 'Internal server error' });

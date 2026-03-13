@@ -269,7 +269,10 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
             `;
 
             const attachments = updated.completedFile
-                ? [{ filename: `${updated.requestId}-completed-file`, path: updated.completedFile }]
+                ? [{
+                    filename: `${updated.requestId}-completed-file${path.extname(updated.completedFile || '') || ''}`,
+                    path: updated.completedFile
+                }]
                 : undefined;
 
             await sendEmail(
@@ -330,7 +333,8 @@ export const downloadVerificationTemplate = async (req: Request, res: Response):
             return res.status(404).json({ message: 'Uploaded template file not found' });
         }
 
-        return res.download(resolvedTemplatePath, `${verification.requestId}-template`);
+        const extension = path.extname(resolvedTemplatePath || '') || '';
+        return res.download(resolvedTemplatePath, `${verification.requestId}-template${extension}`);
     } catch (error) {
         console.error('Error downloading verification template:', error);
         return res.status(500).json({ message: 'Internal server error' });

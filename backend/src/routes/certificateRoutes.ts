@@ -4,8 +4,18 @@ import { authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
 
+const uploadsDir = path.join(__dirname, '../../uploads/');
+const certificateStorage = multer.diskStorage({
+	destination: uploadsDir,
+	filename: (_req, file, cb) => {
+		const ext = path.extname(file.originalname || '').toLowerCase();
+		const safeExt = ext || '.bin';
+		cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
+	}
+});
+
 const upload = multer({
-	dest: path.join(__dirname, '../../uploads/'),
+	storage: certificateStorage,
 	limits: { fileSize: 10 * 1024 * 1024 },
 	fileFilter: (_req, file, cb) => {
 		const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];

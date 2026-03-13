@@ -16,9 +16,19 @@ import multer from 'multer';
 import path from 'path';
 import { simpleRateLimit } from '../middleware/rateLimit';
 
-const upload = multer({ dest: path.join(__dirname, '../../uploads/') });
+const uploadsDir = path.join(__dirname, '../../uploads/');
+const uploadsWithExtStorage = multer.diskStorage({
+	destination: uploadsDir,
+	filename: (_req, file, cb) => {
+		const ext = path.extname(file.originalname || '').toLowerCase();
+		const safeExt = ext || '.bin';
+		cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
+	}
+});
+
+const upload = multer({ storage: uploadsWithExtStorage });
 const verificationResponseUpload = multer({
-	dest: path.join(__dirname, '../../uploads/'),
+	storage: uploadsWithExtStorage,
 	limits: { fileSize: 10 * 1024 * 1024 }
 });
 const adminMutationLimiter = simpleRateLimit({ windowMs: 60 * 1000, max: 30, keyPrefix: 'admin-mutation' });

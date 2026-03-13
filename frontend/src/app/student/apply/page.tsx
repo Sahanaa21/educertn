@@ -340,6 +340,8 @@ export default function ApplyCertificate() {
                                 ) : (
                                     <span className="text-sm font-medium">Click to upload or drag & drop</span>
                                 )}
+                                <span className="mt-1 text-xs text-slate-500">Supported formats: PDF, JPG, JPEG, PNG</span>
+                                <span className="text-xs text-slate-500">Maximum size: 10MB</span>
                                 <input
                                     id="id-upload"
                                     type="file"
