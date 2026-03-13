@@ -264,16 +264,23 @@ export default function AdminCertificates() {
                                     <TableCell className="align-top py-3">
                                         <div className="text-xs text-blue-700 break-all">{req.user?.email || '—'}</div>
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap align-top py-3">
-                                        <Badge variant="outline" className={
-                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50 font-bold tracking-wider' :
-                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50 font-bold tracking-wider' :
-                                                    req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50 font-bold tracking-wider' :
-                                                        'border-yellow-500 text-yellow-700 bg-yellow-50 font-bold tracking-wider'
-                                        }>
-                                            {req.status === 'PENDING' ? <CheckCircle className="w-3 h-3 mr-1 inline" /> : null}
-                                            {req.status}
-                                        </Badge>
+                                    <TableCell className="align-top py-3">
+                                        <div className="space-y-1">
+                                            <Badge variant="outline" className={
+                                                req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50 font-bold tracking-wider' :
+                                                    req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50 font-bold tracking-wider' :
+                                                        req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50 font-bold tracking-wider' :
+                                                            'border-yellow-500 text-yellow-700 bg-yellow-50 font-bold tracking-wider'
+                                            }>
+                                                {req.status === 'PENDING' ? <CheckCircle className="w-3 h-3 mr-1 inline" /> : null}
+                                                {req.status}
+                                            </Badge>
+                                            {req.status === 'REJECTED' && req.rejectionReason ? (
+                                                <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                    Reason: {req.rejectionReason}
+                                                </p>
+                                            ) : null}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         <div className="font-bold text-green-700">{req.paymentStatus}</div>
@@ -406,7 +413,10 @@ export default function AdminCertificates() {
                                                 <span className="text-xs font-semibold text-green-600 italic">Marked as Finalized</span>
                                             )}
                                             {req.status === 'REJECTED' && (
-                                                <span className="text-xs font-semibold text-red-600 italic">Request Denied</span>
+                                                <div className="text-xs font-semibold text-red-600 italic">
+                                                    Request Denied
+                                                    {req.rejectionReason ? `: ${req.rejectionReason}` : ''}
+                                                </div>
                                             )}
                                         </div>
                                     </TableCell>
