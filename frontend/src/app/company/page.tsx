@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, LayoutDashboard, ClipboardList, FilePlus, LogOut } from 'lucide-react';
+import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, LayoutDashboard, ClipboardList, FilePlus, LogOut, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
@@ -53,6 +54,9 @@ export default function CompanyVerification() {
     const [usn, setUsn] = useState('');
     const [verificationTemplate, setVerificationTemplate] = useState<File | null>(null);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [requestSearch, setRequestSearch] = useState('');
+    const [requestStatusFilter, setRequestStatusFilter] = useState('ALL');
+    const [requestSortBy, setRequestSortBy] = useState('NEWEST');
 
     // Dashboard States
     const [requests, setRequests] = useState<VerificationRequest[]>([]);
@@ -364,6 +368,38 @@ export default function CompanyVerification() {
         router.push('/company');
     };
 
+    const filteredCompanyRequests = requests.filter((req) => {
+        const q = requestSearch.trim().toLowerCase();
+        const matchesSearch = !q ||
+            String(req.requestId || '').toLowerCase().includes(q) ||
+            String(req.studentName || '').toLowerCase().includes(q) ||
+            String(req.usn || '').toLowerCase().includes(q) ||
+            String(req.status || '').toLowerCase().includes(q);
+
+        const matchesStatus = requestStatusFilter === 'ALL' || req.status === requestStatusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    const requestStatusRank: Record<string, number> = {
+        PENDING: 1,
+        PROCESSING: 2,
+        COMPLETED: 3,
+        REJECTED: 4,
+    };
+
+    const sortedCompanyRequests = [...filteredCompanyRequests].sort((a, b) => {
+        if (requestSortBy === 'OLDEST') {
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        if (requestSortBy === 'STATUS_ASC') {
+            return (requestStatusRank[a.status] || 99) - (requestStatusRank[b.status] || 99);
+        }
+        if (requestSortBy === 'STATUS_DESC') {
+            return (requestStatusRank[b.status] || 99) - (requestStatusRank[a.status] || 99);
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
     if (mainLoading) {
         return <div className="p-8 text-center text-slate-500 min-h-[70vh] flex items-center justify-center">Loading...</div>;
     }
@@ -642,25 +678,88 @@ export default function CompanyVerification() {
                     </div>
                 ) : (
                     panelView === 'requests' ? (
-                        <Card className="overflow-hidden shadow-sm">
+                        <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+                                <div className="flex items-center gap-3">
+                                    <ClipboardList className="h-6 w-6 text-orange-400" />
+                                    <h2 className="text-lg font-bold tracking-tight">My Verification Applications</h2>
+                                    <span className="text-sm text-slate-400">{requests.length} requests</span>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                                    onClick={() => {
+                                        const token = sessionStorage.getItem('companyToken');
+                                        if (token) fetchRequests(token);
+                                    }}
+                                >
+                                    <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                                </Button>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-800 p-3 rounded-lg text-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">Status:</span>
+                                    <Select value={requestStatusFilter} onValueChange={(value) => setRequestStatusFilter(value || 'ALL')}>
+                                        <SelectTrigger className="w-36 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                                            <SelectValue placeholder="All" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                                            <SelectItem value="ALL">All</SelectItem>
+                                            <SelectItem value="PENDING">Pending</SelectItem>
+                                            <SelectItem value="PROCESSING">Processing</SelectItem>
+                                            <SelectItem value="COMPLETED">Completed</SelectItem>
+                                            <SelectItem value="REJECTED">Rejected</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <ArrowUpDown className="h-4 w-4 text-slate-400" />
+                                    <Select value={requestSortBy} onValueChange={(value) => setRequestSortBy(value || 'NEWEST')}>
+                                        <SelectTrigger className="w-44 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                                            <SelectValue placeholder="Sort by" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                                            <SelectItem value="NEWEST">Newest First</SelectItem>
+                                            <SelectItem value="OLDEST">Oldest First</SelectItem>
+                                            <SelectItem value="STATUS_ASC">Status (A-Z)</SelectItem>
+                                            <SelectItem value="STATUS_DESC">Status (Z-A)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="relative w-full sm:w-72 sm:ml-auto">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                                    <Input
+                                        placeholder="Search by ID, student, USN, status..."
+                                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                                        value={requestSearch}
+                                        onChange={(e) => setRequestSearch(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                        <Card className="overflow-hidden shadow-md border border-slate-200">
                             <CardHeader>
                                 <CardTitle>All Verification Requests</CardTitle>
                                 <CardDescription>Track all requests and download completed responses.</CardDescription>
                             </CardHeader>
                             <div className="overflow-x-auto w-full">
-                                <Table>
-                                    <TableHeader className="bg-slate-50 border-y">
+                                <Table className="w-full min-w-5xl text-sm">
+                                    <TableHeader className="bg-slate-900 border-y">
                                         <TableRow>
-                                            <TableHead className="whitespace-nowrap">Request ID</TableHead>
-                                            <TableHead className="whitespace-nowrap">Student Name</TableHead>
-                                            <TableHead className="whitespace-nowrap">USN</TableHead>
-                                            <TableHead className="whitespace-nowrap">Status</TableHead>
-                                            <TableHead className="whitespace-nowrap">Date</TableHead>
-                                            <TableHead className="whitespace-nowrap">Download Response</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Request ID</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Student Name</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">USN</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Download Response</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {requests.map((req) => (
+                                        {sortedCompanyRequests.map((req) => (
                                             <TableRow key={req.id}>
                                                 <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
@@ -699,7 +798,7 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                             </TableRow>
                                         ))}
-                                        {requests.length === 0 && (
+                                        {sortedCompanyRequests.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">No requests found.</TableCell>
                                             </TableRow>
@@ -708,6 +807,7 @@ export default function CompanyVerification() {
                                 </Table>
                             </div>
                         </Card>
+                        </div>
                     ) : (
                     <form onSubmit={handleOpenPayment} className="space-y-6 max-w-4xl mx-auto">
                         <Card className="shadow-md border-t-4 border-t-yellow-500">
