@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "migrate:upload-extensions": "node scripts/migrate_upload_extensions.js",
     "cleanup:test-data": "node scripts/cleanup_test_data.js",
+    "cleanup:orphan-files": "node scripts/cleanup_orphan_file_refs.js",
     "test:verification": "node scripts/test_verification_api.js",
     "test:issues": "node scripts/test_issue_reports.js"
   },
