@@ -4,6 +4,7 @@ import { generateToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STUDENT_EMAIL_REGEX = /^[^\s@]+@gat\.ac\.in$/i;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -16,6 +17,10 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
 
     if (!EMAIL_REGEX.test(normalizedEmail)) {
         return res.status(400).json({ message: 'Enter a valid email address' });
+    }
+
+    if (!STUDENT_EMAIL_REGEX.test(normalizedEmail)) {
+        return res.status(400).json({ message: 'Use your official student email ending with @gat.ac.in' });
     }
 
     try {
@@ -125,6 +130,12 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     }
 
     try {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (user?.role === 'STUDENT' && !STUDENT_EMAIL_REGEX.test(email)) {
+            return res.status(400).json({ message: 'Use your official student email ending with @gat.ac.in' });
+        }
+
         const validOtp = await prisma.oTP.findFirst({
             where: { email, otp },
             orderBy: { createdAt: 'desc' }
@@ -133,8 +144,6 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
         if (!validOtp || validOtp.expiresAt < new Date()) {
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
-
-        const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });

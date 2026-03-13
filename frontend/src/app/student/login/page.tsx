@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STUDENT_EMAIL_REGEX = /^[^\s@]+@gat\.ac\.in$/i;
 
 export default function StudentLogin() {
     const router = useRouter();
@@ -24,6 +25,7 @@ export default function StudentLogin() {
         e.preventDefault();
         if (!email.trim()) return toast.error('Please enter your email.');
         if (!EMAIL_REGEX.test(email.trim())) return toast.error('Enter a valid email address.');
+        if (!STUDENT_EMAIL_REGEX.test(email.trim())) return toast.error('Use your official student email ending with @gat.ac.in.');
         setLoading(true);
 
         try {
