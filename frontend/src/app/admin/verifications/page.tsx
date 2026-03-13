@@ -36,6 +36,7 @@ export default function AdminVerifications() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [rejectingId, setRejectingId] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
 
     const fetchRequests = async () => {
         const token = sessionStorage.getItem('adminToken');
@@ -147,6 +148,7 @@ export default function AdminVerifications() {
 
             if (res.ok) {
                 toast.success('Completed file uploaded');
+                setSelectedFiles((prev) => ({ ...prev, [id]: null }));
                 fetchRequests();
             } else {
                 const data = await res.json();
@@ -293,16 +295,39 @@ export default function AdminVerifications() {
                                     </TableCell>
                                     <TableCell className="p-2 align-top min-w-72">
                                         <div className="flex w-68 flex-col gap-2">
-                                            <label className="inline-flex items-center justify-center gap-2 h-8 px-3 rounded-md border border-slate-300 bg-white text-sm cursor-pointer hover:bg-slate-50">
-                                                <Upload className="h-4 w-4" /> Upload
+                                            <label className={`inline-flex items-center justify-center gap-2 h-8 px-3 rounded-md border text-sm ${req.status === 'COMPLETED' ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border-slate-300 bg-white cursor-pointer hover:bg-slate-50'}`}>
+                                                <Upload className="h-4 w-4" /> Select File
                                                 <input
                                                     type="file"
                                                     className="hidden"
                                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                                    disabled={processingId === req.id}
-                                                    onChange={(e) => uploadCompletedFile(req.id, e.target.files?.[0] || null)}
+                                                    disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0] || null;
+                                                        setSelectedFiles((prev) => ({ ...prev, [req.id]: file }));
+                                                    }}
                                                 />
                                             </label>
+
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-blue-700 border-blue-300 hover:bg-blue-50"
+                                                onClick={() => uploadCompletedFile(req.id, selectedFiles[req.id] || null)}
+                                                disabled={
+                                                    processingId === req.id ||
+                                                    req.status === 'COMPLETED' ||
+                                                    req.status === 'REJECTED' ||
+                                                    !selectedFiles[req.id]
+                                                }
+                                            >
+                                                {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                                                Upload
+                                            </Button>
+
+                                            {selectedFiles[req.id] ? (
+                                                <p className="text-[11px] text-slate-600 break-all">Selected: {selectedFiles[req.id]?.name}</p>
+                                            ) : null}
 
                                             {req.status !== 'COMPLETED' && req.status !== 'REJECTED' ? (
                                                 <p className="text-[11px] text-slate-500">
@@ -310,21 +335,23 @@ export default function AdminVerifications() {
                                                 </p>
                                             ) : null}
 
-                                            <div className="flex gap-2">
-                                                {rejectingId !== req.id && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                                                        title="Reject Request"
-                                                        onClick={() => { setRejectingId(req.id); setRejectionReason(''); }}
-                                                        disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
-                                                    >
-                                                        <XCircle className="h-4 w-4 mr-1" />
-                                                        Reject
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            {req.status !== 'COMPLETED' && req.status !== 'REJECTED' ? (
+                                                <div className="flex gap-2">
+                                                    {rejectingId !== req.id && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                                                            title="Reject Request"
+                                                            onClick={() => { setRejectingId(req.id); setRejectionReason(''); }}
+                                                            disabled={processingId === req.id}
+                                                        >
+                                                            <XCircle className="h-4 w-4 mr-1" />
+                                                            Reject
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ) : null}
 
                                             {rejectingId === req.id && req.status !== 'REJECTED' && req.status !== 'COMPLETED' && (
                                                 <div className="border border-red-200 rounded-md p-2 bg-red-50 flex flex-col gap-2 mt-2">
