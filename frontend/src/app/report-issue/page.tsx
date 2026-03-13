@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bug, Loader2, Send, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { API_BASE } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 
 const CATEGORY_OPTIONS = [
     'Payment',
@@ -20,6 +20,8 @@ const CATEGORY_OPTIONS = [
     'Performance',
     'Other'
 ];
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ReportIssuePage() {
     const [loading, setLoading] = useState(false);
@@ -38,38 +40,57 @@ export default function ReportIssuePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!title || !description || !category) {
+        const trimmedTitle = title.trim();
+        const trimmedDescription = description.trim();
+        const trimmedCategory = category.trim();
+        const trimmedName = name.trim();
+        const trimmedEmail = email.trim().toLowerCase();
+        const trimmedRole = role.trim();
+
+        if (!trimmedTitle || !trimmedDescription || !trimmedCategory) {
             toast.error('Please complete title, category and issue details.');
             return;
         }
 
-        if (title.trim().length < 5 || description.trim().length < 15) {
+        if (trimmedTitle.length < 5 || trimmedDescription.length < 15) {
             toast.error('Please provide a little more detail for faster resolution.');
+            return;
+        }
+
+        if (trimmedEmail && !EMAIL_REGEX.test(trimmedEmail)) {
+            toast.error('Enter a valid email address or leave it empty.');
             return;
         }
 
         setLoading(true);
         try {
             const payload = {
-                title,
-                description,
-                category,
+                title: trimmedTitle,
+                description: trimmedDescription,
+                category: trimmedCategory,
                 pageUrl,
-                reportedByName: name,
-                reportedByEmail: email,
-                role,
+                reportedByName: trimmedName,
+                reportedByEmail: trimmedEmail,
+                role: trimmedRole,
                 deviceInfo: typeof navigator !== 'undefined' ? navigator.userAgent : ''
             };
 
-            const res = await fetch(`${API_BASE}/api/support/issues`, {
+            const res = await apiFetch('/api/support/issues', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const raw = await res.text();
+            let data: any = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {
+                data = null;
+            }
+
             if (!res.ok) {
-                toast.error(data.message || 'Failed to submit issue report.');
+                toast.error(data?.message || 'Failed to submit issue report.');
                 return;
             }
 

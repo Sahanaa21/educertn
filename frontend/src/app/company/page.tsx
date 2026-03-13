@@ -184,7 +184,13 @@ export default function CompanyVerification() {
                 timeoutMs: 45000,
                 retries: 0,
             });
-            const data = await res.json();
+            const raw = await res.text();
+            let data: any = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {
+                data = null;
+            }
 
             if (res.ok) {
                 toast.success('Login successful!');
@@ -195,7 +201,11 @@ export default function CompanyVerification() {
                 fetchRequests(data.token);
                 router.push('/company');
             } else {
-                toast.error(data.message || 'Invalid OTP.');
+                if (res.status === 400 || res.status === 401) {
+                    toast.error(data?.message || 'Invalid OTP or email. Please try again.');
+                } else {
+                    toast.error(data?.message || 'Failed to verify OTP.');
+                }
             }
         } catch (error) {
             toast.error('Network error.');
@@ -451,10 +461,10 @@ export default function CompanyVerification() {
                 )}
 
             <aside className={[
-                'flex w-64 flex-shrink-0 flex-col border-r bg-white transition-transform duration-300',
-                'fixed inset-y-0 left-0 z-40',
+                'flex flex-shrink-0 flex-col border-r bg-white transition-all duration-300',
+                'fixed inset-y-0 left-0 z-40 w-64',
                 'md:static md:inset-y-auto md:z-auto',
-                isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+                isSidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-20',
             ].join(' ')}>
                 <div className="p-4 border-b border-slate-200 flex items-center justify-between">
                     {isSidebarOpen ? (

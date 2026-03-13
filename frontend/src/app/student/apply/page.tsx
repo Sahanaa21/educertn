@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
-import { API_BASE } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import DemoPaymentDialog from '@/components/payments/DemoPaymentDialog';
 
 const CERTIFICATE_OPTIONS = [
@@ -135,6 +135,12 @@ export default function ApplyCertificate() {
 
         try {
             const token = sessionStorage.getItem('token');
+            if (!token) {
+                toast.error('Session expired. Please login again.');
+                router.push('/student/login');
+                return;
+            }
+
             const formData = new FormData();
             formData.append('usn', usn);
             formData.append('studentName', name);
@@ -149,7 +155,7 @@ export default function ApplyCertificate() {
             if (address) formData.append('address', address);
             formData.append('idProof', file as File);
 
-            const res = await fetch(`${API_BASE}/api/student/certificates`, {
+            const res = await apiFetch('/api/student/certificates', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -162,13 +168,29 @@ export default function ApplyCertificate() {
                 toast.success('Demo payment successful. Request submitted.');
                 router.push('/student/requests');
             } else {
-                const data = await res.json();
-                toast.error(data.message || 'Failed to submit application.');
+                if (res.status === 401 || res.status === 403) {
+                    sessionStorage.removeItem('token');
+                    sessionStorage.removeItem('user');
+                    toast.error('Session expired. Please login again.');
+                    router.push('/student/login');
+                    return;
+                }
+
+                const raw = await res.text();
+                let data: any = null;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch {
+                    data = null;
+                }
+
+                toast.error(data?.message || 'Failed to submit application.');
             }
         } catch (error) {
             toast.error('Network error. Failed to submit.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

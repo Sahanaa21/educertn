@@ -32,14 +32,24 @@ export default function AdminLogin() {
                 body: JSON.stringify({ email: email.trim().toLowerCase(), password })
             });
 
-            const data = await res.json();
+            const raw = await res.text();
+            let data: any = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {
+                data = null;
+            }
 
             if (res.ok) {
                 toast.success('Admin Login successful!');
                 sessionStorage.setItem('adminToken', data.token);
                 router.push('/admin');
             } else {
-                toast.error(data.message || 'Invalid credentials.');
+                if (res.status === 400 || res.status === 401) {
+                    toast.error(data?.message || 'Invalid email or password.');
+                } else {
+                    toast.error(data?.message || 'Login failed. Please try again.');
+                }
             }
         } catch (error) {
             toast.error('Network error. Failed to login.');

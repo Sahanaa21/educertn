@@ -75,7 +75,13 @@ export default function StudentLogin() {
                 timeoutMs: 45000,
                 retries: 0,
             });
-            const data = await res.json();
+            const raw = await res.text();
+            let data: any = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {
+                data = null;
+            }
 
             if (res.ok) {
                 toast.success('Login successful!');
@@ -83,7 +89,11 @@ export default function StudentLogin() {
                 sessionStorage.setItem('user', JSON.stringify(data.user));
                 router.push('/student');
             } else {
-                toast.error(data.message || 'Invalid OTP. Try again.');
+                if (res.status === 400 || res.status === 401) {
+                    toast.error(data?.message || 'Invalid OTP or email. Please try again.');
+                } else {
+                    toast.error(data?.message || 'Failed to verify OTP. Please try again.');
+                }
             }
         } catch (error) {
             toast.error('Network error. Try again.');
