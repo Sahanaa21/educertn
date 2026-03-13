@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { API_BASE } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function StudentRequests() {
     const router = useRouter();
@@ -19,6 +20,7 @@ export default function StudentRequests() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [sortBy, setSortBy] = useState('NEWEST');
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     const fetchRequests = async () => {
         const token = sessionStorage.getItem('token');
@@ -50,6 +52,49 @@ export default function StudentRequests() {
     useEffect(() => {
         fetchRequests();
     }, [router]);
+
+    const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
+        if (!contentDisposition) return fallbackName;
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
+        const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+        return plainMatch?.[1] || fallbackName;
+    };
+
+    const downloadCertificate = async (requestId: string) => {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+            router.push('/student/login');
+            return;
+        }
+
+        setDownloadingId(requestId);
+        try {
+            const res = await fetch(`${API_BASE}/api/student/certificates/${requestId}/download`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                toast.error(data?.message || 'Unable to download certificate');
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-certificate`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            toast.error('Download failed. Please try again.');
+        } finally {
+            setDownloadingId(null);
+        }
+    };
 
     const filteredRequests = requests.filter((req) => {
         const q = search.trim().toLowerCase();
@@ -186,8 +231,14 @@ export default function StudentRequests() {
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        {req.status === 'COMPLETED' && req.copyType.includes('SOFT') ? (
-                                            <Button variant="outline" size="sm" className="hidden sm:inline-flex text-blue-600 border-blue-200">
+                                        {req.issuedCertificateUrl && (req.copyType === 'SOFT_COPY' || req.copyType === 'BOTH') ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="hidden sm:inline-flex text-blue-600 border-blue-200"
+                                                onClick={() => downloadCertificate(req.id)}
+                                                disabled={downloadingId === req.id}
+                                            >
                                                 <Download className="h-4 w-4 mr-2" /> Download
                                             </Button>
                                         ) : (
