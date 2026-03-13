@@ -120,6 +120,23 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 
         // Trigger granular emails
         if (updated.user?.email) {
+            if (status === 'REJECTED' && request.status !== 'REJECTED') {
+                const safeReason = String(rejectionReason || updated.rejectionReason || '').trim();
+                const emailHtml = `
+                    <h2>Your Certificate Request Was Rejected</h2>
+                    <p>Hello ${updated.studentName},</p>
+                    <p>Your request for <strong>${updated.certificateType.replace('_', ' ')}</strong> (Request ID: ${updated.id}) was rejected by the admin team.</p>
+                    <p><strong>Reason:</strong> ${safeReason || 'No reason was provided.'}</p>
+                    <p>Please review the reason and submit a corrected request if needed.</p>
+                    <p>Thank you,</p>
+                    <p>Global Academy of Technology</p>
+                `;
+
+                void sendEmail(updated.user.email, 'Certificate Request Rejected', emailHtml).catch((emailErr) => {
+                    console.error('Failed to send certificate rejection email:', emailErr);
+                });
+            }
+
             if ((action === 'UPLOAD_SOFT_COPY' || req.file) && !request.softCopyEmailed) {
                 const emailHtml = `
                     <h2>Your Certificate Soft Copy is Ready</h2>
@@ -240,6 +257,30 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
                 emailHtml,
                 attachments
             );
+        }
+
+        if (status === 'REJECTED' && existing.status !== 'REJECTED' && updated.companyEmail) {
+            const safeReason = String(rejectionReason || updated.rejectionReason || '').trim();
+            const emailHtml = `
+                <h2>Verification Request Rejected</h2>
+                <p>Hello ${updated.contactPerson},</p>
+                <p>Your verification request was rejected by the admin team.</p>
+                <p><strong>Student Name:</strong> ${updated.studentName}</p>
+                <p><strong>USN:</strong> ${updated.usn}</p>
+                <p><strong>Request ID:</strong> ${updated.requestId}</p>
+                <p><strong>Reason:</strong> ${safeReason || 'No reason was provided.'}</p>
+                <p>Please correct the details and resubmit if required.</p>
+                <p>Thank you,</p>
+                <p>Global Academy of Technology</p>
+            `;
+
+            void sendEmail(
+                updated.companyEmail,
+                'Verification Rejected – Global Academy of Technology',
+                emailHtml
+            ).catch((emailErr) => {
+                console.error('Failed to send verification rejection email:', emailErr);
+            });
         }
 
         res.json(updated);
