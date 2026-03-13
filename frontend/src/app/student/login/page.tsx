@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const STUDENT_EMAIL_REGEX = /^[^\s@]+@gat\.ac\.in$/i;
 
 export default function StudentLogin() {
     const router = useRouter();
@@ -25,7 +24,6 @@ export default function StudentLogin() {
         e.preventDefault();
         if (!email.trim()) return toast.error('Please enter your email.');
         if (!EMAIL_REGEX.test(email.trim())) return toast.error('Enter a valid email address.');
-        if (!STUDENT_EMAIL_REGEX.test(email.trim())) return toast.error('Use your official student email ending with @gat.ac.in.');
         setLoading(true);
 
         try {
@@ -113,18 +111,18 @@ export default function StudentLogin() {
             <Card className="w-full max-w-md shadow-xl border-t-4 border-t-blue-600">
                 <CardHeader className="text-center space-y-2">
                     <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">Student Portal</CardTitle>
-                    <CardDescription>Sign in to request certificates and view history.</CardDescription>
+                    <CardDescription>Sign in with your active email to request certificates and view history.</CardDescription>
                 </CardHeader>
 
                 {step === 1 ? (
                     <form onSubmit={handleSendOtp}>
                         <CardContent className="space-y-4 pt-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-slate-700">Student Email</Label>
+                                <Label htmlFor="email" className="text-slate-700">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="name.usn@gat.ac.in"
+                                    placeholder="yourname@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="h-12"

@@ -4,9 +4,24 @@ import { generateToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const STUDENT_EMAIL_REGEX = /^[^\s@]+@gat\.ac\.in$/i;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isInvalidRecipientError = (error: unknown) => {
+    const message = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
+
+    return [
+        'recipient rejected',
+        'user unknown',
+        'invalid recipient',
+        'no such user',
+        'mailbox unavailable',
+        '550',
+        '553',
+        '5.1.1',
+        '5.1.0',
+    ].some((part) => message.includes(part));
+};
 
 export const studentLogin = async (req: Request, res: Response): Promise<any> => {
     const normalizedEmail = String(req.body?.email || '').trim().toLowerCase();
@@ -19,11 +34,20 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
         return res.status(400).json({ message: 'Enter a valid email address' });
     }
 
-    if (!STUDENT_EMAIL_REGEX.test(normalizedEmail)) {
-        return res.status(400).json({ message: 'Use your official student email ending with @gat.ac.in' });
-    }
-
     try {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+        await sendEmail(
+            normalizedEmail,
+            'Your OTP for Global Academy of Technology',
+            `<p>Your One-Time Password (OTP) for Global Academy of Technology is:</p>
+             <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
+             <p>This OTP expires in 10 minutes.</p>
+               <p>If you did not request this, please ignore this email.</p>`
+           );
+
         let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
         if (!user) {
@@ -31,10 +55,6 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
                 data: { email: normalizedEmail, role: 'STUDENT' }
             });
         }
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
         await prisma.oTP.create({
             data: {
@@ -44,22 +64,13 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
             }
         });
 
-        // Do not block login flow on SMTP latency.
-        void sendEmail(
-            normalizedEmail,
-            'Your OTP for Global Academy of Technology',
-            `<p>Your One-Time Password (OTP) for Global Academy of Technology is:</p>
-             <h2 style="font-size: 32px; font-weight: bold; color: #000;">${otp}</h2>
-             <p>This OTP expires in 10 minutes.</p>
-             <p>If you did not request this, please ignore this email.</p>`
-        ).catch((error) => {
-            console.error('Student OTP email dispatch failed:', error);
-        });
-
         res.json({ message: 'OTP sent to your email. Check your inbox.' });
     } catch (error) {
         console.error('Student login OTP send failed:', error);
-        res.status(500).json({ message: 'Failed to send OTP. Please check your email address and try again.' });
+        if (isInvalidRecipientError(error)) {
+            return res.status(400).json({ message: 'Invalid email entered. Please check and try again.' });
+        }
+        res.status(500).json({ message: 'Failed to send OTP. Please verify the email address and try again.' });
     }
 };
 
@@ -131,10 +142,6 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
 
     try {
         const user = await prisma.user.findUnique({ where: { email } });
-
-        if (user?.role === 'STUDENT' && !STUDENT_EMAIL_REGEX.test(email)) {
-            return res.status(400).json({ message: 'Use your official student email ending with @gat.ac.in' });
-        }
 
         const validOtp = await prisma.oTP.findFirst({
             where: { email, otp },
