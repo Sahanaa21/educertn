@@ -304,24 +304,18 @@ export default function AdminVerifications() {
                                                 />
                                             </label>
 
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-1/2 text-green-700 border-green-300 hover:bg-green-50"
-                                                    title="Mark Completed"
-                                                    onClick={() => updateStatus(req.id, 'COMPLETED')}
-                                                    disabled={processingId === req.id || req.paymentStatus !== 'PAID' || req.status === 'COMPLETED'}
-                                                >
-                                                    {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-                                                    Complete
-                                                </Button>
+                                            {req.status !== 'COMPLETED' && req.status !== 'REJECTED' ? (
+                                                <p className="text-[11px] text-slate-500">
+                                                    Uploading the completed file will automatically mark this request as COMPLETED.
+                                                </p>
+                                            ) : null}
 
+                                            <div className="flex gap-2">
                                                 {rejectingId !== req.id && (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="w-1/2 text-red-600 border-red-200 hover:bg-red-50"
+                                                        className="w-full text-red-600 border-red-200 hover:bg-red-50"
                                                         title="Reject Request"
                                                         onClick={() => { setRejectingId(req.id); setRejectionReason(''); }}
                                                         disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
