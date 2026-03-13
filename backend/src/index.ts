@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
+import path from 'path';
 import authRoutes from './routes/authRoutes';
 import certificateRoutes from './routes/certificateRoutes';
 import verificationRoutes from './routes/verificationRoutes';
@@ -49,6 +50,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Backend is running' });

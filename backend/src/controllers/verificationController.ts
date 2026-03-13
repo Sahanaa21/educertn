@@ -1,10 +1,31 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
+import path from 'path';
 import { prisma } from '../config/prisma';
 import { generateVerificationRequestId } from '../utils/generateId';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 const VERIFICATION_FEE = 5000;
+
+const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
+    if (!storedPath) return null;
+
+    const direct = path.isAbsolute(storedPath) ? storedPath : path.resolve(process.cwd(), storedPath);
+    if (fs.existsSync(direct)) return direct;
+
+    const normalized = storedPath.replace(/\\/g, '/');
+    const uploadsIndex = normalized.lastIndexOf('/uploads/');
+    if (uploadsIndex >= 0) {
+        const relativeFromUploads = normalized.slice(uploadsIndex + 1); // "uploads/..."
+        const candidate = path.resolve(process.cwd(), relativeFromUploads);
+        if (fs.existsSync(candidate)) return candidate;
+    }
+
+    const fallbackByName = path.resolve(process.cwd(), 'uploads', path.basename(normalized));
+    if (fs.existsSync(fallbackByName)) return fallbackByName;
+
+    return null;
+};
 
 const getAuthenticatedCompanyEmail = async (req: AuthRequest): Promise<string | null> => {
     const userId = req.user?.id as string | undefined;
@@ -98,11 +119,13 @@ export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Respon
             return res.status(404).json({ message: 'Request not found' });
         }
 
-        if (request.status !== 'COMPLETED' || !request.completedFile || !fs.existsSync(request.completedFile)) {
+        const resolvedCompletedFilePath = resolveStoredFilePath(request.completedFile);
+
+        if (request.status !== 'COMPLETED' || !resolvedCompletedFilePath) {
             return res.status(400).json({ message: 'Completed response file not available yet' });
         }
 
-        return res.download(request.completedFile, `${request.requestId}-completed-file`);
+        return res.download(resolvedCompletedFilePath, `${request.requestId}-completed-file`);
     } catch (error) {
         console.error('Error downloading completed verification file:', error);
         return res.status(500).json({ message: 'Internal server error' });

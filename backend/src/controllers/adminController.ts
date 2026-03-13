@@ -1,7 +1,28 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
+import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
+
+const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
+    if (!storedPath) return null;
+
+    const direct = path.isAbsolute(storedPath) ? storedPath : path.resolve(process.cwd(), storedPath);
+    if (fs.existsSync(direct)) return direct;
+
+    const normalized = storedPath.replace(/\\/g, '/');
+    const uploadsIndex = normalized.lastIndexOf('/uploads/');
+    if (uploadsIndex >= 0) {
+        const relativeFromUploads = normalized.slice(uploadsIndex + 1); // "uploads/..."
+        const candidate = path.resolve(process.cwd(), relativeFromUploads);
+        if (fs.existsSync(candidate)) return candidate;
+    }
+
+    const fallbackByName = path.resolve(process.cwd(), 'uploads', path.basename(normalized));
+    if (fs.existsSync(fallbackByName)) return fallbackByName;
+
+    return null;
+};
 
 export const getDashboardStats = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -303,11 +324,13 @@ export const downloadVerificationTemplate = async (req: Request, res: Response):
             return res.status(404).json({ message: 'Verification request not found' });
         }
 
-        if (!verification.uploadedTemplate || !fs.existsSync(verification.uploadedTemplate)) {
+        const resolvedTemplatePath = resolveStoredFilePath(verification.uploadedTemplate);
+
+        if (!resolvedTemplatePath) {
             return res.status(404).json({ message: 'Uploaded template file not found' });
         }
 
-        return res.download(verification.uploadedTemplate, `${verification.requestId}-template`);
+        return res.download(resolvedTemplatePath, `${verification.requestId}-template`);
     } catch (error) {
         console.error('Error downloading verification template:', error);
         return res.status(500).json({ message: 'Internal server error' });
