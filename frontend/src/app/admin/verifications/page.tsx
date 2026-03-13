@@ -92,6 +92,14 @@ export default function AdminVerifications() {
         }
     };
 
+    const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
+        if (!contentDisposition) return fallbackName;
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
+        const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+        return plainMatch?.[1] || fallbackName;
+    };
+
     const downloadTemplate = async (id: string, requestId: string) => {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
@@ -111,7 +119,7 @@ export default function AdminVerifications() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${requestId}-template`;
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-template`);
             document.body.appendChild(link);
             link.click();
             link.remove();

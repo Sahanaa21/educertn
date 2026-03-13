@@ -159,6 +159,53 @@ export default function AdminCertificates() {
         setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
+        if (!contentDisposition) return fallbackName;
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
+        const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+        return plainMatch?.[1] || fallbackName;
+    };
+
+    const downloadIdProof = async (id: string) => {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) {
+            router.push('/admin/login');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/certificates/${id}/id-proof`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const raw = await res.text();
+                let data: any = null;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch {
+                    data = null;
+                }
+                toast.error(data?.message || 'Unable to download uploaded file');
+                return;
+            }
+
+            const blob = await res.blob();
+            const fileName = extractDownloadName(res.headers.get('content-disposition'), `${id}-id-proof`);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch {
+            toast.error('Download failed');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
@@ -289,9 +336,15 @@ export default function AdminCertificates() {
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         {req.idProofUrl ? (
-                                            <a href={`${API_BASE}${req.idProofUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 flex items-center text-xs font-medium">
-                                                <FileText className="w-3 h-3 mr-1" /> View
-                                            </a>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-blue-600 hover:text-blue-800 border-blue-200"
+                                                onClick={() => downloadIdProof(req.id)}
+                                            >
+                                                <FileText className="w-3 h-3 mr-1" /> Download
+                                            </Button>
                                         ) : '—'}
                                     </TableCell>
                                     <TableCell className="p-2 align-top min-w-70">

@@ -27,6 +27,30 @@ const resolveStoredFilePath = (storedPath: string | null | undefined): string | 
     return null;
 };
 
+const inferExtensionFromFile = (filePath: string): string => {
+    try {
+        const buffer = fs.readFileSync(filePath).subarray(0, 8192);
+
+        if (buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) return '.pdf';
+        if (buffer.length >= 8 &&
+            buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47 &&
+            buffer[4] === 0x0D && buffer[5] === 0x0A && buffer[6] === 0x1A && buffer[7] === 0x0A) return '.png';
+        if (buffer.length >= 3 && buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return '.jpg';
+        if (buffer.length >= 8 &&
+            buffer[0] === 0xD0 && buffer[1] === 0xCF && buffer[2] === 0x11 && buffer[3] === 0xE0 &&
+            buffer[4] === 0xA1 && buffer[5] === 0xB1 && buffer[6] === 0x1A && buffer[7] === 0xE1) return '.doc';
+        if (buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4B) {
+            const snippet = buffer.toString('utf8');
+            if (snippet.includes('word/') || snippet.includes('[Content_Types].xml')) return '.docx';
+            return '.zip';
+        }
+    } catch {
+        return '';
+    }
+
+    return '';
+};
+
 const getAuthenticatedCompanyEmail = async (req: AuthRequest): Promise<string | null> => {
     const userId = req.user?.id as string | undefined;
     if (!userId) return null;
@@ -125,7 +149,7 @@ export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Respon
             return res.status(400).json({ message: 'Completed response file not available yet' });
         }
 
-        const extension = path.extname(resolvedCompletedFilePath || '') || '';
+        const extension = path.extname(resolvedCompletedFilePath || '') || inferExtensionFromFile(resolvedCompletedFilePath) || '';
         return res.download(resolvedCompletedFilePath, `${request.requestId}-completed-file${extension}`);
     } catch (error) {
         console.error('Error downloading completed verification file:', error);

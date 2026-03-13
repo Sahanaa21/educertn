@@ -3,6 +3,7 @@ import {
 	getDashboardStats,
 	getAllCertificates,
 	updateCertificateStatus,
+	downloadCertificateIdProof,
 	getAllVerifications,
 	updateVerificationStatus,
 	downloadVerificationTemplate,
@@ -43,6 +44,7 @@ router.get('/dashboard', authenticate, requireRole('ADMIN'), getDashboardStats);
 
 router.get('/certificates', authenticate, requireRole('ADMIN'), getAllCertificates);
 router.put('/certificates/:id/status', authenticate, requireRole('ADMIN'), adminMutationLimiter, upload.single('file'), updateCertificateStatus);
+router.get('/certificates/:id/id-proof', authenticate, requireRole('ADMIN'), downloadCertificateIdProof);
 
 router.get('/verifications', authenticate, requireRole('ADMIN'), getAllVerifications);
 router.put('/verifications/:id/status', authenticate, requireRole('ADMIN'), adminMutationLimiter, updateVerificationStatus);

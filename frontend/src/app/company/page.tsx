@@ -327,6 +327,14 @@ export default function CompanyVerification() {
         setLoading(false);
     };
 
+    const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
+        if (!contentDisposition) return fallbackName;
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
+        const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+        return plainMatch?.[1] || fallbackName;
+    };
+
     const handleDownloadResponse = async (id: string, requestId: string) => {
         const token = sessionStorage.getItem('companyToken');
         if (!token) return;
@@ -350,7 +358,7 @@ export default function CompanyVerification() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${requestId}-completed-file`;
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-completed-file`);
             document.body.appendChild(link);
             link.click();
             link.remove();
