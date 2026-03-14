@@ -5,10 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard,
     FileText,
-    Building2,
     Users,
-    CreditCard,
-    BarChart3,
     Settings,
     LogOut,
     CheckSquare
@@ -21,7 +18,6 @@ const menuItems = [
     { name: 'Verifications', href: '/admin/verifications', icon: CheckSquare },
     { name: 'Issues', href: '/admin/issues', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
-    { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
 ];
 
 import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';

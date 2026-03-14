@@ -421,34 +421,9 @@ export const uploadVerificationCompletedFile = async (req: Request, res: Respons
             where: { id },
             data: {
                 completedFile: req.file.path,
-                status: 'COMPLETED'
+                status: existing.status === 'PENDING' ? 'PROCESSING' : existing.status
             }
         });
-
-        if (updated.companyEmail) {
-            const emailHtml = `
-                <h2>Verification Completed</h2>
-                <p>Hello ${updated.contactPerson},</p>
-                <p>Your verification request has been completed.</p>
-                <p><strong>Student Name:</strong> ${updated.studentName}</p>
-                <p><strong>USN:</strong> ${updated.usn}</p>
-                <p><strong>Request ID:</strong> ${updated.requestId}</p>
-                <p>Thank you,</p>
-                <p>Global Academy of Technology</p>
-            `;
-
-            void sendEmail(
-                updated.companyEmail,
-                'Verification Completed – Global Academy of Technology',
-                emailHtml,
-                [{
-                    filename: `${updated.requestId}-completed-file${path.extname(req.file.path || '') || ''}`,
-                    path: req.file.path
-                }]
-            ).catch((emailErr) => {
-                console.error('Failed to send verification completion email after upload:', emailErr);
-            });
-        }
 
         return res.json(updated);
     } catch (error) {

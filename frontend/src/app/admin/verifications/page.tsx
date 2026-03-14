@@ -132,7 +132,7 @@ export default function AdminVerifications() {
 
     const uploadCompletedFile = async (id: string, file: File | null) => {
         const token = sessionStorage.getItem('adminToken');
-        if (!token || !file) return;
+        if (!token || !file) return false;
 
         setProcessingId(id);
 
@@ -147,18 +147,38 @@ export default function AdminVerifications() {
             });
 
             if (res.ok) {
-                toast.success('Completed file uploaded');
+                toast.success('File uploaded');
                 setSelectedFiles((prev) => ({ ...prev, [id]: null }));
-                fetchRequests();
+                return true;
             } else {
                 const data = await res.json();
                 toast.error(data.message || 'Upload failed');
+                return false;
             }
         } catch (error) {
             toast.error('Upload failed');
+            return false;
         } finally {
             setProcessingId(null);
         }
+    };
+
+    const completeVerification = async (id: string) => {
+        const selectedFile = selectedFiles[id] || null;
+        const row = requests.find((r) => r.id === id);
+
+        // Require either a newly selected file or an already uploaded completed file.
+        if (!selectedFile && !row?.completedFile) {
+            toast.error('Select a completed file before marking as completed');
+            return;
+        }
+
+        if (selectedFile) {
+            const uploaded = await uploadCompletedFile(id, selectedFile);
+            if (!uploaded) return;
+        }
+
+        await updateStatus(id, 'COMPLETED');
     };
 
     const filteredRequests = requests.filter(req => {
@@ -312,27 +332,21 @@ export default function AdminVerifications() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="text-blue-700 border-blue-300 hover:bg-blue-50"
-                                                onClick={() => uploadCompletedFile(req.id, selectedFiles[req.id] || null)}
+                                                className="text-green-700 border-green-300 hover:bg-green-50"
+                                                onClick={() => completeVerification(req.id)}
                                                 disabled={
                                                     processingId === req.id ||
                                                     req.status === 'COMPLETED' ||
                                                     req.status === 'REJECTED' ||
-                                                    !selectedFiles[req.id]
+                                                    (!selectedFiles[req.id] && !req.completedFile)
                                                 }
                                             >
-                                                {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-                                                Upload
+                                                {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                                                Complete
                                             </Button>
 
                                             {selectedFiles[req.id] ? (
                                                 <p className="text-[11px] text-slate-600 break-all">Selected: {selectedFiles[req.id]?.name}</p>
-                                            ) : null}
-
-                                            {req.status !== 'COMPLETED' && req.status !== 'REJECTED' ? (
-                                                <p className="text-[11px] text-slate-500">
-                                                    Uploading the completed file will automatically mark this request as COMPLETED.
-                                                </p>
                                             ) : null}
 
                                             {req.status !== 'COMPLETED' && req.status !== 'REJECTED' ? (
