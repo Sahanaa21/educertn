@@ -31,6 +31,7 @@
     "nodemailer": "^8.0.1",
     "pg": "^8.20.0",
     "prisma": "^6.19.2",
+    "razorpay": "^2.9.6",
     "stripe": "^20.4.1"
   },
   "devDependencies": {

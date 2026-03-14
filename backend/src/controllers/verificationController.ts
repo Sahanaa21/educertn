@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
+import { createRazorpayOrder, fetchRazorpayOrder, getRazorpayKeyId, hasRazorpayConfig, verifyRazorpaySignature } from '../config/razorpay';
 import { generateVerificationRequestId } from '../utils/generateId';
 import { AuthRequest } from '../middleware/authMiddleware';
 
@@ -94,15 +95,100 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
                 studentName,
                 usn,
                 uploadedTemplate: templateFile.path,
-                paymentStatus: 'PAID',
+                paymentStatus: 'PENDING',
                 status: 'PENDING'
             }
         });
 
-        res.status(201).json({ ...created, amount: VERIFICATION_FEE });
+        if (!hasRazorpayConfig()) {
+            return res.status(500).json({ message: 'Payment gateway is not configured' });
+        }
+
+        const order = await createRazorpayOrder({
+            amountPaise: VERIFICATION_FEE * 100,
+            receipt: `ver-${requestId}`.slice(0, 40),
+            notes: {
+                requestType: 'VERIFICATION',
+                requestId: created.id,
+                companyEmail: authEmail
+            }
+        });
+
+        res.status(201).json({
+            request: created,
+            amount: VERIFICATION_FEE,
+            razorpayOrder: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                keyId: getRazorpayKeyId(),
+                name: 'Global Academy of Technology',
+                description: `Verification Request ${requestId}`
+            }
+        });
     } catch (error) {
         console.error('Error creating verification request:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const verifyVerificationPayment = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const companyEmail = await getAuthenticatedCompanyEmail(req);
+        if (!companyEmail) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const id = String(req.params.id || '');
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body as {
+            razorpayOrderId?: string;
+            razorpayPaymentId?: string;
+            razorpaySignature?: string;
+        };
+
+        if (!id || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return res.status(400).json({ message: 'Payment verification details are required' });
+        }
+
+        const request = await prisma.verificationRequest.findUnique({
+            where: { id },
+            select: { id: true, requestId: true, companyEmail: true, paymentStatus: true }
+        });
+
+        if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
+        }
+
+        const valid = verifyRazorpaySignature({
+            orderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            signature: razorpaySignature
+        });
+
+        if (!valid) {
+            return res.status(400).json({ message: 'Invalid payment signature' });
+        }
+
+        const order = await fetchRazorpayOrder(razorpayOrderId);
+        const orderRequestId = String((order.notes as any)?.requestId || '');
+        const orderReceipt = String(order.receipt || '');
+        if (orderRequestId !== id && orderReceipt !== `ver-${request.requestId}`.slice(0, 40)) {
+            return res.status(400).json({ message: 'Payment order does not match this request' });
+        }
+
+        const updated = await prisma.verificationRequest.update({
+            where: { id },
+            data: { paymentStatus: 'PAID' }
+        });
+
+        return res.json({ message: 'Payment verified successfully', request: updated });
+    } catch (error) {
+        console.error('Error verifying verification payment:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };
 

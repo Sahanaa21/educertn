@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
-import DemoPaymentDialog from '@/components/payments/DemoPaymentDialog';
+import { openRazorpayCheckout } from '@/lib/razorpay';
 
 const CERTIFICATE_OPTIONS = [
     { value: 'grade_card_correction', label: 'Grade Card Correction', fee: 1200 },
@@ -43,7 +43,6 @@ export default function ApplyCertificate() {
     const [reason, setReason] = useState('');
     const [otherType, setOtherType] = useState('');
     const [file, setFile] = useState<File | null>(null);
-    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
     useEffect(() => {
         if (!sessionStorage.getItem('token')) {
@@ -120,13 +119,8 @@ export default function ApplyCertificate() {
         return true;
     };
 
-    const handleOpenPayment = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!validateForm()) return;
-        setShowPaymentDialog(true);
-    };
-
-    const submitApplication = async (): Promise<void> => {
+    const submitApplication = async (e?: React.FormEvent): Promise<void> => {
+        if (e) e.preventDefault();
         if (!validateForm()) return;
 
         setLoading(true);
@@ -164,8 +158,54 @@ export default function ApplyCertificate() {
             });
 
             if (res.ok) {
-                setShowPaymentDialog(false);
-                toast.success('Demo payment successful. Request submitted.');
+                const data = await res.json();
+                const createdRequest = data?.request;
+                const order = data?.razorpayOrder;
+
+                if (!createdRequest?.id || !order?.id || !order?.keyId) {
+                    toast.error('Failed to initialize payment order.');
+                    return;
+                }
+
+                let paymentResponse;
+                try {
+                    paymentResponse = await openRazorpayCheckout({
+                        keyId: order.keyId,
+                        orderId: order.id,
+                        amount: order.amount,
+                        currency: order.currency || 'INR',
+                        name: order.name || 'Global Academy of Technology',
+                        description: order.description || `Certificate Request ${createdRequest.id}`,
+                        prefill: {
+                            name,
+                            contact: phoneNumber,
+                        }
+                    });
+                } catch (checkoutErr: any) {
+                    toast.error(checkoutErr?.message || 'Payment cancelled. You can retry from support if needed.');
+                    return;
+                }
+
+                const verifyRes = await apiFetch(`/api/student/certificates/${createdRequest.id}/verify-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        razorpayOrderId: paymentResponse.razorpay_order_id,
+                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                        razorpaySignature: paymentResponse.razorpay_signature
+                    })
+                });
+
+                if (!verifyRes.ok) {
+                    const verifyData = await verifyRes.json().catch(() => null);
+                    toast.error(verifyData?.message || 'Payment verification failed. Contact support.');
+                    return;
+                }
+
+                toast.success('Payment successful. Request submitted.');
                 router.push('/student/requests');
             } else {
                 if (res.status === 401 || res.status === 403) {
@@ -200,7 +240,7 @@ export default function ApplyCertificate() {
                 <p className="text-slate-500 mt-1">Fill out the form below to request a new certificate or document.</p>
             </div>
 
-            <form onSubmit={handleOpenPayment}>
+            <form onSubmit={submitApplication}>
                 <Card className="shadow-sm">
                     <CardHeader>
                         <CardTitle>Student Details</CardTitle>
@@ -385,16 +425,7 @@ export default function ApplyCertificate() {
                 </Card>
             </form>
 
-            <DemoPaymentDialog
-                amount={getFee()}
-                open={showPaymentDialog}
-                processing={loading}
-                title="Certificate Payment"
-                description="Choose a payment method to complete this demo payment and submit the certificate request."
-                payerHint={name.trim() || usn.trim()}
-                onConfirm={submitApplication}
-                onOpenChange={setShowPaymentDialog}
-            />
+
         </div>
     );
 }

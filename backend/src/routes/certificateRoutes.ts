@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createCertificateRequest, getStudentRequests, completeCertificateRequest, downloadStudentIssuedCertificate } from '../controllers/certificateController';
+import { createCertificateRequest, getStudentRequests, completeCertificateRequest, downloadStudentIssuedCertificate, verifyCertificatePayment } from '../controllers/certificateController';
 import { authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
@@ -49,6 +49,7 @@ const certificateUploadHandler = (req: any, res: any, next: any) => {
 router.post('/student/certificates', authenticate, certificateUploadHandler, createCertificateRequest);
 router.get('/student/certificates', authenticate, getStudentRequests);
 router.get('/student/certificates/:id/download', authenticate, downloadStudentIssuedCertificate);
+router.post('/student/certificates/:id/verify-payment', authenticate, verifyCertificatePayment);
 
 // Admin routes
 router.put('/admin/certificates/:id/complete', authenticate, completeCertificateRequest);

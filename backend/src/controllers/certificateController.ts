@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
+import { createRazorpayOrder, fetchRazorpayOrder, getRazorpayKeyId, hasRazorpayConfig, verifyRazorpaySignature } from '../config/razorpay';
 import { generateRequestId } from '../utils/generateId';
 
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
@@ -128,16 +129,106 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
             }
         });
 
-        // Simulate immediate payment success for this flow
-        const updatedRequest = await prisma.certificateRequest.update({
-            where: { id: certificateRequest.id },
-            data: { paymentStatus: 'PAID' }
+        if (!hasRazorpayConfig()) {
+            return res.status(500).json({ message: 'Payment gateway is not configured' });
+        }
+
+        const order = await createRazorpayOrder({
+            amountPaise: Math.round(amount * 100),
+            receipt: `cert-${id}`.slice(0, 40),
+            notes: {
+                requestType: 'CERTIFICATE',
+                requestId: id,
+                userId: String(userId)
+            }
         });
 
-        res.status(201).json(updatedRequest);
+        await prisma.certificateRequest.update({
+            where: { id: certificateRequest.id },
+            data: { stripeSessionId: order.id }
+        });
+
+        res.status(201).json({
+            request: certificateRequest,
+            razorpayOrder: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                keyId: getRazorpayKeyId(),
+                name: 'Global Academy of Technology',
+                description: `Certificate Request ${id}`
+            }
+        });
     } catch (error: any) {
         console.error('Error creating certificate request:', error);
         res.status(500).json({ message: error.message || 'Internal server error', details: error });
+    }
+};
+
+export const verifyCertificatePayment = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String((req as any).user?.id || '');
+        const id = String(req.params.id || '');
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body as {
+            razorpayOrderId?: string;
+            razorpayPaymentId?: string;
+            razorpaySignature?: string;
+        };
+
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return res.status(400).json({ message: 'Payment verification details are required' });
+        }
+
+        const request = await prisma.certificateRequest.findUnique({
+            where: { id },
+            select: { id: true, userId: true, paymentStatus: true, stripeSessionId: true }
+        });
+
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
+        }
+
+        if (request.stripeSessionId && request.stripeSessionId !== razorpayOrderId) {
+            return res.status(400).json({ message: 'Order ID mismatch for this request' });
+        }
+
+        const valid = verifyRazorpaySignature({
+            orderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            signature: razorpaySignature
+        });
+
+        if (!valid) {
+            return res.status(400).json({ message: 'Invalid payment signature' });
+        }
+
+        const order = await fetchRazorpayOrder(razorpayOrderId);
+        const orderRequestId = String((order.notes as any)?.requestId || '');
+        const orderReceipt = String(order.receipt || '');
+        if (orderRequestId !== id && orderReceipt !== `cert-${id}`.slice(0, 40)) {
+            return res.status(400).json({ message: 'Payment order does not match this request' });
+        }
+
+        const updated = await prisma.certificateRequest.update({
+            where: { id },
+            data: {
+                paymentStatus: 'PAID',
+                stripeSessionId: razorpayOrderId
+            }
+        });
+
+        return res.json({ message: 'Payment verified successfully', request: updated });
+    } catch (error) {
+        console.error('Error verifying certificate payment:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };
 

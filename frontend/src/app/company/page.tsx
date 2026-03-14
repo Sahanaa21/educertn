@@ -13,7 +13,7 @@ import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, Check
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
-import DemoPaymentDialog from '@/components/payments/DemoPaymentDialog';
+import { openRazorpayCheckout } from '@/lib/razorpay';
 
 type VerificationRequest = {
     id: string;
@@ -53,7 +53,6 @@ export default function CompanyVerification() {
     const [studentName, setStudentName] = useState('');
     const [usn, setUsn] = useState('');
     const [verificationTemplate, setVerificationTemplate] = useState<File | null>(null);
-    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [requestSearch, setRequestSearch] = useState('');
     const [requestStatusFilter, setRequestStatusFilter] = useState('ALL');
     const [requestSortBy, setRequestSortBy] = useState('NEWEST');
@@ -259,13 +258,8 @@ export default function CompanyVerification() {
         return true;
     };
 
-    const handleOpenPayment = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!validateVerificationForm()) return;
-        setShowPaymentDialog(true);
-    };
-
-    const handleSubmit = async (): Promise<void> => {
+    const handleSubmit = async (e?: React.FormEvent): Promise<void> => {
+        if (e) e.preventDefault();
         if (!validateVerificationForm()) return;
 
         setLoading(true);
@@ -305,8 +299,55 @@ export default function CompanyVerification() {
             });
 
             if (res.ok) {
-                setShowPaymentDialog(false);
-                toast.success('Demo payment successful. Request submitted.');
+                const data = await res.json();
+                const createdRequest = data?.request;
+                const order = data?.razorpayOrder;
+
+                if (!createdRequest?.id || !order?.id || !order?.keyId) {
+                    toast.error('Failed to initialize payment order.');
+                    return;
+                }
+
+                let paymentResponse;
+                try {
+                    paymentResponse = await openRazorpayCheckout({
+                        keyId: order.keyId,
+                        orderId: order.id,
+                        amount: order.amount,
+                        currency: order.currency || 'INR',
+                        name: order.name || 'Global Academy of Technology',
+                        description: order.description || `Verification Request ${createdRequest.requestId || createdRequest.id}`,
+                        prefill: {
+                            name: contactPerson,
+                            email: effectiveEmail,
+                            contact: phoneNumber,
+                        }
+                    });
+                } catch (checkoutErr: any) {
+                    toast.error(checkoutErr?.message || 'Payment cancelled. You can retry from support if needed.');
+                    return;
+                }
+
+                const verifyRes = await apiFetch(`/api/company/verifications/${createdRequest.id}/verify-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        razorpayOrderId: paymentResponse.razorpay_order_id,
+                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                        razorpaySignature: paymentResponse.razorpay_signature
+                    })
+                });
+
+                if (!verifyRes.ok) {
+                    const verifyData = await verifyRes.json().catch(() => null);
+                    toast.error(verifyData?.message || 'Payment verification failed. Contact support.');
+                    return;
+                }
+
+                toast.success('Payment successful. Request submitted.');
                 setStudentName('');
                 setUsn('');
                 setVerificationTemplate(null);
@@ -817,7 +858,7 @@ export default function CompanyVerification() {
                         </Card>
                         </div>
                     ) : (
-                    <form onSubmit={handleOpenPayment} className="space-y-6 max-w-4xl mx-auto">
+                    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
                         <Card className="shadow-md border-t-4 border-t-yellow-500">
                             <CardHeader>
                                 <CardTitle>Agency / Company Details</CardTitle>
@@ -931,16 +972,7 @@ export default function CompanyVerification() {
                     )
                 )}
 
-                <DemoPaymentDialog
-                    amount={VERIFICATION_FEE}
-                    open={showPaymentDialog}
-                    processing={loading}
-                    title="Verification Payment"
-                    description="Choose a payment method to complete this demo payment and submit the verification request."
-                    payerHint={companyName.trim() || companyEmail}
-                    onConfirm={handleSubmit}
-                    onOpenChange={setShowPaymentDialog}
-                />
+
                 </div>
             </main>
             </div>
