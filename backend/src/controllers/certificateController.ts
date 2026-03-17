@@ -90,8 +90,8 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
 
         const parsedYear = Number(yearOfPassing);
         const currentYear = new Date().getFullYear();
-        if (!Number.isInteger(parsedYear) || parsedYear < 1990 || parsedYear > currentYear + 1) {
-            return res.status(400).json({ message: 'Enter a valid year of passing' });
+        if (!Number.isInteger(parsedYear) || parsedYear < 2000 || parsedYear > currentYear + 1) {
+            return res.status(400).json({ message: 'Enter a valid year of passing (2000 or later)' });
         }
 
         if ((copyType === 'HARD_COPY' || copyType === 'BOTH') && !String(address || '').trim()) {

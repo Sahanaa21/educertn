@@ -25,6 +25,7 @@ const CERTIFICATE_OPTIONS = [
 
 const MAX_ID_PROOF_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_ID_PROOF_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
+const MIN_PASSING_YEAR = 2000;
 
 export default function ApplyCertificate() {
     const router = useRouter();
@@ -75,8 +76,8 @@ export default function ApplyCertificate() {
 
         const passingYear = Number(year);
         const currentYear = new Date().getFullYear();
-        if (!Number.isInteger(passingYear) || passingYear < 1990 || passingYear > currentYear + 1) {
-            toast.error('Enter a valid year of passing.');
+        if (!Number.isInteger(passingYear) || passingYear < MIN_PASSING_YEAR || passingYear > currentYear + 1) {
+            toast.error(`Enter a valid year of passing (${MIN_PASSING_YEAR} or later).`);
             return false;
         }
 
@@ -275,7 +276,24 @@ export default function ApplyCertificate() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="year">Year of Passing</Label>
-                                <Input id="year" type="number" placeholder="2023" value={year} onChange={e => setYear(e.target.value)} required />
+                                <Input
+                                    id="year"
+                                    type="number"
+                                    placeholder="2023"
+                                    min={MIN_PASSING_YEAR}
+                                    value={year}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (!raw) {
+                                            setYear('');
+                                            return;
+                                        }
+                                        const parsed = Number(raw);
+                                        if (Number.isNaN(parsed)) return;
+                                        setYear(String(Math.max(MIN_PASSING_YEAR, parsed)));
+                                    }}
+                                    required
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phoneNumber">Phone Number</Label>
