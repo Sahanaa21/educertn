@@ -130,7 +130,7 @@ export default function AdminCertificates() {
                 req.status,
                 req.paymentStatus,
                 req.amount || 0,
-                req.stripeSessionId || 'N/A',
+                req.paymentOrderId || 'N/A',
                 new Date(req.createdAt).toLocaleDateString()
             ];
             csvRows.push(row.join(','));
@@ -332,7 +332,7 @@ export default function AdminCertificates() {
                                     <TableCell className="align-top py-3">
                                         <div className="font-bold text-green-700">{req.paymentStatus}</div>
                                         <div className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</div>
-                                        <div className="text-xs text-slate-400 truncate max-w-44">Payment ID: {req.stripeSessionId || 'txn_demo...'}</div>
+                                        <div className="text-xs text-slate-400 truncate max-w-44">Payment Order ID: {req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         {req.idProofUrl ? (

@@ -145,7 +145,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
 
         await prisma.certificateRequest.update({
             where: { id: certificateRequest.id },
-            data: { stripeSessionId: order.id }
+            data: { paymentOrderId: order.id }
         });
 
         res.status(201).json({
@@ -185,7 +185,7 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
 
         const request = await prisma.certificateRequest.findUnique({
             where: { id },
-            select: { id: true, userId: true, paymentStatus: true, stripeSessionId: true }
+            select: { id: true, userId: true, paymentStatus: true, paymentOrderId: true }
         });
 
         if (!request || request.userId !== userId) {
@@ -196,7 +196,7 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
         }
 
-        if (request.stripeSessionId && request.stripeSessionId !== razorpayOrderId) {
+        if (request.paymentOrderId && request.paymentOrderId !== razorpayOrderId) {
             return res.status(400).json({ message: 'Order ID mismatch for this request' });
         }
 
@@ -221,7 +221,7 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
             where: { id },
             data: {
                 paymentStatus: 'PAID',
-                stripeSessionId: razorpayOrderId
+                paymentOrderId: razorpayOrderId
             }
         });
 
@@ -275,7 +275,7 @@ export const createCertificatePaymentOrder = async (req: Request, res: Response)
 
         await prisma.certificateRequest.update({
             where: { id },
-            data: { stripeSessionId: order.id }
+            data: { paymentOrderId: order.id }
         });
 
         return res.json({

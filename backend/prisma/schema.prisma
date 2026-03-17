@@ -81,7 +81,7 @@ model CertificateRequest {
   supportingDocsUrl    String?
   paymentStatus        String            @default("PENDING") // PENDING, PAID, FAILED
   amount               Float             @default(0)
-  stripeSessionId      String?
+  paymentOrderId       String?
   status               CertificateStatus @default(PENDING)
   rejectionReason      String?
   physicalCopyPosted   Boolean           @default(false)
@@ -102,7 +102,7 @@ model VerificationRequest {
   usn              String
   uploadedTemplate String
   completedFile    String?
-  stripeSessionId  String?
+  paymentOrderId   String?
   paymentStatus    String             @default("PENDING")
   status           VerificationStatus @default(PENDING)
   rejectionReason  String?

@@ -146,11 +146,11 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
                 return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
             }
 
-            if (!request.stripeSessionId) {
+            if (!request.paymentOrderId) {
                 return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
             }
 
-            const payment = await fetchLatestCapturedPaymentForOrder(request.stripeSessionId);
+            const payment = await fetchLatestCapturedPaymentForOrder(request.paymentOrderId);
             if (!payment?.id) {
                 return res.status(400).json({ message: 'Cannot process refund: captured payment not found for this request' });
             }
@@ -308,7 +308,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
                 return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
             }
 
-            const orderId = existing.stripeSessionId;
+            const orderId = existing.paymentOrderId;
             if (!orderId) {
                 return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
             }

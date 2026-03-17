@@ -116,7 +116,7 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
 
         await prisma.verificationRequest.update({
             where: { id: created.id },
-            data: { stripeSessionId: order.id }
+            data: { paymentOrderId: order.id }
         });
 
         res.status(201).json({
@@ -189,7 +189,7 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
             where: { id },
             data: {
                 paymentStatus: 'PAID',
-                stripeSessionId: razorpayOrderId
+                paymentOrderId: razorpayOrderId
             }
         });
 
@@ -241,7 +241,7 @@ export const createVerificationPaymentOrder = async (req: AuthRequest, res: Resp
 
         await prisma.verificationRequest.update({
             where: { id: request.id },
-            data: { stripeSessionId: order.id }
+            data: { paymentOrderId: order.id }
         });
 
         return res.json({
