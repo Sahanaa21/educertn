@@ -114,6 +114,11 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
             }
         });
 
+        await prisma.verificationRequest.update({
+            where: { id: created.id },
+            data: { stripeSessionId: order.id }
+        });
+
         res.status(201).json({
             request: created,
             amount: VERIFICATION_FEE,
@@ -182,7 +187,10 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
 
         const updated = await prisma.verificationRequest.update({
             where: { id },
-            data: { paymentStatus: 'PAID' }
+            data: {
+                paymentStatus: 'PAID',
+                stripeSessionId: razorpayOrderId
+            }
         });
 
         return res.json({ message: 'Payment verified successfully', request: updated });
@@ -229,6 +237,11 @@ export const createVerificationPaymentOrder = async (req: AuthRequest, res: Resp
                 requestId: request.id,
                 companyEmail
             }
+        });
+
+        await prisma.verificationRequest.update({
+            where: { id: request.id },
+            data: { stripeSessionId: order.id }
         });
 
         return res.json({

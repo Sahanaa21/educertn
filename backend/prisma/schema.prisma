@@ -102,6 +102,7 @@ model VerificationRequest {
   usn              String
   uploadedTemplate String
   completedFile    String?
+  stripeSessionId  String?
   paymentStatus    String             @default("PENDING")
   status           VerificationStatus @default(PENDING)
   rejectionReason  String?

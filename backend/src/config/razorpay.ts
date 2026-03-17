@@ -42,6 +42,29 @@ export const fetchRazorpayOrder = async (orderId: string) => {
     return razorpay.orders.fetch(orderId);
 };
 
+export const fetchLatestCapturedPaymentForOrder = async (orderId: string): Promise<any | null> => {
+    const razorpay = getClient();
+    const paymentsResponse = await (razorpay as any).orders.fetchPayments(orderId);
+    const items = Array.isArray(paymentsResponse?.items) ? paymentsResponse.items : [];
+
+    const captured = items
+        .filter((payment: any) => payment && (payment.status === 'captured' || Boolean(payment.captured)))
+        .sort((a: any, b: any) => Number(b?.created_at || 0) - Number(a?.created_at || 0));
+
+    return captured[0] || null;
+};
+
+export const createRazorpayRefund = async (paymentId: string, amountPaise?: number): Promise<any> => {
+    const razorpay = getClient();
+    const payload: Record<string, unknown> = {};
+
+    if (typeof amountPaise === 'number' && amountPaise > 0) {
+        payload.amount = Math.round(amountPaise);
+    }
+
+    return (razorpay as any).payments.refund(paymentId, payload);
+};
+
 export const verifyRazorpaySignature = ({
     orderId,
     paymentId,
