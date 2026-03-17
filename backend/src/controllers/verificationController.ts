@@ -106,7 +106,7 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
 
         const order = await createRazorpayOrder({
             amountPaise: VERIFICATION_FEE * 100,
-            receipt: `ver-${requestId}`.slice(0, 40),
+            receipt: `ver-${requestId}-${Date.now()}`.slice(0, 40),
             notes: {
                 requestType: 'VERIFICATION',
                 requestId: created.id,
@@ -176,7 +176,7 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
         const order = await fetchRazorpayOrder(razorpayOrderId);
         const orderRequestId = String((order.notes as any)?.requestId || '');
         const orderReceipt = String(order.receipt || '');
-        if (orderRequestId !== id && orderReceipt !== `ver-${request.requestId}`.slice(0, 40)) {
+        if (orderRequestId !== id && !orderReceipt.startsWith(`ver-${request.requestId}`)) {
             return res.status(400).json({ message: 'Payment order does not match this request' });
         }
 
@@ -188,6 +188,61 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
         return res.json({ message: 'Payment verified successfully', request: updated });
     } catch (error) {
         console.error('Error verifying verification payment:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const createVerificationPaymentOrder = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const companyEmail = await getAuthenticatedCompanyEmail(req);
+        if (!companyEmail) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const id = String(req.params.id || '');
+        if (!id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const request = await prisma.verificationRequest.findUnique({
+            where: { id },
+            select: { id: true, requestId: true, companyEmail: true, paymentStatus: true }
+        });
+
+        if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (!hasRazorpayConfig()) {
+            return res.status(500).json({ message: 'Payment gateway is not configured' });
+        }
+
+        const order = await createRazorpayOrder({
+            amountPaise: VERIFICATION_FEE * 100,
+            receipt: `ver-${request.requestId}-${Date.now()}`.slice(0, 40),
+            notes: {
+                requestType: 'VERIFICATION',
+                requestId: request.id,
+                companyEmail
+            }
+        });
+
+        return res.json({
+            razorpayOrder: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                keyId: getRazorpayKeyId(),
+                name: 'Global Academy of Technology',
+                description: `Verification Request ${request.requestId}`
+            }
+        });
+    } catch (error) {
+        console.error('Error creating verification retry payment order:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

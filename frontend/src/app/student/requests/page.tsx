@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
+import { openRazorpayCheckout } from '@/lib/razorpay';
 
 export default function StudentRequests() {
     const router = useRouter();
@@ -21,6 +22,7 @@ export default function StudentRequests() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [sortBy, setSortBy] = useState('NEWEST');
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [payingId, setPayingId] = useState<string | null>(null);
 
     const fetchRequests = async () => {
         const token = sessionStorage.getItem('token');
@@ -93,6 +95,73 @@ export default function StudentRequests() {
             toast.error('Download failed. Please try again.');
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    const retryPayment = async (req: any) => {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+            router.push('/student/login');
+            return;
+        }
+
+        setPayingId(req.id);
+        try {
+            const orderRes = await fetch(`${API_BASE}/api/student/certificates/${req.id}/create-payment-order`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const orderData = await orderRes.json().catch(() => null);
+            if (!orderRes.ok) {
+                toast.error(orderData?.message || 'Unable to start payment');
+                return;
+            }
+
+            const order = orderData?.razorpayOrder;
+            if (!order?.id || !order?.keyId) {
+                toast.error('Invalid payment order response');
+                return;
+            }
+
+            const paymentResponse = await openRazorpayCheckout({
+                keyId: order.keyId,
+                orderId: order.id,
+                amount: order.amount,
+                currency: order.currency || 'INR',
+                name: order.name || 'Global Academy of Technology',
+                description: order.description || `Certificate Request ${req.id}`,
+                prefill: {
+                    name: req.studentName,
+                    contact: req.phoneNumber || undefined,
+                }
+            });
+
+            const verifyRes = await fetch(`${API_BASE}/api/student/certificates/${req.id}/verify-payment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    razorpayOrderId: paymentResponse.razorpay_order_id,
+                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                    razorpaySignature: paymentResponse.razorpay_signature
+                })
+            });
+
+            const verifyData = await verifyRes.json().catch(() => null);
+            if (!verifyRes.ok) {
+                toast.error(verifyData?.message || 'Payment verification failed');
+                return;
+            }
+
+            toast.success('Payment successful');
+            fetchRequests();
+        } catch (error: any) {
+            toast.error(error?.message || 'Payment failed or cancelled');
+        } finally {
+            setPayingId(null);
         }
     };
 
@@ -231,7 +300,17 @@ export default function StudentRequests() {
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        {req.issuedCertificateUrl && (req.copyType === 'SOFT_COPY' || req.copyType === 'BOTH') ? (
+                                        {req.paymentStatus !== 'PAID' ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="hidden sm:inline-flex text-amber-700 border-amber-300"
+                                                onClick={() => retryPayment(req)}
+                                                disabled={payingId === req.id}
+                                            >
+                                                {payingId === req.id ? 'Processing...' : 'Pay Now'}
+                                            </Button>
+                                        ) : req.issuedCertificateUrl && (req.copyType === 'SOFT_COPY' || req.copyType === 'BOTH') ? (
                                             <Button
                                                 variant="outline"
                                                 size="sm"

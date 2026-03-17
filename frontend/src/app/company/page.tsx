@@ -60,6 +60,7 @@ export default function CompanyVerification() {
     // Dashboard States
     const [requests, setRequests] = useState<VerificationRequest[]>([]);
     const [mainLoading, setMainLoading] = useState(true);
+    const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
 
     const handleUnauthorized = () => {
         sessionStorage.removeItem('companyToken');
@@ -409,6 +410,73 @@ export default function CompanyVerification() {
         }
     };
 
+    const retryVerificationPayment = async (request: VerificationRequest) => {
+        const token = sessionStorage.getItem('companyToken');
+        if (!token) {
+            handleUnauthorized();
+            return;
+        }
+
+        setPayingRequestId(request.id);
+        try {
+            const orderRes = await fetch(`${API_BASE}/api/company/verifications/${request.id}/create-payment-order`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const orderData = await orderRes.json().catch(() => null);
+            if (!orderRes.ok) {
+                toast.error(orderData?.message || 'Unable to start payment');
+                return;
+            }
+
+            const order = orderData?.razorpayOrder;
+            if (!order?.id || !order?.keyId) {
+                toast.error('Invalid payment order response');
+                return;
+            }
+
+            const paymentResponse = await openRazorpayCheckout({
+                keyId: order.keyId,
+                orderId: order.id,
+                amount: order.amount,
+                currency: order.currency || 'INR',
+                name: order.name || 'Global Academy of Technology',
+                description: order.description || `Verification Request ${request.requestId}`,
+                prefill: {
+                    name: request.companyName,
+                    email: companyEmail || sessionStorage.getItem('companyEmail') || undefined,
+                }
+            });
+
+            const verifyRes = await fetch(`${API_BASE}/api/company/verifications/${request.id}/verify-payment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    razorpayOrderId: paymentResponse.razorpay_order_id,
+                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                    razorpaySignature: paymentResponse.razorpay_signature
+                })
+            });
+
+            const verifyData = await verifyRes.json().catch(() => null);
+            if (!verifyRes.ok) {
+                toast.error(verifyData?.message || 'Payment verification failed');
+                return;
+            }
+
+            toast.success('Payment successful');
+            fetchRequests(token);
+        } catch (error: any) {
+            toast.error(error?.message || 'Payment failed or cancelled');
+        } finally {
+            setPayingRequestId(null);
+        }
+    };
+
     const handleLogout = () => {
         sessionStorage.removeItem('companyToken');
         sessionStorage.removeItem('companyEmail');
@@ -698,7 +766,7 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {req.status === 'COMPLETED' ? (
+                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -706,6 +774,17 @@ export default function CompanyVerification() {
                                                             onClick={() => handleDownloadResponse(req.id, req.requestId)}
                                                         >
                                                             Download
+                                                        </Button>
+                                                    ) : req.paymentStatus !== 'PAID' ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                                                            disabled={payingRequestId === req.id}
+                                                            onClick={() => retryVerificationPayment(req)}
+                                                        >
+                                                            {payingRequestId === req.id ? 'Processing...' : 'Pay Now'}
                                                         </Button>
                                                     ) : (
                                                         <span className="text-slate-400 text-sm">Not available</span>
@@ -832,7 +911,7 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {req.status === 'COMPLETED' ? (
+                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -840,6 +919,17 @@ export default function CompanyVerification() {
                                                             onClick={() => handleDownloadResponse(req.id, req.requestId)}
                                                         >
                                                             Download
+                                                        </Button>
+                                                    ) : req.paymentStatus !== 'PAID' ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                                                            disabled={payingRequestId === req.id}
+                                                            onClick={() => retryVerificationPayment(req)}
+                                                        >
+                                                            {payingRequestId === req.id ? 'Processing...' : 'Pay Now'}
                                                         </Button>
                                                     ) : (
                                                         <span className="text-slate-400 text-sm">Not available</span>

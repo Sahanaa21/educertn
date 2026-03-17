@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createCertificateRequest, getStudentRequests, completeCertificateRequest, downloadStudentIssuedCertificate, verifyCertificatePayment } from '../controllers/certificateController';
+import { createCertificateRequest, getStudentRequests, completeCertificateRequest, downloadStudentIssuedCertificate, verifyCertificatePayment, createCertificatePaymentOrder } from '../controllers/certificateController';
 import { authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
@@ -50,6 +50,7 @@ router.post('/student/certificates', authenticate, certificateUploadHandler, cre
 router.get('/student/certificates', authenticate, getStudentRequests);
 router.get('/student/certificates/:id/download', authenticate, downloadStudentIssuedCertificate);
 router.post('/student/certificates/:id/verify-payment', authenticate, verifyCertificatePayment);
+router.post('/student/certificates/:id/create-payment-order', authenticate, createCertificatePaymentOrder);
 
 // Admin routes
 router.put('/admin/certificates/:id/complete', authenticate, completeCertificateRequest);

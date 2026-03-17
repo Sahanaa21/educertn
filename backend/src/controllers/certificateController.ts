@@ -135,7 +135,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
 
         const order = await createRazorpayOrder({
             amountPaise: Math.round(amount * 100),
-            receipt: `cert-${id}`.slice(0, 40),
+            receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
             notes: {
                 requestType: 'CERTIFICATE',
                 requestId: id,
@@ -213,7 +213,7 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
         const order = await fetchRazorpayOrder(razorpayOrderId);
         const orderRequestId = String((order.notes as any)?.requestId || '');
         const orderReceipt = String(order.receipt || '');
-        if (orderRequestId !== id && orderReceipt !== `cert-${id}`.slice(0, 40)) {
+        if (orderRequestId !== id && !orderReceipt.startsWith(`cert-${id}`)) {
             return res.status(400).json({ message: 'Payment order does not match this request' });
         }
 
@@ -228,6 +228,68 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
         return res.json({ message: 'Payment verified successfully', request: updated });
     } catch (error) {
         console.error('Error verifying certificate payment:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const createCertificatePaymentOrder = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String((req as any).user?.id || '');
+        const id = String(req.params.id || '');
+
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const request = await prisma.certificateRequest.findUnique({
+            where: { id },
+            select: { id: true, userId: true, amount: true, paymentStatus: true }
+        });
+
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (!hasRazorpayConfig()) {
+            return res.status(500).json({ message: 'Payment gateway is not configured' });
+        }
+
+        const amountPaise = Math.round(Number(request.amount || 0) * 100);
+        if (amountPaise <= 0) {
+            return res.status(400).json({ message: 'Invalid payment amount for this request' });
+        }
+
+        const order = await createRazorpayOrder({
+            amountPaise,
+            receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
+            notes: {
+                requestType: 'CERTIFICATE',
+                requestId: id,
+                userId
+            }
+        });
+
+        await prisma.certificateRequest.update({
+            where: { id },
+            data: { stripeSessionId: order.id }
+        });
+
+        return res.json({
+            razorpayOrder: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                keyId: getRazorpayKeyId(),
+                name: 'Global Academy of Technology',
+                description: `Certificate Request ${id}`
+            }
+        });
+    } catch (error) {
+        console.error('Error creating certificate retry payment order:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
