@@ -26,6 +26,7 @@ const CERTIFICATE_OPTIONS = [
 const MAX_ID_PROOF_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_ID_PROOF_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
 const MIN_PASSING_YEAR = 2000;
+const MAX_PASSING_YEAR = new Date().getFullYear() + 1;
 
 export default function ApplyCertificate() {
     const router = useRouter();
@@ -75,8 +76,7 @@ export default function ApplyCertificate() {
         }
 
         const passingYear = Number(year);
-        const currentYear = new Date().getFullYear();
-        if (!Number.isInteger(passingYear) || passingYear < MIN_PASSING_YEAR || passingYear > currentYear + 1) {
+        if (!Number.isInteger(passingYear) || String(passingYear).length !== 4 || passingYear < MIN_PASSING_YEAR || passingYear > MAX_PASSING_YEAR) {
             toast.error(`Enter a valid year of passing (${MIN_PASSING_YEAR} or later).`);
             return false;
         }
@@ -281,16 +281,26 @@ export default function ApplyCertificate() {
                                     type="number"
                                     placeholder="2023"
                                     min={MIN_PASSING_YEAR}
+                                    max={MAX_PASSING_YEAR}
+                                    step={1}
                                     value={year}
                                     onChange={(e) => {
-                                        const raw = e.target.value;
-                                        if (!raw) {
+                                        const digits = String(e.target.value || '').replace(/\D/g, '').slice(0, 4);
+                                        if (!digits) {
                                             setYear('');
                                             return;
                                         }
-                                        const parsed = Number(raw);
-                                        if (Number.isNaN(parsed)) return;
-                                        setYear(String(Math.max(MIN_PASSING_YEAR, parsed)));
+                                        setYear(digits);
+                                    }}
+                                    onBlur={() => {
+                                        if (!year) return;
+                                        const parsed = Number(year);
+                                        if (Number.isNaN(parsed)) {
+                                            setYear('');
+                                            return;
+                                        }
+                                        const bounded = Math.min(MAX_PASSING_YEAR, Math.max(MIN_PASSING_YEAR, parsed));
+                                        setYear(String(bounded));
                                     }}
                                     required
                                 />

@@ -243,7 +243,7 @@ export const createCertificatePaymentOrder = async (req: Request, res: Response)
 
         const request = await prisma.certificateRequest.findUnique({
             where: { id },
-            select: { id: true, userId: true, amount: true, paymentStatus: true }
+            select: { id: true, userId: true, amount: true, paymentStatus: true, status: true }
         });
 
         if (!request || request.userId !== userId) {
@@ -252,6 +252,10 @@ export const createCertificatePaymentOrder = async (req: Request, res: Response)
 
         if (request.paymentStatus === 'PAID') {
             return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (request.status === 'REJECTED') {
+            return res.status(400).json({ message: 'Payment is not allowed for rejected requests' });
         }
 
         if (!hasRazorpayConfig()) {

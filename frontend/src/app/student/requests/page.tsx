@@ -300,7 +300,7 @@ export default function StudentRequests() {
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        {req.paymentStatus !== 'PAID' ? (
+                                        {req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
                                             <Button
                                                 variant="outline"
                                                 size="sm"

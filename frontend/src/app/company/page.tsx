@@ -775,7 +775,7 @@ export default function CompanyVerification() {
                                                         >
                                                             Download
                                                         </Button>
-                                                    ) : req.paymentStatus !== 'PAID' ? (
+                                                    ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -920,7 +920,7 @@ export default function CompanyVerification() {
                                                         >
                                                             Download
                                                         </Button>
-                                                    ) : req.paymentStatus !== 'PAID' ? (
+                                                    ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
