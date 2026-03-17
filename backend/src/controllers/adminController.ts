@@ -308,7 +308,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
                 return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
             }
 
-            const orderId = existing.paymentOrderId;
+            const orderId = (existing as any).paymentOrderId || (existing as any).stripeSessionId;
             if (!orderId) {
                 return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
             }
