@@ -188,6 +188,8 @@ export default function StudentDashboard() {
                                                     <Badge variant={getPaymentMeta(req).label === 'PAID' || getPaymentMeta(req).label === 'REFUNDED' ? 'default' : 'secondary'} className={getPaymentMeta(req).className}>
                                                         {getPaymentMeta(req).label}
                                                     </Badge>
+                                                    <p className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</p>
+                                                    <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
                                                     {getPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getPaymentMeta(req).hint}</p> : null}
                                                 </div>
                                             </TableCell>

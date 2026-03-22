@@ -362,7 +362,7 @@ export default function StudentRequests() {
                                 <TableHead className="text-slate-200 font-semibold">Request ID</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Certificate Type</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Mode/Copies</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Payment / Refund</TableHead>
+                                <TableHead className="text-slate-200 font-semibold">Payment</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Status</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Date Applied</TableHead>
                                 <TableHead className="text-right text-slate-200 font-semibold">Action</TableHead>
@@ -379,6 +379,8 @@ export default function StudentRequests() {
                                             <Badge variant="outline" className={getPaymentMeta(req).className}>
                                                 {getPaymentMeta(req).label}
                                             </Badge>
+                                            <p className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</p>
+                                            <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
                                             {getPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getPaymentMeta(req).hint}</p> : null}
                                         </div>
                                     </TableCell>
@@ -468,6 +470,8 @@ export default function StudentRequests() {
                                                                 <Badge variant="outline" className={getPaymentMeta(req).className}>
                                                                     {getPaymentMeta(req).label}
                                                                 </Badge>
+                                                                <p className="mt-1 text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</p>
+                                                                <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
                                                                 {getPaymentMeta(req).hint ? <p className="mt-1 text-xs text-slate-500">{getPaymentMeta(req).hint}</p> : null}
                                                             </div>
                                                             <div>

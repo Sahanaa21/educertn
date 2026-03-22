@@ -21,6 +21,7 @@ type VerificationRequest = {
     companyName: string;
     studentName: string;
     usn: string;
+    paymentOrderId?: string | null;
     status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
     rejectionReason?: string | null;
     paymentStatus: string;
@@ -820,7 +821,7 @@ export default function CompanyVerification() {
                                             <TableHead className="whitespace-nowrap">Request ID</TableHead>
                                             <TableHead className="whitespace-nowrap">Student Name</TableHead>
                                             <TableHead className="whitespace-nowrap">USN</TableHead>
-                                            <TableHead className="whitespace-nowrap">Payment / Refund</TableHead>
+                                            <TableHead className="whitespace-nowrap">Payment</TableHead>
                                             <TableHead className="whitespace-nowrap">Status</TableHead>
                                             <TableHead className="whitespace-nowrap">Date</TableHead>
                                             <TableHead className="whitespace-nowrap">Download Response</TableHead>
@@ -837,6 +838,8 @@ export default function CompanyVerification() {
                                                         <Badge variant="outline" className={getVerificationPaymentMeta(req).className}>
                                                             {getVerificationPaymentMeta(req).label}
                                                         </Badge>
+                                                        <p className="text-xs text-slate-500">Amount: Rs {VERIFICATION_FEE.toFixed(2)}</p>
+                                                        <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
                                                         {getVerificationPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getVerificationPaymentMeta(req).hint}</p> : null}
                                                     </div>
                                                 </TableCell>
@@ -983,7 +986,7 @@ export default function CompanyVerification() {
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Request ID</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Student Name</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">USN</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Payment / Refund</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Payment</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Download Response</TableHead>
@@ -1000,6 +1003,8 @@ export default function CompanyVerification() {
                                                         <Badge variant="outline" className={getVerificationPaymentMeta(req).className}>
                                                             {getVerificationPaymentMeta(req).label}
                                                         </Badge>
+                                                        <p className="text-xs text-slate-500">Amount: Rs {VERIFICATION_FEE.toFixed(2)}</p>
+                                                        <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
                                                         {getVerificationPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getVerificationPaymentMeta(req).hint}</p> : null}
                                                     </div>
                                                 </TableCell>
