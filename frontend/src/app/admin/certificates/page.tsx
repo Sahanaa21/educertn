@@ -347,7 +347,7 @@ export default function AdminCertificates() {
                                             </Button>
                                         ) : '—'}
                                     </TableCell>
-                                    <TableCell className="p-2 align-top min-w-70">
+                                    <TableCell className="p-2 align-top min-w-70 overflow-hidden">
                                         <div className="flex w-68 flex-col gap-2">
                                             {req.status !== 'COMPLETED' && req.status !== 'REJECTED' && (
                                                 <div className="mb-2 flex gap-2">
@@ -466,7 +466,7 @@ export default function AdminCertificates() {
                                                 <span className="text-xs font-semibold text-green-600 italic">Marked as Finalized</span>
                                             )}
                                             {req.status === 'REJECTED' && (
-                                                <div className="text-xs font-semibold text-red-600 italic">
+                                                <div className="text-xs font-semibold text-red-600 italic break-words max-w-xs">
                                                     Request Denied
                                                     {req.rejectionReason ? `: ${req.rejectionReason}` : ''}
                                                 </div>

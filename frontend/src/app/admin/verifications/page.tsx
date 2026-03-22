@@ -330,7 +330,7 @@ export default function AdminVerifications() {
                                         <div className="mt-1 text-xs text-slate-500">Amount: Rs 5000.00</div>
                                         <div className="text-xs text-slate-400 truncate" title={req.paymentOrderId || 'N/A'}>Order ID: {req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
-                                    <TableCell className="p-2 align-top min-w-72">
+                                    <TableCell className="p-2 align-top min-w-72 overflow-hidden">
                                         <div className="flex w-68 flex-col gap-2">
                                             {!isCancelledRequest(req) ? (
                                                 <>
@@ -369,7 +369,7 @@ export default function AdminVerifications() {
                                                     ) : null}
                                                 </>
                                             ) : (
-                                                <div className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                                                <div className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 break-words max-w-xs">
                                                     User cancelled this request. No further admin action is needed.
                                                 </div>
                                             )}
