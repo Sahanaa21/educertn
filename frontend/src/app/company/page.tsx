@@ -479,6 +479,22 @@ export default function CompanyVerification() {
         return request.status === 'PENDING' && request.paymentStatus === 'PAID';
     };
 
+    const isCancelledVerification = (request: VerificationRequest) => {
+        return request.status === 'REJECTED' && String(request.rejectionReason || '').toLowerCase().includes('cancelled by company');
+    };
+
+    const getVerificationStatusLabel = (request: VerificationRequest) => {
+        return isCancelledVerification(request) ? 'CANCELLED' : request.status;
+    };
+
+    const getVerificationStatusBadgeClass = (request: VerificationRequest) => {
+        if (isCancelledVerification(request)) return 'border-slate-400 text-slate-700 bg-slate-100';
+        if (request.status === 'COMPLETED') return 'border-green-500 text-green-700 bg-green-50';
+        if (request.status === 'PROCESSING') return 'border-blue-500 text-blue-700 bg-blue-50';
+        if (request.status === 'REJECTED') return 'border-red-500 text-red-700 bg-red-50';
+        return 'border-yellow-500 text-yellow-700 bg-yellow-50';
+    };
+
     const cancelVerificationRequest = async (request: VerificationRequest) => {
         const token = sessionStorage.getItem('companyToken');
         if (!token) {
@@ -788,17 +804,12 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
-                                                        <Badge variant="outline" className={
-                                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
-                                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                                                                    req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
-                                                                        'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                        }>
-                                                            {req.status}
+                                                        <Badge variant="outline" className={getVerificationStatusBadgeClass(req)}>
+                                                            {getVerificationStatusLabel(req)}
                                                         </Badge>
                                                         {req.status === 'REJECTED' && req.rejectionReason ? (
                                                             <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
-                                                                Reason: {req.rejectionReason}
+                                                                {isCancelledVerification(req) ? 'Cancellation Note:' : 'Reason:'} {req.rejectionReason}
                                                             </p>
                                                         ) : null}
                                                     </div>
@@ -944,17 +955,12 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
-                                                        <Badge variant="outline" className={
-                                                            req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50' :
-                                                                req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50' :
-                                                                    req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50' :
-                                                                        'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                        }>
-                                                            {req.status}
+                                                        <Badge variant="outline" className={getVerificationStatusBadgeClass(req)}>
+                                                            {getVerificationStatusLabel(req)}
                                                         </Badge>
                                                         {req.status === 'REJECTED' && req.rejectionReason ? (
                                                             <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
-                                                                Reason: {req.rejectionReason}
+                                                                {isCancelledVerification(req) ? 'Cancellation Note:' : 'Reason:'} {req.rejectionReason}
                                                             </p>
                                                         ) : null}
                                                     </div>
