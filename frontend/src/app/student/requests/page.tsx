@@ -361,7 +361,7 @@ export default function StudentRequests() {
                             <TableRow>
                                 <TableHead className="text-slate-200 font-semibold">Request ID</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Certificate Type</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Mode/Copies</TableHead>
+                                <TableHead className="text-slate-200 font-semibold">Delivery Mode</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Payment</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Status</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Date Applied</TableHead>
@@ -373,7 +373,7 @@ export default function StudentRequests() {
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium text-blue-600">{req.id}</TableCell>
                                     <TableCell>{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
-                                    <TableCell>{req.copyType.replace('_', ' ')} ({req.copies})</TableCell>
+                                    <TableCell>{req.copyType.replace('_', ' ')}</TableCell>
                                     <TableCell>
                                         <div className="space-y-1">
                                             <Badge variant="outline" className={getPaymentMeta(req).className}>
@@ -456,10 +456,6 @@ export default function StudentRequests() {
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Delivery Mode</p>
                                                                 <p className="font-medium text-slate-900">{req.copyType.replace('_', ' ')}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-medium text-slate-500">Copies</p>
-                                                                <p className="font-medium text-slate-900">{req.copies}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Amount Paid</p>

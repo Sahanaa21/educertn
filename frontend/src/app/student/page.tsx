@@ -182,7 +182,7 @@ export default function StudentDashboard() {
                                         <TableRow key={req.id}>
                                             <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.id}</TableCell>
                                             <TableCell className="whitespace-nowrap">{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{req.copyType.replace('_', ' ')} ({req.copies})</TableCell>
+                                            <TableCell className="whitespace-nowrap">{req.copyType.replace('_', ' ')}</TableCell>
                                             <TableCell className="whitespace-nowrap">
                                                 <div className="space-y-1">
                                                     <Badge variant={getPaymentMeta(req).label === 'PAID' || getPaymentMeta(req).label === 'REFUNDED' ? 'default' : 'secondary'} className={getPaymentMeta(req).className}>

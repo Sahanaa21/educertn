@@ -40,7 +40,6 @@ export default function ApplyCertificate() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [type, setType] = useState('');
     const [mode, setMode] = useState('');
-    const [copies, setCopies] = useState(1);
     const [address, setAddress] = useState('');
     const [reason, setReason] = useState('');
     const [otherType, setOtherType] = useState('');
@@ -56,11 +55,11 @@ export default function ApplyCertificate() {
 
     const getFee = () => {
         if (!selectedCertificate) return 0;
-        return selectedCertificate.fee * copies;
+        return selectedCertificate.fee;
     };
 
     const validateForm = () => {
-        if (!usn || !name || !branch || !year || !phoneNumber || !type || !mode || !copies) {
+        if (!usn || !name || !branch || !year || !phoneNumber || !type || !mode) {
             toast.error('Please fill all required fields.');
             return false;
         }
@@ -144,7 +143,7 @@ export default function ApplyCertificate() {
             formData.append('phoneNumber', phoneNumber);
             formData.append('certificateType', type === 'other' ? otherType : type);
             formData.append('copyType', mode === 'soft' ? 'SOFT_COPY' : mode === 'hard' ? 'HARD_COPY' : 'BOTH');
-            formData.append('copies', copies.toString());
+            formData.append('copies', '1');
             formData.append('amount', amount.toString());
             if (reason) formData.append('reason', reason);
             if (address) formData.append('address', address);
@@ -353,7 +352,7 @@ export default function ApplyCertificate() {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="mode">Delivery Mode</Label>
                                 <Select onValueChange={(val) => setMode(String(val ?? ''))} required>
                                     <SelectTrigger>
@@ -365,17 +364,6 @@ export default function ApplyCertificate() {
                                         <SelectItem value="both">Both Soft & Hard Copy</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="copies">Number of Copies</Label>
-                                <Input
-                                    id="copies"
-                                    type="number"
-                                    min="1"
-                                    value={copies}
-                                    onChange={e => setCopies(Math.max(1, Number(e.target.value) || 1))}
-                                    required
-                                />
                             </div>
                         </div>
 
