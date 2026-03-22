@@ -16,6 +16,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
+app.disable('x-powered-by');
+
 const defaultAllowedOrigins = [
     'http://localhost:3000',
     'https://gat-verification-portal.vercel.app'
@@ -48,6 +50,14 @@ app.use(cors({
     },
     credentials: true
 }));
+app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-DNS-Prefetch-Control', 'off');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+});
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));

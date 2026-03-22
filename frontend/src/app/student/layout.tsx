@@ -23,16 +23,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         setIsSidebarOpen(window.innerWidth >= 768);
     }, []);
 
-    useEffect(() => {
-        const clearStudentSession = () => {
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('user');
-        };
-
-        window.addEventListener('beforeunload', clearStudentSession);
-        return () => window.removeEventListener('beforeunload', clearStudentSession);
-    }, []);
-
     // close on mobile when route changes
     useEffect(() => {
         if (window.innerWidth < 768) setIsSidebarOpen(false);

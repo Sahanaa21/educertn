@@ -8,13 +8,65 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.changeAdminPassword = exports.adminLogin = exports.verifyOtp = exports.companyLogin = exports.studentLogin = void 0;
+const crypto_1 = __importDefault(require("crypto"));
 const prisma_1 = require("../config/prisma");
 const auth_1 = require("../utils/auth");
 const email_1 = require("../utils/email");
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SCRYPT_PREFIX = 'scrypt';
+const SCRYPT_N = 16384;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEYLEN = 64;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const safeCompareStrings = (a, b) => {
+    const aBuffer = Buffer.from(a);
+    const bBuffer = Buffer.from(b);
+    if (aBuffer.length !== bBuffer.length) {
+        return false;
+    }
+    return crypto_1.default.timingSafeEqual(aBuffer, bBuffer);
+};
+const hashPassword = (plainPassword) => {
+    const salt = crypto_1.default.randomBytes(16).toString('hex');
+    const hash = crypto_1.default
+        .scryptSync(plainPassword, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P })
+        .toString('hex');
+    return `${SCRYPT_PREFIX}$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`;
+};
+const isScryptHash = (value) => {
+    return typeof value === 'string' && value.startsWith(`${SCRYPT_PREFIX}$`);
+};
+const verifyPassword = (plainPassword, storedPassword) => {
+    if (!storedPassword) {
+        return false;
+    }
+    if (!isScryptHash(storedPassword)) {
+        return safeCompareStrings(plainPassword, storedPassword);
+    }
+    try {
+        const [prefix, n, r, p, salt, storedHash] = storedPassword.split('$');
+        if (!prefix || !n || !r || !p || !salt || !storedHash) {
+            return false;
+        }
+        const derivedHash = crypto_1.default
+            .scryptSync(plainPassword, salt, Buffer.from(storedHash, 'hex').length, {
+            N: Number(n),
+            r: Number(r),
+            p: Number(p),
+        })
+            .toString('hex');
+        return safeCompareStrings(derivedHash, storedHash);
+    }
+    catch (_a) {
+        return false;
+    }
+};
 const isInvalidRecipientError = (error) => {
     const message = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
     return [
@@ -52,6 +104,8 @@ const studentLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 data: { email: normalizedEmail, role: 'STUDENT' }
             });
         }
+        // Keep only one active OTP per email to avoid accepting stale codes.
+        yield prisma_1.prisma.oTP.deleteMany({ where: { email: normalizedEmail } });
         yield prisma_1.prisma.oTP.create({
             data: {
                 email: normalizedEmail,
@@ -93,6 +147,8 @@ const companyLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 data: { email: normalizedEmail, role: 'COMPANY' }
             });
         }
+        // Keep only one active OTP per email to avoid accepting stale codes.
+        yield prisma_1.prisma.oTP.deleteMany({ where: { email: normalizedEmail } });
         yield prisma_1.prisma.oTP.create({
             data: {
                 email: normalizedEmail,
@@ -126,11 +182,11 @@ const verifyOtp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     try {
         const user = yield prisma_1.prisma.user.findUnique({ where: { email } });
-        const validOtp = yield prisma_1.prisma.oTP.findFirst({
-            where: { email, otp },
+        const latestOtp = yield prisma_1.prisma.oTP.findFirst({
+            where: { email },
             orderBy: { createdAt: 'desc' }
         });
-        if (!validOtp || validOtp.expiresAt < new Date()) {
+        if (!latestOtp || latestOtp.expiresAt < new Date() || latestOtp.otp !== otp) {
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
         if (!user) {
@@ -158,9 +214,15 @@ const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
     try {
         const user = yield prisma_1.prisma.user.findUnique({ where: { email, role: 'ADMIN' } });
-        if (!user || user.password !== password) {
+        if (!user || !verifyPassword(password, user.password)) {
             yield sleep(400);
             return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        if (!isScryptHash(user.password)) {
+            yield prisma_1.prisma.user.update({
+                where: { id: user.id },
+                data: { password: hashPassword(password) }
+            });
         }
         const token = (0, auth_1.generateToken)({ id: user.id, role: user.role }, '8h');
         res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
@@ -187,10 +249,13 @@ const changeAdminPassword = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!user || user.role !== 'ADMIN') {
             return res.status(403).json({ message: 'Unauthorized' });
         }
-        if (user.password !== currentPassword) {
+        if (!verifyPassword(currentPassword, user.password)) {
             return res.status(401).json({ message: 'Current password is incorrect' });
         }
-        yield prisma_1.prisma.user.update({ where: { id: adminId }, data: { password: newPassword } });
+        if (verifyPassword(newPassword, user.password)) {
+            return res.status(400).json({ message: 'New password must be different from the current password' });
+        }
+        yield prisma_1.prisma.user.update({ where: { id: adminId }, data: { password: hashPassword(newPassword) } });
         res.json({ message: 'Password updated successfully' });
     }
     catch (error) {

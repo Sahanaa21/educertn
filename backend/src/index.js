@@ -18,6 +18,7 @@ const maintenanceMode_1 = require("./middleware/maintenanceMode");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
+app.disable('x-powered-by');
 const defaultAllowedOrigins = [
     'http://localhost:3000',
     'https://gat-verification-portal.vercel.app'
@@ -41,6 +42,14 @@ app.use((0, cors_1.default)({
     },
     credentials: true
 }));
+app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-DNS-Prefetch-Control', 'off');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+});
 app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
 app.use('/uploads', express_1.default.static(path_1.default.resolve(process.cwd(), 'uploads')));

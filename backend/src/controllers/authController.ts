@@ -1,11 +1,71 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { generateToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SCRYPT_PREFIX = 'scrypt';
+const SCRYPT_N = 16384;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEYLEN = 64;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const safeCompareStrings = (a: string, b: string) => {
+    const aBuffer = Buffer.from(a);
+    const bBuffer = Buffer.from(b);
+
+    if (aBuffer.length !== bBuffer.length) {
+        return false;
+    }
+
+    return crypto.timingSafeEqual(aBuffer, bBuffer);
+};
+
+const hashPassword = (plainPassword: string) => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto
+        .scryptSync(plainPassword, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P })
+        .toString('hex');
+
+    return `${SCRYPT_PREFIX}$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`;
+};
+
+const isScryptHash = (value: string | null | undefined) => {
+    return typeof value === 'string' && value.startsWith(`${SCRYPT_PREFIX}$`);
+};
+
+const verifyPassword = (plainPassword: string, storedPassword: string | null | undefined) => {
+    if (!storedPassword) {
+        return false;
+    }
+
+    if (!isScryptHash(storedPassword)) {
+        return safeCompareStrings(plainPassword, storedPassword);
+    }
+
+    try {
+        const [prefix, n, r, p, salt, storedHash] = storedPassword.split('$');
+
+        if (!prefix || !n || !r || !p || !salt || !storedHash) {
+            return false;
+        }
+
+        const derivedHash = crypto
+            .scryptSync(plainPassword, salt, Buffer.from(storedHash, 'hex').length, {
+                N: Number(n),
+                r: Number(r),
+                p: Number(p),
+            })
+            .toString('hex');
+
+        return safeCompareStrings(derivedHash, storedHash);
+    } catch {
+        return false;
+    }
+};
 
 const isInvalidRecipientError = (error: unknown) => {
     const message = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
@@ -55,6 +115,9 @@ export const studentLogin = async (req: Request, res: Response): Promise<any> =>
                 data: { email: normalizedEmail, role: 'STUDENT' }
             });
         }
+
+        // Keep only one active OTP per email to avoid accepting stale codes.
+        await prisma.oTP.deleteMany({ where: { email: normalizedEmail } });
 
         await prisma.oTP.create({
             data: {
@@ -107,6 +170,9 @@ export const companyLogin = async (req: Request, res: Response): Promise<any> =>
             });
         }
 
+        // Keep only one active OTP per email to avoid accepting stale codes.
+        await prisma.oTP.deleteMany({ where: { email: normalizedEmail } });
+
         await prisma.oTP.create({
             data: {
                 email: normalizedEmail,
@@ -143,12 +209,12 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     try {
         const user = await prisma.user.findUnique({ where: { email } });
 
-        const validOtp = await prisma.oTP.findFirst({
-            where: { email, otp },
+        const latestOtp = await prisma.oTP.findFirst({
+            where: { email },
             orderBy: { createdAt: 'desc' }
         });
 
-        if (!validOtp || validOtp.expiresAt < new Date()) {
+        if (!latestOtp || latestOtp.expiresAt < new Date() || latestOtp.otp !== otp) {
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
@@ -182,9 +248,16 @@ export const adminLogin = async (req: Request, res: Response): Promise<any> => {
     try {
         const user = await prisma.user.findUnique({ where: { email, role: 'ADMIN' } });
 
-        if (!user || user.password !== password) {
+        if (!user || !verifyPassword(password, user.password)) {
             await sleep(400);
             return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        if (!isScryptHash(user.password)) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { password: hashPassword(password) }
+            });
         }
 
         const token = generateToken({ id: user.id, role: user.role }, '8h');
@@ -215,11 +288,15 @@ export const changeAdminPassword = async (req: Request, res: Response): Promise<
             return res.status(403).json({ message: 'Unauthorized' });
         }
 
-        if (user.password !== currentPassword) {
+        if (!verifyPassword(currentPassword, user.password)) {
             return res.status(401).json({ message: 'Current password is incorrect' });
         }
 
-        await prisma.user.update({ where: { id: adminId }, data: { password: newPassword } });
+        if (verifyPassword(newPassword, user.password)) {
+            return res.status(400).json({ message: 'New password must be different from the current password' });
+        }
+
+        await prisma.user.update({ where: { id: adminId }, data: { password: hashPassword(newPassword) } });
 
         res.json({ message: 'Password updated successfully' });
     } catch (error) {
