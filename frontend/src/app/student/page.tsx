@@ -69,6 +69,19 @@ export default function StudentDashboard() {
         return 'border-yellow-500 text-yellow-700 bg-yellow-50';
     };
 
+    const getRefundLabel = (req: any) => {
+        if (req.paymentStatus === 'REFUNDED') return 'REFUNDED';
+        if (isCancelledRequest(req) && req.paymentStatus === 'PAID') return 'REFUND_PENDING';
+        return 'N/A';
+    };
+
+    const getRefundBadgeClass = (req: any) => {
+        const refundLabel = getRefundLabel(req);
+        if (refundLabel === 'REFUNDED') return 'border-emerald-500 text-emerald-700 bg-emerald-50';
+        if (refundLabel === 'REFUND_PENDING') return 'border-amber-500 text-amber-700 bg-amber-50';
+        return 'border-slate-300 text-slate-600 bg-slate-50';
+    };
+
     return (
         <div className="space-y-8">
             <div>
@@ -152,9 +165,20 @@ export default function StudentDashboard() {
                                             <TableCell className="whitespace-nowrap">{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
                                             <TableCell className="whitespace-nowrap">{req.copyType.replace('_', ' ')} ({req.copies})</TableCell>
                                             <TableCell className="whitespace-nowrap">
-                                                <Badge variant={req.paymentStatus === 'PAID' ? 'default' : 'secondary'} className={req.paymentStatus === 'PAID' ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-none'}>
-                                                    {req.paymentStatus}
-                                                </Badge>
+                                                <div className="space-y-1">
+                                                    <Badge variant={req.paymentStatus === 'PAID' ? 'default' : 'secondary'} className={
+                                                        req.paymentStatus === 'PAID'
+                                                            ? 'bg-green-600 hover:bg-green-700'
+                                                            : req.paymentStatus === 'REFUNDED'
+                                                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                                                : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-none'
+                                                    }>
+                                                        {req.paymentStatus}
+                                                    </Badge>
+                                                    <Badge variant="outline" className={getRefundBadgeClass(req)}>
+                                                        {getRefundLabel(req)}
+                                                    </Badge>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap">
                                                 <div className="space-y-1">

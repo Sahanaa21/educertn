@@ -495,6 +495,19 @@ export default function CompanyVerification() {
         return 'border-yellow-500 text-yellow-700 bg-yellow-50';
     };
 
+    const getVerificationRefundLabel = (request: VerificationRequest) => {
+        if (request.paymentStatus === 'REFUNDED') return 'REFUNDED';
+        if (isCancelledVerification(request) && request.paymentStatus === 'PAID') return 'REFUND_PENDING';
+        return 'N/A';
+    };
+
+    const getVerificationRefundBadgeClass = (request: VerificationRequest) => {
+        const refundLabel = getVerificationRefundLabel(request);
+        if (refundLabel === 'REFUNDED') return 'border-emerald-500 text-emerald-700 bg-emerald-50';
+        if (refundLabel === 'REFUND_PENDING') return 'border-amber-500 text-amber-700 bg-amber-50';
+        return 'border-slate-300 text-slate-600 bg-slate-50';
+    };
+
     const cancelVerificationRequest = async (request: VerificationRequest) => {
         const token = sessionStorage.getItem('companyToken');
         if (!token) {
@@ -506,9 +519,6 @@ export default function CompanyVerification() {
             toast.error('This request cannot be cancelled now');
             return;
         }
-
-        const confirmed = window.confirm('Cancel this request and initiate refund?');
-        if (!confirmed) return;
 
         setCancellingRequestId(request.id);
         try {
@@ -791,6 +801,7 @@ export default function CompanyVerification() {
                                             <TableHead className="whitespace-nowrap">Request ID</TableHead>
                                             <TableHead className="whitespace-nowrap">Student Name</TableHead>
                                             <TableHead className="whitespace-nowrap">USN</TableHead>
+                                            <TableHead className="whitespace-nowrap">Payment / Refund</TableHead>
                                             <TableHead className="whitespace-nowrap">Status</TableHead>
                                             <TableHead className="whitespace-nowrap">Date</TableHead>
                                             <TableHead className="whitespace-nowrap">Download Response</TableHead>
@@ -802,6 +813,22 @@ export default function CompanyVerification() {
                                                 <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div className="space-y-1">
+                                                        <Badge variant="outline" className={
+                                                            req.paymentStatus === 'PAID'
+                                                                ? 'border-green-500 text-green-700 bg-green-50'
+                                                                : req.paymentStatus === 'REFUNDED'
+                                                                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                                                                    : 'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                                        }>
+                                                            {req.paymentStatus}
+                                                        </Badge>
+                                                        <Badge variant="outline" className={getVerificationRefundBadgeClass(req)}>
+                                                            {getVerificationRefundLabel(req)}
+                                                        </Badge>
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
                                                         <Badge variant="outline" className={getVerificationStatusBadgeClass(req)}>
@@ -855,7 +882,7 @@ export default function CompanyVerification() {
                                         ))}
                                         {requests.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                                                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                                                     No verification requests found. Click "New Verification Request" to begin.
                                                 </TableCell>
                                             </TableRow>
@@ -942,6 +969,7 @@ export default function CompanyVerification() {
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Request ID</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Student Name</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">USN</TableHead>
+                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Payment / Refund</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
                                             <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Download Response</TableHead>
@@ -953,6 +981,22 @@ export default function CompanyVerification() {
                                                 <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div className="space-y-1">
+                                                        <Badge variant="outline" className={
+                                                            req.paymentStatus === 'PAID'
+                                                                ? 'border-green-500 text-green-700 bg-green-50'
+                                                                : req.paymentStatus === 'REFUNDED'
+                                                                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                                                                    : 'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                                        }>
+                                                            {req.paymentStatus}
+                                                        </Badge>
+                                                        <Badge variant="outline" className={getVerificationRefundBadgeClass(req)}>
+                                                            {getVerificationRefundLabel(req)}
+                                                        </Badge>
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
                                                         <Badge variant="outline" className={getVerificationStatusBadgeClass(req)}>
@@ -995,7 +1039,7 @@ export default function CompanyVerification() {
                                         ))}
                                         {sortedCompanyRequests.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">No requests found.</TableCell>
+                                                <TableCell colSpan={7} className="text-center py-8 text-slate-500">No requests found.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>

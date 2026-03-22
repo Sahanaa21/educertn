@@ -191,6 +191,19 @@ export default function StudentRequests() {
         return 'border-yellow-500 text-yellow-700 bg-yellow-50';
     };
 
+    const getRefundLabel = (req: any) => {
+        if (req.paymentStatus === 'REFUNDED') return 'REFUNDED';
+        if (isCancelledRequest(req) && req.paymentStatus === 'PAID') return 'REFUND_PENDING';
+        return 'N/A';
+    };
+
+    const getRefundBadgeClass = (req: any) => {
+        const refundLabel = getRefundLabel(req);
+        if (refundLabel === 'REFUNDED') return 'border-emerald-500 text-emerald-700 bg-emerald-50';
+        if (refundLabel === 'REFUND_PENDING') return 'border-amber-500 text-amber-700 bg-amber-50';
+        return 'border-slate-300 text-slate-600 bg-slate-50';
+    };
+
     const cancelRequest = async (req: any) => {
         const token = sessionStorage.getItem('token');
         if (!token) {
@@ -202,9 +215,6 @@ export default function StudentRequests() {
             toast.error('This request cannot be cancelled now');
             return;
         }
-
-        const confirmed = window.confirm('Cancel this request and initiate refund?');
-        if (!confirmed) return;
 
         setCancellingId(req.id);
         try {
@@ -333,6 +343,7 @@ export default function StudentRequests() {
                                 <TableHead className="text-slate-200 font-semibold">Request ID</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Certificate Type</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Mode/Copies</TableHead>
+                                <TableHead className="text-slate-200 font-semibold">Payment / Refund</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Status</TableHead>
                                 <TableHead className="text-slate-200 font-semibold">Date Applied</TableHead>
                                 <TableHead className="text-right text-slate-200 font-semibold">Action</TableHead>
@@ -344,6 +355,22 @@ export default function StudentRequests() {
                                     <TableCell className="font-medium text-blue-600">{req.id}</TableCell>
                                     <TableCell>{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
                                     <TableCell>{req.copyType.replace('_', ' ')} ({req.copies})</TableCell>
+                                    <TableCell>
+                                        <div className="space-y-1">
+                                            <Badge variant="outline" className={
+                                                req.paymentStatus === 'PAID'
+                                                    ? 'border-green-500 text-green-700 bg-green-50'
+                                                    : req.paymentStatus === 'REFUNDED'
+                                                        ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                                                        : 'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                            }>
+                                                {req.paymentStatus}
+                                            </Badge>
+                                            <Badge variant="outline" className={getRefundBadgeClass(req)}>
+                                                {getRefundLabel(req)}
+                                            </Badge>
+                                        </div>
+                                    </TableCell>
                                     <TableCell>
                                         <div className="space-y-1">
                                             <Badge variant="outline" className={getStatusBadgeClass(req)}>
@@ -423,6 +450,24 @@ export default function StudentRequests() {
                                                                 <p className="font-medium text-slate-900">₹ {req.amount}</p>
                                                             </div>
                                                             <div>
+                                                                <p className="text-sm font-medium text-slate-500">Payment Status</p>
+                                                                <Badge variant="outline" className={
+                                                                    req.paymentStatus === 'PAID'
+                                                                        ? 'border-green-500 text-green-700 bg-green-50'
+                                                                        : req.paymentStatus === 'REFUNDED'
+                                                                            ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                                                                            : 'border-yellow-500 text-yellow-700 bg-yellow-50'
+                                                                }>
+                                                                    {req.paymentStatus}
+                                                                </Badge>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium text-slate-500">Refund</p>
+                                                                <Badge variant="outline" className={getRefundBadgeClass(req)}>
+                                                                    {getRefundLabel(req)}
+                                                                </Badge>
+                                                            </div>
+                                                            <div>
                                                                 <p className="text-sm font-medium text-slate-500">Date Applied</p>
                                                                 <p className="font-medium text-slate-900">{new Date(req.createdAt).toLocaleDateString()}</p>
                                                             </div>
@@ -461,7 +506,7 @@ export default function StudentRequests() {
                             ))}
                             {sortedRequests.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                                    <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                                         No requests found.
                                     </TableCell>
                                 </TableRow>
