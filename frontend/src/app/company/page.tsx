@@ -844,16 +844,19 @@ export default function CompanyVerification() {
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     {canCancelVerification(req) ? (
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="text-red-700 border-red-300 hover:bg-red-50"
-                                                            disabled={cancellingRequestId === req.id}
-                                                            onClick={() => cancelVerificationRequest(req)}
-                                                        >
-                                                            {cancellingRequestId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
-                                                        </Button>
+                                                        <div className="flex flex-col items-start gap-1">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="text-red-700 border-red-300 hover:bg-red-50"
+                                                                disabled={cancellingRequestId === req.id}
+                                                                onClick={() => cancelVerificationRequest(req)}
+                                                            >
+                                                                {cancellingRequestId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
+                                                            </Button>
+                                                            <span className="text-[11px] text-slate-500">Refund goes to the original payment method.</span>
+                                                        </div>
                                                     ) : req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
@@ -1011,7 +1014,21 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
+                                                    {canCancelVerification(req) ? (
+                                                        <div className="flex flex-col items-start gap-1">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="text-red-700 border-red-300 hover:bg-red-50"
+                                                                disabled={cancellingRequestId === req.id}
+                                                                onClick={() => cancelVerificationRequest(req)}
+                                                            >
+                                                                {cancellingRequestId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
+                                                            </Button>
+                                                            <span className="text-[11px] text-slate-500">Refund goes to the original payment method.</span>
+                                                        </div>
+                                                    ) : req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"

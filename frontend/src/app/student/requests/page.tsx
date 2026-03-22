@@ -386,15 +386,18 @@ export default function StudentRequests() {
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
                                         {canCancelRequest(req) ? (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="hidden sm:inline-flex text-red-700 border-red-300"
-                                                onClick={() => cancelRequest(req)}
-                                                disabled={cancellingId === req.id}
-                                            >
-                                                {cancellingId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
-                                            </Button>
+                                            <div className="hidden sm:flex flex-col items-end gap-1">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-red-700 border-red-300"
+                                                    onClick={() => cancelRequest(req)}
+                                                    disabled={cancellingId === req.id}
+                                                >
+                                                    {cancellingId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
+                                                </Button>
+                                                <span className="text-[11px] text-slate-500">Refund goes to the original payment method.</span>
+                                            </div>
                                         ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
                                             <Button
                                                 variant="outline"
