@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { createVerificationRequest, downloadCompanyCompletedFile, getCompanyVerifications, verifyVerificationPayment, createVerificationPaymentOrder } from '../controllers/verificationController';
+import {
+	createVerificationRequest,
+	downloadCompanyCompletedFile,
+	getCompanyVerifications,
+	verifyVerificationPayment,
+	createVerificationPaymentOrder,
+	cancelCompanyVerificationRequest
+} from '../controllers/verificationController';
 import { authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
@@ -58,5 +65,6 @@ router.get('/company/verifications', authenticate, getCompanyVerifications);
 router.get('/company/verifications/:id/response', authenticate, downloadCompanyCompletedFile);
 router.post('/company/verifications/:id/verify-payment', authenticate, verifyVerificationPayment);
 router.post('/company/verifications/:id/create-payment-order', authenticate, createVerificationPaymentOrder);
+router.post('/company/verifications/:id/cancel', authenticate, cancelCompanyVerificationRequest);
 
 export default router;

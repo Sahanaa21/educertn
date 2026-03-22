@@ -2,7 +2,15 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
-import { createRazorpayOrder, fetchRazorpayOrder, getRazorpayKeyId, hasRazorpayConfig, verifyRazorpaySignature } from '../config/razorpay';
+import {
+    createRazorpayOrder,
+    createRazorpayRefund,
+    fetchLatestCapturedPaymentForOrder,
+    fetchRazorpayOrder,
+    getRazorpayKeyId,
+    hasRazorpayConfig,
+    verifyRazorpaySignature
+} from '../config/razorpay';
 import { generateRequestId } from '../utils/generateId';
 
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
@@ -365,6 +373,91 @@ export const downloadStudentIssuedCertificate = async (req: Request, res: Respon
         return res.download(resolvedFilePath, `${request.id}-certificate${extension}`);
     } catch (error) {
         console.error('Error downloading issued certificate:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const cancelStudentCertificateRequest = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String((req as any).user?.id || '');
+        const id = String(req.params.id || '');
+
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const existing = await prisma.certificateRequest.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                userId: true,
+                status: true,
+                paymentStatus: true,
+                paymentOrderId: true,
+                amount: true,
+                softCopyEmailed: true,
+                physicalCopyPosted: true,
+                issuedCertificateUrl: true
+            }
+        });
+
+        if (!existing || existing.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+
+        if (existing.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Cancellation is allowed only while request is pending' });
+        }
+
+        if (existing.softCopyEmailed || existing.physicalCopyPosted || Boolean(existing.issuedCertificateUrl)) {
+            return res.status(400).json({ message: 'Cannot cancel after documents are issued or dispatched' });
+        }
+
+        let nextPaymentStatus = existing.paymentStatus;
+
+        if (existing.paymentStatus === 'PAID') {
+            if (!hasRazorpayConfig()) {
+                return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
+            }
+
+            if (!existing.paymentOrderId) {
+                return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
+            }
+
+            const payment = await fetchLatestCapturedPaymentForOrder(existing.paymentOrderId);
+            if (!payment?.id) {
+                return res.status(400).json({ message: 'Cannot process refund: captured payment not found for this request' });
+            }
+
+            const paidAmount = Number(payment.amount || 0);
+            const alreadyRefunded = Number(payment.amount_refunded || 0);
+            const desiredAmount = Math.round(Number(existing.amount || 0) * 100);
+            const refundableAmount = desiredAmount > 0 ? Math.min(desiredAmount, paidAmount) : paidAmount;
+
+            if (alreadyRefunded < refundableAmount) {
+                await createRazorpayRefund(payment.id, refundableAmount);
+            }
+
+            nextPaymentStatus = 'REFUNDED';
+        }
+
+        const updated = await prisma.certificateRequest.update({
+            where: { id },
+            data: {
+                status: 'REJECTED',
+                rejectionReason: 'Cancelled by user before processing',
+                paymentStatus: nextPaymentStatus
+            }
+        });
+
+        return res.json({
+            message: nextPaymentStatus === 'REFUNDED'
+                ? 'Request cancelled and refund initiated'
+                : 'Request cancelled successfully',
+            request: updated
+        });
+    } catch (error) {
+        console.error('Error cancelling certificate request:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

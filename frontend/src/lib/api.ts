@@ -31,7 +31,11 @@ export async function apiFetch(
 		const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
 		try {
-			const response = await fetch(target, { ...init, signal: controller.signal });
+			const response = await fetch(target, {
+				cache: 'no-store',
+				...init,
+				signal: controller.signal,
+			});
 			clearTimeout(timeoutId);
 
 			// Retry for transient 5xx failures only.

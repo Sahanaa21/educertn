@@ -8,10 +8,67 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeCertificateRequest = exports.getStudentRequests = exports.createCertificateRequest = void 0;
+exports.cancelStudentCertificateRequest = exports.downloadStudentIssuedCertificate = exports.completeCertificateRequest = exports.getStudentRequests = exports.createCertificatePaymentOrder = exports.verifyCertificatePayment = exports.createCertificateRequest = void 0;
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
+const razorpay_1 = require("../config/razorpay");
 const generateId_1 = require("../utils/generateId");
+const resolveStoredFilePath = (storedPath) => {
+    if (!storedPath)
+        return null;
+    const direct = path_1.default.isAbsolute(storedPath) ? storedPath : path_1.default.resolve(process.cwd(), storedPath);
+    if (fs_1.default.existsSync(direct))
+        return direct;
+    const normalized = storedPath.replace(/\\/g, '/');
+    const uploadsIndex = normalized.lastIndexOf('/uploads/');
+    if (uploadsIndex >= 0) {
+        const relativeFromUploads = normalized.slice(uploadsIndex + 1);
+        const candidate = path_1.default.resolve(process.cwd(), relativeFromUploads);
+        if (fs_1.default.existsSync(candidate))
+            return candidate;
+    }
+    const fallbackByName = path_1.default.resolve(process.cwd(), 'uploads', path_1.default.basename(normalized));
+    if (fs_1.default.existsSync(fallbackByName))
+        return fallbackByName;
+    return null;
+};
+const inferExtensionFromFile = (filePath) => {
+    try {
+        const buffer = fs_1.default.readFileSync(filePath).subarray(0, 8192);
+        if (buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+            return '.pdf';
+        }
+        if (buffer.length >= 8 &&
+            buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47 &&
+            buffer[4] === 0x0D && buffer[5] === 0x0A && buffer[6] === 0x1A && buffer[7] === 0x0A) {
+            return '.png';
+        }
+        if (buffer.length >= 3 && buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+            return '.jpg';
+        }
+        if (buffer.length >= 8 &&
+            buffer[0] === 0xD0 && buffer[1] === 0xCF && buffer[2] === 0x11 && buffer[3] === 0xE0 &&
+            buffer[4] === 0xA1 && buffer[5] === 0xB1 && buffer[6] === 0x1A && buffer[7] === 0xE1) {
+            return '.doc';
+        }
+        if (buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4B) {
+            const snippet = buffer.toString('utf8');
+            if (snippet.includes('word/') || snippet.includes('[Content_Types].xml')) {
+                return '.docx';
+            }
+            return '.zip';
+        }
+    }
+    catch (_a) {
+        return '';
+    }
+    return '';
+};
 const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user.id;
@@ -23,12 +80,33 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
         const studentName = body.studentName;
         const branch = body.branch;
         const yearOfPassing = body.yearOfPassing;
+        const phoneNumber = body.phoneNumber || undefined;
         const certificateType = body.certificateType;
         const copyType = body.copyType;
         const copies = Number(body.copies) || 1;
         const reason = body.reason || undefined;
         const address = body.address || undefined;
         const amount = Number(body.amount) || 0;
+        if (!usn || !studentName || !branch || !yearOfPassing || !phoneNumber || !certificateType || !copyType) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+        if (!/^\d{10}$/.test(String(phoneNumber))) {
+            return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+        }
+        const parsedYear = Number(yearOfPassing);
+        const currentYear = new Date().getFullYear();
+        if (!Number.isInteger(parsedYear) || parsedYear < 2000 || parsedYear > currentYear + 1) {
+            return res.status(400).json({ message: 'Enter a valid year of passing (2000 or later)' });
+        }
+        if ((copyType === 'HARD_COPY' || copyType === 'BOTH') && !String(address || '').trim()) {
+            return res.status(400).json({ message: 'Postal address is required for hard copy delivery' });
+        }
+        if (!String(reason || '').trim()) {
+            return res.status(400).json({ message: 'Reason for request is required' });
+        }
+        if (!file) {
+            return res.status(400).json({ message: 'Government ID proof is required' });
+        }
         const id = yield (0, generateId_1.generateRequestId)();
         const certificateRequest = yield prisma_1.prisma.certificateRequest.create({
             data: {
@@ -38,6 +116,7 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
                 studentName,
                 branch,
                 yearOfPassing,
+                phoneNumber,
                 certificateType,
                 copyType,
                 copies,
@@ -49,12 +128,33 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
                 status: 'PENDING'
             }
         });
-        // Simulate immediate payment success for this flow
-        const updatedRequest = yield prisma_1.prisma.certificateRequest.update({
-            where: { id: certificateRequest.id },
-            data: { paymentStatus: 'PAID' }
+        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+            return res.status(500).json({ message: 'Payment gateway is not configured' });
+        }
+        const order = yield (0, razorpay_1.createRazorpayOrder)({
+            amountPaise: Math.round(amount * 100),
+            receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
+            notes: {
+                requestType: 'CERTIFICATE',
+                requestId: id,
+                userId: String(userId)
+            }
         });
-        res.status(201).json(updatedRequest);
+        yield prisma_1.prisma.certificateRequest.update({
+            where: { id: certificateRequest.id },
+            data: { paymentOrderId: order.id }
+        });
+        res.status(201).json({
+            request: certificateRequest,
+            razorpayOrder: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                keyId: (0, razorpay_1.getRazorpayKeyId)(),
+                name: 'Global Academy of Technology',
+                description: `Certificate Request ${id}`
+            }
+        });
     }
     catch (error) {
         console.error('Error creating certificate request:', error);
@@ -62,6 +162,118 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
     }
 });
 exports.createCertificateRequest = createCertificateRequest;
+const verifyCertificatePayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const userId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || '');
+        const id = String(req.params.id || '');
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return res.status(400).json({ message: 'Payment verification details are required' });
+        }
+        const request = yield prisma_1.prisma.certificateRequest.findUnique({
+            where: { id },
+            select: { id: true, userId: true, paymentStatus: true, paymentOrderId: true }
+        });
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+        if (request.paymentStatus === 'PAID') {
+            return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
+        }
+        if (request.paymentOrderId && request.paymentOrderId !== razorpayOrderId) {
+            return res.status(400).json({ message: 'Order ID mismatch for this request' });
+        }
+        const valid = (0, razorpay_1.verifyRazorpaySignature)({
+            orderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            signature: razorpaySignature
+        });
+        if (!valid) {
+            return res.status(400).json({ message: 'Invalid payment signature' });
+        }
+        const order = yield (0, razorpay_1.fetchRazorpayOrder)(razorpayOrderId);
+        const orderRequestId = String(((_b = order.notes) === null || _b === void 0 ? void 0 : _b.requestId) || '');
+        const orderReceipt = String(order.receipt || '');
+        if (orderRequestId !== id && !orderReceipt.startsWith(`cert-${id}`)) {
+            return res.status(400).json({ message: 'Payment order does not match this request' });
+        }
+        const updated = yield prisma_1.prisma.certificateRequest.update({
+            where: { id },
+            data: {
+                paymentStatus: 'PAID',
+                paymentOrderId: razorpayOrderId
+            }
+        });
+        return res.json({ message: 'Payment verified successfully', request: updated });
+    }
+    catch (error) {
+        console.error('Error verifying certificate payment:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+exports.verifyCertificatePayment = verifyCertificatePayment;
+const createCertificatePaymentOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || '');
+        const id = String(req.params.id || '');
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        const request = yield prisma_1.prisma.certificateRequest.findUnique({
+            where: { id },
+            select: { id: true, userId: true, amount: true, paymentStatus: true, status: true }
+        });
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+        if (request.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+        if (request.status === 'REJECTED') {
+            return res.status(400).json({ message: 'Payment is not allowed for rejected requests' });
+        }
+        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+            return res.status(500).json({ message: 'Payment gateway is not configured' });
+        }
+        const amountPaise = Math.round(Number(request.amount || 0) * 100);
+        if (amountPaise <= 0) {
+            return res.status(400).json({ message: 'Invalid payment amount for this request' });
+        }
+        const order = yield (0, razorpay_1.createRazorpayOrder)({
+            amountPaise,
+            receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
+            notes: {
+                requestType: 'CERTIFICATE',
+                requestId: id,
+                userId
+            }
+        });
+        yield prisma_1.prisma.certificateRequest.update({
+            where: { id },
+            data: { paymentOrderId: order.id }
+        });
+        return res.json({
+            razorpayOrder: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                keyId: (0, razorpay_1.getRazorpayKeyId)(),
+                name: 'Global Academy of Technology',
+                description: `Certificate Request ${id}`
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error creating certificate retry payment order:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+exports.createCertificatePaymentOrder = createCertificatePaymentOrder;
 const getStudentRequests = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user.id;
@@ -94,3 +306,112 @@ const completeCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 
     }
 });
 exports.completeCertificateRequest = completeCertificateRequest;
+const downloadStudentIssuedCertificate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || '');
+        const id = String(req.params.id || '');
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        const request = yield prisma_1.prisma.certificateRequest.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                userId: true,
+                copyType: true,
+                issuedCertificateUrl: true
+            }
+        });
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+        if (request.copyType === 'HARD_COPY') {
+            return res.status(400).json({ message: 'Soft copy is not available for this request' });
+        }
+        const resolvedFilePath = resolveStoredFilePath(request.issuedCertificateUrl);
+        if (!resolvedFilePath) {
+            return res.status(404).json({ message: 'Certificate file not found. Please contact admin.' });
+        }
+        const extension = path_1.default.extname(resolvedFilePath || '') || inferExtensionFromFile(resolvedFilePath) || '';
+        return res.download(resolvedFilePath, `${request.id}-certificate${extension}`);
+    }
+    catch (error) {
+        console.error('Error downloading issued certificate:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+exports.downloadStudentIssuedCertificate = downloadStudentIssuedCertificate;
+const cancelStudentCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || '');
+        const id = String(req.params.id || '');
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+        const existing = yield prisma_1.prisma.certificateRequest.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                userId: true,
+                status: true,
+                paymentStatus: true,
+                paymentOrderId: true,
+                amount: true,
+                softCopyEmailed: true,
+                physicalCopyPosted: true,
+                issuedCertificateUrl: true
+            }
+        });
+        if (!existing || existing.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+        if (existing.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Cancellation is allowed only while request is pending' });
+        }
+        if (existing.softCopyEmailed || existing.physicalCopyPosted || Boolean(existing.issuedCertificateUrl)) {
+            return res.status(400).json({ message: 'Cannot cancel after documents are issued or dispatched' });
+        }
+        let nextPaymentStatus = existing.paymentStatus;
+        if (existing.paymentStatus === 'PAID') {
+            if (!(0, razorpay_1.hasRazorpayConfig)()) {
+                return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
+            }
+            if (!existing.paymentOrderId) {
+                return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
+            }
+            const payment = yield (0, razorpay_1.fetchLatestCapturedPaymentForOrder)(existing.paymentOrderId);
+            if (!(payment === null || payment === void 0 ? void 0 : payment.id)) {
+                return res.status(400).json({ message: 'Cannot process refund: captured payment not found for this request' });
+            }
+            const paidAmount = Number(payment.amount || 0);
+            const alreadyRefunded = Number(payment.amount_refunded || 0);
+            const desiredAmount = Math.round(Number(existing.amount || 0) * 100);
+            const refundableAmount = desiredAmount > 0 ? Math.min(desiredAmount, paidAmount) : paidAmount;
+            if (alreadyRefunded < refundableAmount) {
+                yield (0, razorpay_1.createRazorpayRefund)(payment.id, refundableAmount);
+            }
+            nextPaymentStatus = 'REFUNDED';
+        }
+        const updated = yield prisma_1.prisma.certificateRequest.update({
+            where: { id },
+            data: {
+                status: 'REJECTED',
+                rejectionReason: 'Cancelled by user before processing',
+                paymentStatus: nextPaymentStatus
+            }
+        });
+        return res.json({
+            message: nextPaymentStatus === 'REFUNDED'
+                ? 'Request cancelled and refund initiated'
+                : 'Request cancelled successfully',
+            request: updated
+        });
+    }
+    catch (error) {
+        console.error('Error cancelling certificate request:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+exports.cancelStudentCertificateRequest = cancelStudentCertificateRequest;

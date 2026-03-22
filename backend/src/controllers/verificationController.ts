@@ -2,7 +2,15 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
-import { createRazorpayOrder, fetchRazorpayOrder, getRazorpayKeyId, hasRazorpayConfig, verifyRazorpaySignature } from '../config/razorpay';
+import {
+    createRazorpayOrder,
+    createRazorpayRefund,
+    fetchLatestCapturedPaymentForOrder,
+    fetchRazorpayOrder,
+    getRazorpayKeyId,
+    hasRazorpayConfig,
+    verifyRazorpaySignature
+} from '../config/razorpay';
 import { generateVerificationRequestId } from '../utils/generateId';
 import { AuthRequest } from '../middleware/authMiddleware';
 
@@ -328,5 +336,89 @@ export const completeVerificationRequest = async (req: Request, res: Response): 
     } catch (error) {
         console.error('Error completing verification request:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const cancelCompanyVerificationRequest = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const companyEmail = await getAuthenticatedCompanyEmail(req);
+        if (!companyEmail) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const id = String(req.params.id || '');
+        if (!id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const existing = await prisma.verificationRequest.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                companyEmail: true,
+                status: true,
+                paymentStatus: true,
+                paymentOrderId: true,
+                completedFile: true
+            }
+        });
+
+        if (!existing || existing.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
+            return res.status(404).json({ message: 'Verification request not found' });
+        }
+
+        if (existing.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Cancellation is allowed only while request is pending' });
+        }
+
+        if (Boolean(existing.completedFile)) {
+            return res.status(400).json({ message: 'Cannot cancel after processed documents are uploaded' });
+        }
+
+        let nextPaymentStatus = existing.paymentStatus;
+
+        if (existing.paymentStatus === 'PAID') {
+            if (!hasRazorpayConfig()) {
+                return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
+            }
+
+            if (!existing.paymentOrderId) {
+                return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
+            }
+
+            const payment = await fetchLatestCapturedPaymentForOrder(existing.paymentOrderId);
+            if (!payment?.id) {
+                return res.status(400).json({ message: 'Cannot process refund: captured payment not found for this request' });
+            }
+
+            const paidAmount = Number(payment.amount || 0);
+            const alreadyRefunded = Number(payment.amount_refunded || 0);
+            const refundableAmount = Math.min(VERIFICATION_FEE * 100, paidAmount);
+
+            if (alreadyRefunded < refundableAmount) {
+                await createRazorpayRefund(payment.id, refundableAmount);
+            }
+
+            nextPaymentStatus = 'REFUNDED';
+        }
+
+        const updated = await prisma.verificationRequest.update({
+            where: { id },
+            data: {
+                status: 'REJECTED',
+                rejectionReason: 'Cancelled by company before processing',
+                paymentStatus: nextPaymentStatus
+            }
+        });
+
+        return res.json({
+            message: nextPaymentStatus === 'REFUNDED'
+                ? 'Request cancelled and refund initiated'
+                : 'Request cancelled successfully',
+            request: updated
+        });
+    } catch (error) {
+        console.error('Error cancelling verification request:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };

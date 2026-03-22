@@ -23,6 +23,7 @@ export default function StudentRequests() {
     const [sortBy, setSortBy] = useState('NEWEST');
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const [payingId, setPayingId] = useState<string | null>(null);
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
 
     const fetchRequests = async () => {
         const token = sessionStorage.getItem('token');
@@ -33,6 +34,7 @@ export default function StudentRequests() {
 
         try {
             const res = await fetch(`${API_BASE}/api/student/certificates`, {
+                cache: 'no-store',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -162,6 +164,51 @@ export default function StudentRequests() {
             toast.error(error?.message || 'Payment failed or cancelled');
         } finally {
             setPayingId(null);
+        }
+    };
+
+    const canCancelRequest = (req: any) => {
+        return req.status === 'PENDING'
+            && req.paymentStatus === 'PAID'
+            && !req.softCopyEmailed
+            && !req.physicalCopyPosted
+            && !req.issuedCertificateUrl;
+    };
+
+    const cancelRequest = async (req: any) => {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+            router.push('/student/login');
+            return;
+        }
+
+        if (!canCancelRequest(req)) {
+            toast.error('This request cannot be cancelled now');
+            return;
+        }
+
+        const confirmed = window.confirm('Cancel this request and initiate refund?');
+        if (!confirmed) return;
+
+        setCancellingId(req.id);
+        try {
+            const res = await fetch(`${API_BASE}/api/student/certificates/${req.id}/cancel`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                toast.error(data?.message || 'Failed to cancel request');
+                return;
+            }
+
+            toast.success(data?.message || 'Request cancelled successfully');
+            await fetchRequests();
+        } catch {
+            toast.error('Failed to cancel request. Please try again.');
+        } finally {
+            setCancellingId(null);
         }
     };
 
@@ -300,7 +347,17 @@ export default function StudentRequests() {
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        {req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
+                                        {canCancelRequest(req) ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="hidden sm:inline-flex text-red-700 border-red-300"
+                                                onClick={() => cancelRequest(req)}
+                                                disabled={cancellingId === req.id}
+                                            >
+                                                {cancellingId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
+                                            </Button>
+                                        ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -383,7 +440,9 @@ export default function StudentRequests() {
 
                                                         {req.status === 'REJECTED' && req.rejectionReason && (
                                                             <div className="pt-4 border-t">
-                                                                <p className="text-sm font-medium text-red-700">Rejection Reason</p>
+                                                                <p className="text-sm font-medium text-red-700">
+                                                                    {req.rejectionReason.includes('Cancelled by user') ? 'Cancellation Note' : 'Rejection Reason'}
+                                                                </p>
                                                                 <p className="mt-1 rounded-md bg-red-50 p-2 text-sm text-red-800">{req.rejectionReason}</p>
                                                             </div>
                                                         )}

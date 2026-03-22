@@ -61,6 +61,7 @@ export default function CompanyVerification() {
     const [requests, setRequests] = useState<VerificationRequest[]>([]);
     const [mainLoading, setMainLoading] = useState(true);
     const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
+    const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
 
     const handleUnauthorized = () => {
         sessionStorage.removeItem('companyToken');
@@ -76,6 +77,7 @@ export default function CompanyVerification() {
     const fetchRequests = async (token: string) => {
         try {
             const res = await apiFetch('/api/company/verifications', {
+                cache: 'no-store',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -107,16 +109,6 @@ export default function CompanyVerification() {
         } else {
             setMainLoading(false);
         }
-    }, []);
-
-    useEffect(() => {
-        const clearCompanySession = () => {
-            sessionStorage.removeItem('companyToken');
-            sessionStorage.removeItem('companyEmail');
-        };
-
-        window.addEventListener('beforeunload', clearCompanySession);
-        return () => window.removeEventListener('beforeunload', clearCompanySession);
     }, []);
 
     useEffect(() => {
@@ -353,8 +345,11 @@ export default function CompanyVerification() {
                 setUsn('');
                 setVerificationTemplate(null);
 
-                if (token) fetchRequests(token);
-                router.push('/company/requests');
+                if (token) {
+                    await fetchRequests(token);
+                }
+                setPanelView('requests');
+                router.replace('/company/requests');
             } else {
                 if (res.status === 401 || res.status === 403) {
                     handleUnauthorized();
@@ -365,8 +360,9 @@ export default function CompanyVerification() {
             }
         } catch (error) {
             toast.error('Network error. Failed to submit.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
@@ -469,11 +465,54 @@ export default function CompanyVerification() {
             }
 
             toast.success('Payment successful');
-            fetchRequests(token);
+            await fetchRequests(token);
+            setPanelView('requests');
+            router.replace('/company/requests');
         } catch (error: any) {
             toast.error(error?.message || 'Payment failed or cancelled');
         } finally {
             setPayingRequestId(null);
+        }
+    };
+
+    const canCancelVerification = (request: VerificationRequest) => {
+        return request.status === 'PENDING' && request.paymentStatus === 'PAID';
+    };
+
+    const cancelVerificationRequest = async (request: VerificationRequest) => {
+        const token = sessionStorage.getItem('companyToken');
+        if (!token) {
+            handleUnauthorized();
+            return;
+        }
+
+        if (!canCancelVerification(request)) {
+            toast.error('This request cannot be cancelled now');
+            return;
+        }
+
+        const confirmed = window.confirm('Cancel this request and initiate refund?');
+        if (!confirmed) return;
+
+        setCancellingRequestId(request.id);
+        try {
+            const res = await fetch(`${API_BASE}/api/company/verifications/${request.id}/cancel`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                toast.error(data?.message || 'Failed to cancel request');
+                return;
+            }
+
+            toast.success(data?.message || 'Request cancelled successfully');
+            await fetchRequests(token);
+        } catch {
+            toast.error('Failed to cancel request. Please try again.');
+        } finally {
+            setCancellingRequestId(null);
         }
     };
 
@@ -766,7 +805,18 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
+                                                    {canCancelVerification(req) ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-red-700 border-red-300 hover:bg-red-50"
+                                                            disabled={cancellingRequestId === req.id}
+                                                            onClick={() => cancelVerificationRequest(req)}
+                                                        >
+                                                            {cancellingRequestId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
+                                                        </Button>
+                                                    ) : req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"

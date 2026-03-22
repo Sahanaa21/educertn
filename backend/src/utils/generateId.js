@@ -9,17 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateRequestId = void 0;
+exports.generateVerificationRequestId = exports.generateRequestId = void 0;
 const prisma_1 = require("../config/prisma");
 const generateRequestId = () => __awaiter(void 0, void 0, void 0, function* () {
     const year = new Date().getFullYear();
     const prefix = `GAT-${year}-`;
-    // We need to find the latest ID from both CertificateRequest and VerificationRequest for this year
+    // Certificate IDs are stored directly in certificateRequest.id.
     const lastCert = yield prisma_1.prisma.certificateRequest.findFirst({
-        where: { id: { startsWith: prefix } },
-        orderBy: { id: 'desc' }
-    });
-    const lastVer = yield prisma_1.prisma.verificationRequest.findFirst({
         where: { id: { startsWith: prefix } },
         orderBy: { id: 'desc' }
     });
@@ -31,8 +27,21 @@ const generateRequestId = () => __awaiter(void 0, void 0, void 0, function* () {
             maxNumber = num;
         }
     }
-    if (lastVer) {
-        const numStr = lastVer.id.replace(prefix, '');
+    const nextNumber = maxNumber + 1;
+    const formattedNumber = nextNumber.toString().padStart(4, '0');
+    return `${prefix}${formattedNumber}`;
+});
+exports.generateRequestId = generateRequestId;
+const generateVerificationRequestId = () => __awaiter(void 0, void 0, void 0, function* () {
+    const year = new Date().getFullYear();
+    const prefix = `GAT-VER-${year}-`;
+    const lastVerification = yield prisma_1.prisma.verificationRequest.findFirst({
+        where: { requestId: { startsWith: prefix } },
+        orderBy: { requestId: 'desc' }
+    });
+    let maxNumber = 0;
+    if (lastVerification === null || lastVerification === void 0 ? void 0 : lastVerification.requestId) {
+        const numStr = lastVerification.requestId.replace(prefix, '');
         const num = parseInt(numStr, 10);
         if (!isNaN(num) && num > maxNumber) {
             maxNumber = num;
@@ -42,4 +51,4 @@ const generateRequestId = () => __awaiter(void 0, void 0, void 0, function* () {
     const formattedNumber = nextNumber.toString().padStart(4, '0');
     return `${prefix}${formattedNumber}`;
 });
-exports.generateRequestId = generateRequestId;
+exports.generateVerificationRequestId = generateVerificationRequestId;
