@@ -495,17 +495,36 @@ export default function CompanyVerification() {
         return 'border-yellow-500 text-yellow-700 bg-yellow-50';
     };
 
-    const getVerificationRefundLabel = (request: VerificationRequest) => {
-        if (request.paymentStatus === 'REFUNDED') return 'REFUNDED';
-        if (isCancelledVerification(request) && request.paymentStatus === 'PAID') return 'REFUND_PENDING';
-        return 'N/A';
-    };
+    const getVerificationPaymentMeta = (request: VerificationRequest) => {
+        if (request.paymentStatus === 'REFUNDED') {
+            return {
+                label: 'REFUNDED',
+                className: 'border-emerald-500 text-emerald-700 bg-emerald-50',
+                hint: 'Refund completed'
+            };
+        }
 
-    const getVerificationRefundBadgeClass = (request: VerificationRequest) => {
-        const refundLabel = getVerificationRefundLabel(request);
-        if (refundLabel === 'REFUNDED') return 'border-emerald-500 text-emerald-700 bg-emerald-50';
-        if (refundLabel === 'REFUND_PENDING') return 'border-amber-500 text-amber-700 bg-amber-50';
-        return 'border-slate-300 text-slate-600 bg-slate-50';
+        if (isCancelledVerification(request) && request.paymentStatus === 'PAID') {
+            return {
+                label: 'REFUND IN PROGRESS',
+                className: 'border-amber-500 text-amber-700 bg-amber-50',
+                hint: 'Refund is being processed'
+            };
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return {
+                label: 'PAID',
+                className: 'border-green-500 text-green-700 bg-green-50',
+                hint: ''
+            };
+        }
+
+        return {
+            label: String(request.paymentStatus || 'PENDING'),
+            className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
+            hint: ''
+        };
     };
 
     const cancelVerificationRequest = async (request: VerificationRequest) => {
@@ -815,18 +834,10 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
-                                                        <Badge variant="outline" className={
-                                                            req.paymentStatus === 'PAID'
-                                                                ? 'border-green-500 text-green-700 bg-green-50'
-                                                                : req.paymentStatus === 'REFUNDED'
-                                                                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                                                                    : 'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                        }>
-                                                            {req.paymentStatus}
+                                                        <Badge variant="outline" className={getVerificationPaymentMeta(req).className}>
+                                                            {getVerificationPaymentMeta(req).label}
                                                         </Badge>
-                                                        <Badge variant="outline" className={getVerificationRefundBadgeClass(req)}>
-                                                            {getVerificationRefundLabel(req)}
-                                                        </Badge>
+                                                        {getVerificationPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getVerificationPaymentMeta(req).hint}</p> : null}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap">
@@ -986,18 +997,10 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
-                                                        <Badge variant="outline" className={
-                                                            req.paymentStatus === 'PAID'
-                                                                ? 'border-green-500 text-green-700 bg-green-50'
-                                                                : req.paymentStatus === 'REFUNDED'
-                                                                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                                                                    : 'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                        }>
-                                                            {req.paymentStatus}
+                                                        <Badge variant="outline" className={getVerificationPaymentMeta(req).className}>
+                                                            {getVerificationPaymentMeta(req).label}
                                                         </Badge>
-                                                        <Badge variant="outline" className={getVerificationRefundBadgeClass(req)}>
-                                                            {getVerificationRefundLabel(req)}
-                                                        </Badge>
+                                                        {getVerificationPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getVerificationPaymentMeta(req).hint}</p> : null}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap">

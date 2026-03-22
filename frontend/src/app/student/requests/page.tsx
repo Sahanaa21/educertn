@@ -191,17 +191,36 @@ export default function StudentRequests() {
         return 'border-yellow-500 text-yellow-700 bg-yellow-50';
     };
 
-    const getRefundLabel = (req: any) => {
-        if (req.paymentStatus === 'REFUNDED') return 'REFUNDED';
-        if (isCancelledRequest(req) && req.paymentStatus === 'PAID') return 'REFUND_PENDING';
-        return 'N/A';
-    };
+    const getPaymentMeta = (req: any) => {
+        if (req.paymentStatus === 'REFUNDED') {
+            return {
+                label: 'REFUNDED',
+                className: 'border-emerald-500 text-emerald-700 bg-emerald-50',
+                hint: 'Refund completed'
+            };
+        }
 
-    const getRefundBadgeClass = (req: any) => {
-        const refundLabel = getRefundLabel(req);
-        if (refundLabel === 'REFUNDED') return 'border-emerald-500 text-emerald-700 bg-emerald-50';
-        if (refundLabel === 'REFUND_PENDING') return 'border-amber-500 text-amber-700 bg-amber-50';
-        return 'border-slate-300 text-slate-600 bg-slate-50';
+        if (isCancelledRequest(req) && req.paymentStatus === 'PAID') {
+            return {
+                label: 'REFUND IN PROGRESS',
+                className: 'border-amber-500 text-amber-700 bg-amber-50',
+                hint: 'Refund is being processed'
+            };
+        }
+
+        if (req.paymentStatus === 'PAID') {
+            return {
+                label: 'PAID',
+                className: 'border-green-500 text-green-700 bg-green-50',
+                hint: ''
+            };
+        }
+
+        return {
+            label: String(req.paymentStatus || 'PENDING'),
+            className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
+            hint: ''
+        };
     };
 
     const cancelRequest = async (req: any) => {
@@ -357,18 +376,10 @@ export default function StudentRequests() {
                                     <TableCell>{req.copyType.replace('_', ' ')} ({req.copies})</TableCell>
                                     <TableCell>
                                         <div className="space-y-1">
-                                            <Badge variant="outline" className={
-                                                req.paymentStatus === 'PAID'
-                                                    ? 'border-green-500 text-green-700 bg-green-50'
-                                                    : req.paymentStatus === 'REFUNDED'
-                                                        ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                                                        : 'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                            }>
-                                                {req.paymentStatus}
+                                            <Badge variant="outline" className={getPaymentMeta(req).className}>
+                                                {getPaymentMeta(req).label}
                                             </Badge>
-                                            <Badge variant="outline" className={getRefundBadgeClass(req)}>
-                                                {getRefundLabel(req)}
-                                            </Badge>
+                                            {getPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getPaymentMeta(req).hint}</p> : null}
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -454,21 +465,10 @@ export default function StudentRequests() {
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Payment Status</p>
-                                                                <Badge variant="outline" className={
-                                                                    req.paymentStatus === 'PAID'
-                                                                        ? 'border-green-500 text-green-700 bg-green-50'
-                                                                        : req.paymentStatus === 'REFUNDED'
-                                                                            ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                                                                            : 'border-yellow-500 text-yellow-700 bg-yellow-50'
-                                                                }>
-                                                                    {req.paymentStatus}
+                                                                <Badge variant="outline" className={getPaymentMeta(req).className}>
+                                                                    {getPaymentMeta(req).label}
                                                                 </Badge>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-medium text-slate-500">Refund</p>
-                                                                <Badge variant="outline" className={getRefundBadgeClass(req)}>
-                                                                    {getRefundLabel(req)}
-                                                                </Badge>
+                                                                {getPaymentMeta(req).hint ? <p className="mt-1 text-xs text-slate-500">{getPaymentMeta(req).hint}</p> : null}
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Date Applied</p>

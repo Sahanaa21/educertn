@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 
 const menuItems = [
     { name: 'Dashboard', href: '/student', icon: LayoutDashboard },
-    { name: 'Apply Certificate', href: '/student/apply', icon: FileText },
     { name: 'My Requests', href: '/student/requests', icon: Clock },
+    { name: 'Apply Certificate', href: '/student/apply', icon: FileText },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
