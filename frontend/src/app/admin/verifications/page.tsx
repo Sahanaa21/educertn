@@ -21,6 +21,7 @@ type VerificationRequest = {
     usn: string;
     uploadedTemplate: string;
     completedFile: string | null;
+    paymentOrderId?: string | null;
     paymentStatus: string;
     status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
     rejectionReason?: string | null;
@@ -191,6 +192,28 @@ export default function AdminVerifications() {
         return matchesSearch && matchesStatus;
     });
 
+    const isCancelledRequest = (req: VerificationRequest) => {
+        return req.status === 'REJECTED' && String(req.rejectionReason || '').toLowerCase().includes('cancelled by');
+    };
+
+    const getStatusLabel = (req: VerificationRequest) => {
+        return isCancelledRequest(req) ? 'CANCELLED' : req.status;
+    };
+
+    const getStatusBadgeClass = (req: VerificationRequest) => {
+        if (isCancelledRequest(req)) return 'border-slate-400 text-slate-700 bg-slate-100 font-bold tracking-wider';
+        if (req.status === 'COMPLETED') return 'border-green-500 text-green-700 bg-green-50 font-bold tracking-wider';
+        if (req.status === 'PROCESSING') return 'border-blue-500 text-blue-700 bg-blue-50 font-bold tracking-wider';
+        if (req.status === 'REJECTED') return 'border-red-500 text-red-700 bg-red-50 font-bold tracking-wider';
+        return 'border-yellow-500 text-yellow-700 bg-yellow-50 font-bold tracking-wider';
+    };
+
+    const getPaymentTextClass = (req: VerificationRequest) => {
+        if (req.paymentStatus === 'REFUNDED') return 'font-bold text-emerald-700';
+        if (req.paymentStatus === 'PAID') return 'font-bold text-green-700';
+        return 'font-bold text-slate-700';
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
@@ -292,62 +315,64 @@ export default function AdminVerifications() {
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         <div className="space-y-1">
-                                            <Badge variant="outline" className={
-                                                req.status === 'COMPLETED' ? 'border-green-500 text-green-700 bg-green-50 font-bold tracking-wider' :
-                                                    req.status === 'PROCESSING' ? 'border-blue-500 text-blue-700 bg-blue-50 font-bold tracking-wider' :
-                                                        req.status === 'REJECTED' ? 'border-red-500 text-red-700 bg-red-50 font-bold tracking-wider' :
-                                                            'border-yellow-500 text-yellow-700 bg-yellow-50 font-bold tracking-wider'
-                                            }>
-                                                {req.status}
+                                            <Badge variant="outline" className={getStatusBadgeClass(req)}>
+                                                {getStatusLabel(req)}
                                             </Badge>
                                             {req.status === 'REJECTED' && req.rejectionReason ? (
                                                 <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
-                                                    Reason: {req.rejectionReason}
+                                                    {isCancelledRequest(req) ? 'Cancellation Note:' : 'Reason:'} {req.rejectionReason}
                                                 </p>
                                             ) : null}
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top py-3">
-                                        <Badge variant={req.paymentStatus === 'PAID' ? 'default' : 'secondary'} className={req.paymentStatus === 'PAID' ? 'bg-green-600' : 'bg-slate-200 text-slate-700'}>
-                                            {req.paymentStatus}
-                                        </Badge>
+                                        <div className={getPaymentTextClass(req)}>{req.paymentStatus}</div>
                                         <div className="mt-1 text-xs text-slate-500">Amount: Rs 5000.00</div>
+                                        <div className="text-xs text-slate-400 truncate max-w-44">Payment Order ID: {req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
                                     <TableCell className="p-2 align-top min-w-72">
                                         <div className="flex w-68 flex-col gap-2">
-                                            <label className={`inline-flex items-center justify-center gap-2 h-8 px-3 rounded-md border text-sm ${req.status === 'COMPLETED' ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border-slate-300 bg-white cursor-pointer hover:bg-slate-50'}`}>
-                                                <Upload className="h-4 w-4" /> Select File
-                                                <input
-                                                    type="file"
-                                                    className="hidden"
-                                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                                    disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
-                                                    onChange={(e) => {
-                                                        const file = e.target.files?.[0] || null;
-                                                        setSelectedFiles((prev) => ({ ...prev, [req.id]: file }));
-                                                    }}
-                                                />
-                                            </label>
+                                            {!isCancelledRequest(req) ? (
+                                                <>
+                                                    <label className={`inline-flex items-center justify-center gap-2 h-8 px-3 rounded-md border text-sm ${req.status === 'COMPLETED' ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border-slate-300 bg-white cursor-pointer hover:bg-slate-50'}`}>
+                                                        <Upload className="h-4 w-4" /> Select File
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                                            disabled={processingId === req.id || req.status === 'COMPLETED' || req.status === 'REJECTED'}
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0] || null;
+                                                                setSelectedFiles((prev) => ({ ...prev, [req.id]: file }));
+                                                            }}
+                                                        />
+                                                    </label>
 
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="text-green-700 border-green-300 hover:bg-green-50"
-                                                onClick={() => completeVerification(req.id)}
-                                                disabled={
-                                                    processingId === req.id ||
-                                                    req.status === 'COMPLETED' ||
-                                                    req.status === 'REJECTED' ||
-                                                    (!selectedFiles[req.id] && !req.completedFile)
-                                                }
-                                            >
-                                                {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-                                                Complete
-                                            </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-green-700 border-green-300 hover:bg-green-50"
+                                                        onClick={() => completeVerification(req.id)}
+                                                        disabled={
+                                                            processingId === req.id ||
+                                                            req.status === 'COMPLETED' ||
+                                                            req.status === 'REJECTED' ||
+                                                            (!selectedFiles[req.id] && !req.completedFile)
+                                                        }
+                                                    >
+                                                        {processingId === req.id ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                                                        Complete
+                                                    </Button>
 
-                                            {selectedFiles[req.id] ? (
-                                                <p className="text-[11px] text-slate-600 break-all">Selected: {selectedFiles[req.id]?.name}</p>
-                                            ) : null}
+                                                    {selectedFiles[req.id] ? (
+                                                        <p className="text-[11px] text-slate-600 break-all">Selected: {selectedFiles[req.id]?.name}</p>
+                                                    ) : null}
+                                                </>
+                                            ) : (
+                                                <div className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                                                    User cancelled this request. No further admin action is needed.
+                                                </div>
+                                            )}
 
                                             {req.status !== 'COMPLETED' && req.status !== 'REJECTED' ? (
                                                 <div className="flex gap-2">
