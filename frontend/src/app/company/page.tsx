@@ -833,13 +833,13 @@ export default function CompanyVerification() {
                                                 <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
-                                                <TableCell className="whitespace-nowrap">
+                                                <TableCell className="max-w-xs">
                                                     <div className="space-y-1">
                                                         <Badge variant="outline" className={getVerificationPaymentMeta(req).className}>
                                                             {getVerificationPaymentMeta(req).label}
                                                         </Badge>
                                                         <p className="text-xs text-slate-500">Amount: Rs {VERIFICATION_FEE.toFixed(2)}</p>
-                                                        <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
+                                                        <p className="text-xs text-slate-500 break-all">Order ID:<br/>{req.paymentOrderId || 'N/A'}</p>
                                                         {getVerificationPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getVerificationPaymentMeta(req).hint}</p> : null}
                                                     </div>
                                                 </TableCell>
@@ -998,13 +998,13 @@ export default function CompanyVerification() {
                                                 <TableCell className="font-medium text-blue-600 whitespace-nowrap">{req.requestId}</TableCell>
                                                 <TableCell className="whitespace-nowrap font-medium">{req.studentName}</TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600">{req.usn}</TableCell>
-                                                <TableCell className="whitespace-nowrap">
+                                                <TableCell className="max-w-xs">
                                                     <div className="space-y-1">
                                                         <Badge variant="outline" className={getVerificationPaymentMeta(req).className}>
                                                             {getVerificationPaymentMeta(req).label}
                                                         </Badge>
                                                         <p className="text-xs text-slate-500">Amount: Rs {VERIFICATION_FEE.toFixed(2)}</p>
-                                                        <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
+                                                        <p className="text-xs text-slate-500 break-all">Order ID:<br/>{req.paymentOrderId || 'N/A'}</p>
                                                         {getVerificationPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getVerificationPaymentMeta(req).hint}</p> : null}
                                                     </div>
                                                 </TableCell>

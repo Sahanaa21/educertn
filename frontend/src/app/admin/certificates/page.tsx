@@ -329,10 +329,10 @@ export default function AdminCertificates() {
                                             ) : null}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="align-top py-3">
+                                    <TableCell className="align-top py-3 max-w-xs">
                                         <div className="font-bold text-green-700">{req.paymentStatus}</div>
                                         <div className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</div>
-                                        <div className="text-xs text-slate-400 truncate max-w-44">Payment Order ID: {req.paymentOrderId || 'N/A'}</div>
+                                        <div className="text-xs text-slate-400 break-all text-wrap">Order ID:<br/>{req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         {req.idProofUrl ? (

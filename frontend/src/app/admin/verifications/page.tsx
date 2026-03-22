@@ -325,10 +325,10 @@ export default function AdminVerifications() {
                                             ) : null}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="align-top py-3">
+                                    <TableCell className="align-top py-3 max-w-xs">
                                         <div className={getPaymentTextClass(req)}>{req.paymentStatus}</div>
                                         <div className="mt-1 text-xs text-slate-500">Amount: Rs 5000.00</div>
-                                        <div className="text-xs text-slate-400 truncate max-w-44">Payment Order ID: {req.paymentOrderId || 'N/A'}</div>
+                                        <div className="text-xs text-slate-400 break-all text-wrap">Order ID:<br/>{req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
                                     <TableCell className="p-2 align-top min-w-72">
                                         <div className="flex w-68 flex-col gap-2">

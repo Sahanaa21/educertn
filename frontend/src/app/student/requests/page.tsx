@@ -374,13 +374,13 @@ export default function StudentRequests() {
                                     <TableCell className="font-medium text-blue-600">{req.id}</TableCell>
                                     <TableCell>{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
                                     <TableCell>{req.copyType.replace('_', ' ')}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="max-w-xs">
                                         <div className="space-y-1">
                                             <Badge variant="outline" className={getPaymentMeta(req).className}>
                                                 {getPaymentMeta(req).label}
                                             </Badge>
                                             <p className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</p>
-                                            <p className="text-xs text-slate-500 break-all">Payment Order ID: {req.paymentOrderId || 'N/A'}</p>
+                                            <p className="text-xs text-slate-500 break-all">Order ID:<br/>{req.paymentOrderId || 'N/A'}</p>
                                             {getPaymentMeta(req).hint ? <p className="text-xs text-slate-500">{getPaymentMeta(req).hint}</p> : null}
                                         </div>
                                     </TableCell>
