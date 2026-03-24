@@ -430,6 +430,7 @@ export default function ApplyCertificate() {
                             <span className="text-sm text-slate-500">
                                 Certificate Fee: {selectedCertificate ? `Rs ${selectedCertificate.fee.toFixed(2)}` : 'Select certificate type'}
                             </span>
+                            <span className="text-xs text-amber-700 mt-1 font-medium">Please verify all details before payment. Submitted requests cannot be edited or cancelled.</span>
                             <span className="text-sm text-slate-500">Total Amount Payable</span>
                             <span className="text-2xl font-bold text-slate-900">₹ {getFee().toFixed(2)}</span>
                         </div>

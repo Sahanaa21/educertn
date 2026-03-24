@@ -23,7 +23,6 @@ export default function StudentRequests() {
     const [sortBy, setSortBy] = useState('NEWEST');
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const [payingId, setPayingId] = useState<string | null>(null);
-    const [cancellingId, setCancellingId] = useState<string | null>(null);
 
     const fetchRequests = async () => {
         const token = sessionStorage.getItem('token');
@@ -167,13 +166,7 @@ export default function StudentRequests() {
         }
     };
 
-    const canCancelRequest = (req: any) => {
-        return req.status === 'PENDING'
-            && req.paymentStatus === 'PAID'
-            && !req.softCopyEmailed
-            && !req.physicalCopyPosted
-            && !req.issuedCertificateUrl;
-    };
+    const canCancelRequest = (_req: any) => false;
 
     const isCancelledRequest = (req: any) => {
         return req.status === 'REJECTED' && String(req.rejectionReason || '').toLowerCase().includes('cancelled by user');
@@ -221,40 +214,6 @@ export default function StudentRequests() {
             className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
             hint: ''
         };
-    };
-
-    const cancelRequest = async (req: any) => {
-        const token = sessionStorage.getItem('token');
-        if (!token) {
-            router.push('/student/login');
-            return;
-        }
-
-        if (!canCancelRequest(req)) {
-            toast.error('This request cannot be cancelled now');
-            return;
-        }
-
-        setCancellingId(req.id);
-        try {
-            const res = await fetch(`${API_BASE}/api/student/certificates/${req.id}/cancel`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                toast.error(data?.message || 'Failed to cancel request');
-                return;
-            }
-
-            toast.success(data?.message || 'Request cancelled successfully');
-            await fetchRequests();
-        } catch {
-            toast.error('Failed to cancel request. Please try again.');
-        } finally {
-            setCancellingId(null);
-        }
     };
 
     const filteredRequests = requests.filter((req) => {
@@ -398,20 +357,7 @@ export default function StudentRequests() {
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        {canCancelRequest(req) ? (
-                                            <div className="hidden sm:flex flex-col items-end gap-1">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-red-700 border-red-300"
-                                                    onClick={() => cancelRequest(req)}
-                                                    disabled={cancellingId === req.id}
-                                                >
-                                                    {cancellingId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
-                                                </Button>
-                                                <span className="text-[11px] text-slate-500">Refund goes to the original payment method.</span>
-                                            </div>
-                                        ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
+                                        {req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
                                             <Button
                                                 variant="outline"
                                                 size="sm"

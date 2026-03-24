@@ -62,7 +62,6 @@ export default function CompanyVerification() {
     const [requests, setRequests] = useState<VerificationRequest[]>([]);
     const [mainLoading, setMainLoading] = useState(true);
     const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
-    const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
 
     const handleUnauthorized = () => {
         sessionStorage.removeItem('companyToken');
@@ -476,10 +475,6 @@ export default function CompanyVerification() {
         }
     };
 
-    const canCancelVerification = (request: VerificationRequest) => {
-        return request.status === 'PENDING' && request.paymentStatus === 'PAID';
-    };
-
     const isCancelledVerification = (request: VerificationRequest) => {
         return request.status === 'REJECTED' && String(request.rejectionReason || '').toLowerCase().includes('cancelled by company');
     };
@@ -526,40 +521,6 @@ export default function CompanyVerification() {
             className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
             hint: ''
         };
-    };
-
-    const cancelVerificationRequest = async (request: VerificationRequest) => {
-        const token = sessionStorage.getItem('companyToken');
-        if (!token) {
-            handleUnauthorized();
-            return;
-        }
-
-        if (!canCancelVerification(request)) {
-            toast.error('This request cannot be cancelled now');
-            return;
-        }
-
-        setCancellingRequestId(request.id);
-        try {
-            const res = await fetch(`${API_BASE}/api/company/verifications/${request.id}/cancel`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                toast.error(data?.message || 'Failed to cancel request');
-                return;
-            }
-
-            toast.success(data?.message || 'Request cancelled successfully');
-            await fetchRequests(token);
-        } catch {
-            toast.error('Failed to cancel request. Please try again.');
-        } finally {
-            setCancellingRequestId(null);
-        }
     };
 
     const handleLogout = () => {
@@ -857,21 +818,7 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {canCancelVerification(req) ? (
-                                                        <div className="flex flex-col items-start gap-1">
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="text-red-700 border-red-300 hover:bg-red-50"
-                                                                disabled={cancellingRequestId === req.id}
-                                                                onClick={() => cancelVerificationRequest(req)}
-                                                            >
-                                                                {cancellingRequestId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
-                                                            </Button>
-                                                            <span className="text-[11px] text-slate-500">Refund goes to the original payment method.</span>
-                                                        </div>
-                                                    ) : req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
+                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -1022,21 +969,7 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {canCancelVerification(req) ? (
-                                                        <div className="flex flex-col items-start gap-1">
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="text-red-700 border-red-300 hover:bg-red-50"
-                                                                disabled={cancellingRequestId === req.id}
-                                                                onClick={() => cancelVerificationRequest(req)}
-                                                            >
-                                                                {cancellingRequestId === req.id ? 'Cancelling...' : 'Cancel & Refund'}
-                                                            </Button>
-                                                            <span className="text-[11px] text-slate-500">Refund goes to the original payment method.</span>
-                                                        </div>
-                                                    ) : req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
+                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -1174,6 +1107,7 @@ export default function CompanyVerification() {
                             </CardContent>
                             <CardFooter className="bg-slate-100 border-t flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
                                 <div className="flex flex-col text-center sm:text-left">
+                                    <span className="text-xs text-amber-700 mt-1 font-medium">Please verify all details before payment. Submitted requests cannot be edited or cancelled.</span>
                                     <span className="text-sm text-slate-500">Verification Fee</span>
                                     <span className="text-2xl font-bold text-slate-900">₹ {VERIFICATION_FEE.toFixed(2)}</span>
                                 </div>
