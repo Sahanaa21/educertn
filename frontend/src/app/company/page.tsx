@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, LayoutDashboard, ClipboardList, FilePlus, LogOut, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, ClipboardList, FilePlus, LogOut, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
@@ -37,7 +37,7 @@ export default function CompanyVerification() {
     const router = useRouter();
     const pathname = usePathname();
     const [loading, setLoading] = useState(false);
-    const [panelView, setPanelView] = useState<'dashboard' | 'requests' | 'application'>('dashboard');
+    const [panelView, setPanelView] = useState<'dashboard' | 'requests' | 'application'>('application');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Auth States
@@ -68,7 +68,7 @@ export default function CompanyVerification() {
         sessionStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
         setStep(1);
-        setPanelView('dashboard');
+        setPanelView('application');
         setMainLoading(false);
         toast.error('Session expired. Please login again.');
         router.push('/company');
@@ -106,8 +106,31 @@ export default function CompanyVerification() {
                 setCompanyEmail(savedCompanyEmail);
             }
             fetchRequests(token);
+
+            const loadProfile = async () => {
+                try {
+                    const res = await apiFetch('/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) return;
+
+                    const data = await res.json().catch(() => null);
+                    const companyProfile = data?.companyProfile;
+                    const user = data?.user;
+
+                    if (companyProfile?.companyName) setCompanyName(String(companyProfile.companyName));
+                    if (companyProfile?.contactPerson) setContactPerson(String(companyProfile.contactPerson));
+                    if (companyProfile?.phoneNumber) setPhoneNumber(String(companyProfile.phoneNumber));
+                    if (user?.email) setCompanyEmail(String(user.email));
+                } catch {
+                    // Keep manual entry when profile fetch is unavailable.
+                }
+            };
+
+            void loadProfile();
         } else {
             setMainLoading(false);
+            router.replace('/auth');
         }
     }, []);
 
@@ -117,8 +140,8 @@ export default function CompanyVerification() {
         } else if (pathname === '/company/apply') {
             setPanelView('application');
         } else {
-            // Default /company route: show dashboard when requests exist, else show apply form.
-            setPanelView(requests.length > 0 ? 'dashboard' : 'application');
+            // Default /company route: direct to apply form as requested.
+            setPanelView('application');
         }
 
         if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -492,19 +515,19 @@ export default function CompanyVerification() {
     };
 
     const getVerificationPaymentMeta = (request: VerificationRequest) => {
-        if (request.paymentStatus === 'REFUNDED') {
+        if (request.paymentStatus === 'REFUND_COMPLETED' || request.paymentStatus === 'REFUNDED') {
             return {
-                label: 'REFUNDED',
+                label: 'REFUND COMPLETED',
                 className: 'border-emerald-500 text-emerald-700 bg-emerald-50',
                 hint: 'Refund completed'
             };
         }
 
-        if (isCancelledVerification(request) && request.paymentStatus === 'PAID') {
+        if (request.paymentStatus === 'REFUND_INITIATED' || (isCancelledVerification(request) && request.paymentStatus === 'PAID')) {
             return {
                 label: 'REFUND IN PROGRESS',
                 className: 'border-amber-500 text-amber-700 bg-amber-50',
-                hint: 'Refund is being processed'
+                hint: 'Refund initiated. It may take 5-7 working days.'
             };
         }
 
@@ -568,74 +591,7 @@ export default function CompanyVerification() {
     }
 
     if (!isAuthenticated) {
-        return (
-            <div className="container mx-auto px-4 py-16 flex flex-col items-center min-h-[70vh]">
-                <Link href="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 mb-8 self-center sm:self-auto max-w-md w-full">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-                </Link>
-
-                <Card className="w-full max-w-md shadow-xl border-t-4 border-t-yellow-500">
-                    <CardHeader className="text-center space-y-2">
-                        <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">Agency / Company Login</CardTitle>
-                        <CardDescription>Sign in with your official email to request verifications.</CardDescription>
-                    </CardHeader>
-
-                    {step === 1 ? (
-                        <form onSubmit={handleSendOtp}>
-                            <CardContent className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="loginEmail" className="text-slate-700">Official Email</Label>
-                                    <Input
-                                        id="loginEmail"
-                                        type="email"
-                                        placeholder="hr@company.com"
-                                        value={loginEmail}
-                                        onChange={(e) => setLoginEmail(e.target.value)}
-                                        className="h-12"
-                                        required
-                                    />
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-4 pb-8">
-                                <Button type="submit" className="w-full h-12 bg-blue-900 hover:bg-blue-800 text-white text-base" disabled={loading}>
-                                    {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : 'Send OTP'}
-                                </Button>
-                            </CardFooter>
-                        </form>
-                    ) : (
-                        <form onSubmit={handleVerifyOtp}>
-                            <CardContent className="space-y-4 pt-4">
-                                <div className="space-y-2 text-center text-sm text-slate-600 mb-6">
-                                    <p>We've sent a one-time password to</p>
-                                    <p className="font-semibold text-slate-900">{loginEmail}</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp" className="text-slate-700">Enter OTP</Label>
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="123456"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        className="h-12 text-center text-2xl tracking-widest font-mono"
-                                        maxLength={6}
-                                        required
-                                    />
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-4 pb-8">
-                                <Button type="submit" className="w-full h-12 bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-bold text-base" disabled={loading}>
-                                    {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : 'Verify & Login'}
-                                </Button>
-                                <Button type="button" variant="ghost" className="text-sm text-slate-500" onClick={() => setStep(1)} disabled={loading}>
-                                    Wrong email? Click here
-                                </Button>
-                            </CardFooter>
-                        </form>
-                    )}
-                </Card>
-            </div>
-        );
+        return <div className="p-8 text-center text-slate-500 min-h-[70vh] flex items-center justify-center">Redirecting to secure sign in...</div>;
     }
 
     return (
@@ -692,13 +648,6 @@ export default function CompanyVerification() {
                 </div>
 
                 <nav className="flex flex-col gap-1 px-3 py-4 flex-1">
-                    <button
-                        onClick={() => { router.push('/company'); if (window.innerWidth < 768) setIsSidebarOpen(false); }}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'dashboard' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}
-                    >
-                        <LayoutDashboard size={20} className={panelView === 'dashboard' ? 'text-yellow-700' : 'text-slate-400'} />
-                        {isSidebarOpen && <span className="truncate">Dashboard</span>}
-                    </button>
                     <button
                         onClick={() => { router.push('/company/requests'); if (window.innerWidth < 768) setIsSidebarOpen(false); }}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${panelView === 'requests' ? 'bg-yellow-50 text-yellow-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-yellow-700'} ${!isSidebarOpen && 'justify-center px-0'}`}

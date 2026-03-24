@@ -46,9 +46,34 @@ export default function ApplyCertificate() {
     const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
-        if (!sessionStorage.getItem('token')) {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
             router.push('/student/login');
+            return;
         }
+
+        const loadProfile = async () => {
+            try {
+                const res = await apiFetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) return;
+                const data = await res.json().catch(() => null);
+                const user = data?.user;
+                const profile = data?.studentProfile;
+
+                if (user?.name) setName(String(user.name));
+                if (profile?.usn) setUsn(String(profile.usn));
+                if (profile?.branch) setBranch(String(profile.branch));
+                if (profile?.yearOfPassing) setYear(String(profile.yearOfPassing));
+                if (profile?.phoneNumber) setPhoneNumber(String(profile.phoneNumber));
+            } catch {
+                // Keep manual entry when profile autofill is unavailable.
+            }
+        };
+
+        void loadProfile();
     }, [router]);
 
     const selectedCertificate = CERTIFICATE_OPTIONS.find(option => option.value === type);
@@ -263,13 +288,16 @@ export default function ApplyCertificate() {
                                         <SelectValue placeholder="Select Branch" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="CSE">Computer Science & Engineering</SelectItem>
-                                        <SelectItem value="ISE">Information Science</SelectItem>
-                                        <SelectItem value="ECE">Electronics & Communication</SelectItem>
-                                        <SelectItem value="EEE">Electrical & Electronics</SelectItem>
-                                        <SelectItem value="ME">Mechanical Engineering</SelectItem>
-                                        <SelectItem value="CE">Civil Engineering</SelectItem>
-                                        <SelectItem value="AI">AI & Data Science</SelectItem>
+                                        <SelectItem value="CSE">CSE - Computer Science and Engineering</SelectItem>
+                                        <SelectItem value="ISE">ISE - Information Science and Engineering</SelectItem>
+                                        <SelectItem value="ECE">ECE - Electronics and Communication Engineering</SelectItem>
+                                        <SelectItem value="EEE">EEE - Electrical and Electronics Engineering</SelectItem>
+                                        <SelectItem value="ME">ME - Mechanical Engineering</SelectItem>
+                                        <SelectItem value="AIDS">AIDS - Artificial Intelligence and Data Science</SelectItem>
+                                        <SelectItem value="AIML">AIML - Artificial Intelligence and Machine Learning</SelectItem>
+                                        <SelectItem value="CSE(AIML)">CSE(AIML) - CSE with AI and ML</SelectItem>
+                                        <SelectItem value="CIVIL">CIVIL - Civil Engineering</SelectItem>
+                                        <SelectItem value="AERONAUTICAL">AERONAUTICAL - Aeronautical Engineering</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -348,6 +376,18 @@ export default function ApplyCertificate() {
                             <div className="space-y-2">
                                 <Label htmlFor="otherType">Specify Certificate Name <span className="text-red-500">*</span></Label>
                                 <Input id="otherType" placeholder="Migration Certificate, etc." value={otherType} onChange={e => setOtherType(e.target.value)} required />
+                            </div>
+                        )}
+
+                        {type === 'grade_card_correction' && (
+                            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                                For grade correction, 10th standard marks card copy must be submitted.
+                            </div>
+                        )}
+
+                        {type === 'duplicate_grade_card' && (
+                            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                                For duplicate grade card, FIR copy must be submitted.
                             </div>
                         )}
 

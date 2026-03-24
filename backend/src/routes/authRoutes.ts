@@ -1,6 +1,16 @@
 import { Router } from 'express';
-import { studentLogin, verifyOtp, companyLogin, adminLogin } from '../controllers/authController';
+import {
+	studentLogin,
+	verifyOtp,
+	companyLogin,
+	adminLogin,
+	requestUnifiedOtp,
+	verifyUnifiedOtp,
+	completeUnifiedProfile,
+	getCurrentProfile
+} from '../controllers/authController';
 import { simpleRateLimit } from '../middleware/rateLimit';
+import { authenticate } from '../middleware/authMiddleware';
 
 const router = Router();
 const authLimiter = simpleRateLimit({ windowMs: 60 * 1000, max: 12, keyPrefix: 'auth' });
@@ -16,5 +26,11 @@ router.post('/company/verify-otp', authLimiter, verifyOtp);
 
 // Admin routes
 router.post('/admin/login', adminAuthLimiter, adminLogin);
+
+// Unified auth routes (preferred)
+router.post('/request-otp', authLimiter, requestUnifiedOtp);
+router.post('/verify-unified-otp', authLimiter, verifyUnifiedOtp);
+router.post('/complete-profile', authLimiter, completeUnifiedProfile);
+router.get('/me', authenticate, getCurrentProfile);
 
 export default router;

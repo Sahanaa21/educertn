@@ -185,19 +185,19 @@ export default function StudentRequests() {
     };
 
     const getPaymentMeta = (req: any) => {
-        if (req.paymentStatus === 'REFUNDED') {
+        if (req.paymentStatus === 'REFUND_COMPLETED' || req.paymentStatus === 'REFUNDED') {
             return {
-                label: 'REFUNDED',
+                label: 'REFUND COMPLETED',
                 className: 'border-emerald-500 text-emerald-700 bg-emerald-50',
                 hint: 'Refund completed'
             };
         }
 
-        if (isCancelledRequest(req) && req.paymentStatus === 'PAID') {
+        if (req.paymentStatus === 'REFUND_INITIATED' || (isCancelledRequest(req) && req.paymentStatus === 'PAID')) {
             return {
                 label: 'REFUND IN PROGRESS',
                 className: 'border-amber-500 text-amber-700 bg-amber-50',
-                hint: 'Refund is being processed'
+                hint: 'Refund initiated. It may take 5-7 working days.'
             };
         }
 

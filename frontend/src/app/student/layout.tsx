@@ -2,11 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const menuItems = [
-    { name: 'Dashboard', href: '/student', icon: LayoutDashboard },
     { name: 'My Requests', href: '/student/requests', icon: Clock },
     { name: 'Apply Certificate', href: '/student/apply', icon: FileText },
 ];

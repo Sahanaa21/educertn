@@ -330,7 +330,7 @@ export default function AdminCertificates() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top py-3 w-40 overflow-hidden">
-                                        <div className="font-bold text-green-700">{req.paymentStatus}</div>
+                                        <div className={`font-bold ${req.paymentStatus === 'REFUND_INITIATED' ? 'text-amber-700' : req.paymentStatus === 'REFUND_COMPLETED' || req.paymentStatus === 'REFUNDED' ? 'text-emerald-700' : req.paymentStatus === 'PAID' ? 'text-green-700' : 'text-slate-700'}`}>{req.paymentStatus}</div>
                                         <div className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</div>
                                         <div className="text-xs text-slate-400 truncate" title={req.paymentOrderId || 'N/A'}>Order ID: {req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
@@ -466,9 +466,22 @@ export default function AdminCertificates() {
                                                 <span className="text-xs font-semibold text-green-600 italic">Marked as Finalized</span>
                                             )}
                                             {req.status === 'REJECTED' && (
-                                                <div className="text-xs font-semibold text-red-600 italic break-words max-w-xs">
-                                                    Request Denied
-                                                    {req.rejectionReason ? `: ${req.rejectionReason}` : ''}
+                                                <div className="space-y-2">
+                                                    <div className="text-xs font-semibold text-red-600 italic break-words max-w-xs">
+                                                        Request Denied
+                                                        {req.rejectionReason ? `: ${req.rejectionReason}` : ''}
+                                                    </div>
+                                                    {req.paymentStatus === 'REFUND_INITIATED' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                                            disabled={processingId === req.id}
+                                                            onClick={() => updateStatus(req.id, undefined, 'MARK_REFUND_COMPLETED')}
+                                                        >
+                                                            Mark Refund Completed
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

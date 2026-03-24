@@ -53,6 +53,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   certificateRequests CertificateRequest[]
+  studentProfile      StudentProfile?
+  companyProfile      CompanyProfile?
 }
 
 model OTP {
@@ -134,4 +136,27 @@ model PortalSettings {
   allowCompanySignup Boolean  @default(true)
   smtpFromName       String
   updatedAt          DateTime @updatedAt
+}
+
+model StudentProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usn           String
+  branch        String
+  yearOfPassing String
+  phoneNumber   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CompanyProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName   String
+  contactPerson String
+  phoneNumber   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

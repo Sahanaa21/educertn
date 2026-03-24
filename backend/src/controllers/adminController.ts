@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
-import { createRazorpayRefund, fetchLatestCapturedPaymentForOrder, hasRazorpayConfig } from '../config/razorpay';
 import { sendEmail } from '../utils/email';
 
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
@@ -139,33 +138,21 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
         }) + '\n');
 
         let updateData: any = {};
-        let refundApplied = false;
+        let refundMarkedInitiated = false;
+
+        if (action === 'MARK_REFUND_COMPLETED') {
+            const updated = await prisma.certificateRequest.update({
+                where: { id },
+                data: { paymentStatus: 'REFUND_COMPLETED' },
+                include: { user: true }
+            }) as any;
+
+            return res.json(updated);
+        }
 
         if (status === 'REJECTED' && request.status !== 'REJECTED' && request.paymentStatus === 'PAID') {
-            if (!hasRazorpayConfig()) {
-                return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
-            }
-
-            if (!request.paymentOrderId) {
-                return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
-            }
-
-            const payment = await fetchLatestCapturedPaymentForOrder(request.paymentOrderId);
-            if (!payment?.id) {
-                return res.status(400).json({ message: 'Cannot process refund: captured payment not found for this request' });
-            }
-
-            const paidAmount = Number(payment.amount || 0);
-            const alreadyRefunded = Number(payment.amount_refunded || 0);
-            const desiredAmount = Math.round(Number(request.amount || 0) * 100);
-            const refundableAmount = desiredAmount > 0 ? Math.min(desiredAmount, paidAmount) : paidAmount;
-
-            if (alreadyRefunded < refundableAmount) {
-                await createRazorpayRefund(payment.id, refundableAmount);
-            }
-
-            updateData.paymentStatus = 'REFUNDED';
-            refundApplied = true;
+            updateData.paymentStatus = 'REFUND_INITIATED';
+            refundMarkedInitiated = true;
         }
 
         if (status) updateData.status = status;
@@ -215,7 +202,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
                     <p>Hello ${updated.studentName},</p>
                     <p>Your request for <strong>${updated.certificateType.replace('_', ' ')}</strong> (Request ID: ${updated.id}) was rejected by the admin team.</p>
                     <p><strong>Reason:</strong> ${safeReason || 'No reason was provided.'}</p>
-                    ${refundApplied ? '<p><strong>Refund:</strong> Your payment has been refunded to the original payment source.</p>' : ''}
+                    ${refundMarkedInitiated ? '<p><strong>Refund:</strong> Refund has been initiated. It may take 5-7 working days. You will be updated once completed.</p>' : ''}
                     <p>Please review the reason and submit a corrected request if needed.</p>
                     <p>Thank you,</p>
                     <p>Global Academy of Technology</p>
@@ -291,7 +278,15 @@ export const getAllVerifications = async (req: Request, res: Response): Promise<
 export const updateVerificationStatus = async (req: Request, res: Response): Promise<any> => {
     try {
         const id = String(req.params.id);
-        const { status, rejectionReason } = req.body as { status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED'; rejectionReason?: string };
+        const { status, rejectionReason, action } = req.body as { status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED'; rejectionReason?: string; action?: string };
+
+        if (action === 'MARK_REFUND_COMPLETED') {
+            const updated = await prisma.verificationRequest.update({
+                where: { id },
+                data: { paymentStatus: 'REFUND_COMPLETED' }
+            }) as any;
+            return res.json(updated);
+        }
 
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
@@ -302,31 +297,9 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
             return res.status(404).json({ message: 'Verification request not found' });
         }
 
-        let refundApplied = false;
+        let refundMarkedInitiated = false;
         if (status === 'REJECTED' && existing.status !== 'REJECTED' && existing.paymentStatus === 'PAID') {
-            if (!hasRazorpayConfig()) {
-                return res.status(500).json({ message: 'Cannot process refund: payment gateway is not configured' });
-            }
-
-            const orderId = (existing as any).paymentOrderId || (existing as any).stripeSessionId;
-            if (!orderId) {
-                return res.status(400).json({ message: 'Cannot process refund: missing payment order reference' });
-            }
-
-            const payment = await fetchLatestCapturedPaymentForOrder(orderId);
-            if (!payment?.id) {
-                return res.status(400).json({ message: 'Cannot process refund: captured payment not found for this request' });
-            }
-
-            const paidAmount = Number(payment.amount || 0);
-            const alreadyRefunded = Number(payment.amount_refunded || 0);
-            const refundableAmount = Math.min(5000 * 100, paidAmount);
-
-            if (alreadyRefunded < refundableAmount) {
-                await createRazorpayRefund(payment.id, refundableAmount);
-            }
-
-            refundApplied = true;
+            refundMarkedInitiated = true;
         }
 
         if (status === 'COMPLETED' && (!existing.completedFile || !fs.existsSync(existing.completedFile))) {
@@ -339,7 +312,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
                 where: { id },
                 data: {
                     status,
-                    ...(refundApplied ? { paymentStatus: 'REFUNDED' } : {}),
+                    ...(refundMarkedInitiated ? { paymentStatus: 'REFUND_INITIATED' } : {}),
                     ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {})
                 }
             }) as any;
@@ -389,7 +362,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
                 <p><strong>USN:</strong> ${updated.usn}</p>
                 <p><strong>Request ID:</strong> ${updated.requestId}</p>
                 <p><strong>Reason:</strong> ${safeReason || 'No reason was provided.'}</p>
-                ${refundApplied ? '<p><strong>Refund:</strong> Your payment has been refunded to the original payment source.</p>' : ''}
+                ${refundMarkedInitiated ? '<p><strong>Refund:</strong> Refund has been initiated. It may take 5-7 working days. You will be updated once completed.</p>' : ''}
                 <p>Please correct the details and resubmit if required.</p>
                 <p>Thank you,</p>
                 <p>Global Academy of Technology</p>

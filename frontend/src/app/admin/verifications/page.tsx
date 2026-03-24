@@ -68,7 +68,7 @@ export default function AdminVerifications() {
         fetchRequests();
     }, [router]);
 
-    const updateStatus = async (id: string, status: string, rejReason?: string) => {
+    const updateStatus = async (id: string, status?: string, rejReason?: string, action?: string) => {
         setProcessingId(id);
         const token = sessionStorage.getItem('adminToken');
         try {
@@ -78,7 +78,11 @@ export default function AdminVerifications() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ status, ...(status === 'REJECTED' && rejReason ? { rejectionReason: rejReason } : {}) })
+                body: JSON.stringify({
+                    ...(status ? { status } : {}),
+                    ...(action ? { action } : {}),
+                    ...(status === 'REJECTED' && rejReason ? { rejectionReason: rejReason } : {})
+                })
             });
 
             if (res.ok) {
@@ -209,7 +213,8 @@ export default function AdminVerifications() {
     };
 
     const getPaymentTextClass = (req: VerificationRequest) => {
-        if (req.paymentStatus === 'REFUNDED') return 'font-bold text-emerald-700';
+        if (req.paymentStatus === 'REFUND_COMPLETED' || req.paymentStatus === 'REFUNDED') return 'font-bold text-emerald-700';
+        if (req.paymentStatus === 'REFUND_INITIATED') return 'font-bold text-amber-700';
         if (req.paymentStatus === 'PAID') return 'font-bold text-green-700';
         return 'font-bold text-slate-700';
     };
@@ -426,6 +431,18 @@ export default function AdminVerifications() {
                                                         </Button>
                                                     </div>
                                                 </div>
+                                            )}
+
+                                            {req.status === 'REJECTED' && req.paymentStatus === 'REFUND_INITIATED' && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                                    disabled={processingId === req.id}
+                                                    onClick={() => updateStatus(req.id, undefined, undefined, 'MARK_REFUND_COMPLETED')}
+                                                >
+                                                    Mark Refund Completed
+                                                </Button>
                                             )}
                                         </div>
                                     </TableCell>

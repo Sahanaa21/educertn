@@ -21,7 +21,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     next();
 };
 
-export const requireRole = (role: 'STUDENT' | 'ADMIN') => {
+export const requireRole = (role: 'STUDENT' | 'ADMIN' | 'COMPANY') => {
     return (req: AuthRequest, res: Response, next: NextFunction): any => {
         if (!req.user || req.user.role !== role) {
             return res.status(403).json({ message: 'Forbidden' });
