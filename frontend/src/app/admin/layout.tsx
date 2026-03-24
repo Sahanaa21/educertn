@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   - Desktop (md:): static inline sidebar, can collapse to icon-only
                 */}
                 <aside className={[
-                    'flex flex-shrink-0 flex-col border-r bg-slate-900 text-slate-300 transition-all duration-300',
+                    'flex shrink-0 flex-col border-r bg-slate-900 text-slate-300 transition-all duration-300',
                     // mobile: fixed overlay
                     'fixed inset-y-0 left-0 z-40 w-64',
                     // desktop: static inline with collapsible width
@@ -80,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                         {isSidebarOpen ? (
                             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500 min-w-[8px]"></div>
+                                <div className="w-2 h-2 rounded-full bg-green-500 min-w-2"></div>
                                 Admin Hub
                             </h2>
                         ) : (

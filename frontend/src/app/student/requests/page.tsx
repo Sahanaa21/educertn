@@ -349,7 +349,7 @@ export default function StudentRequests() {
                                                 {getStatusLabel(req)}
                                             </Badge>
                                             {req.status === 'REJECTED' && req.rejectionReason ? (
-                                                <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                <p className="max-w-65 whitespace-normal text-xs text-red-700">
                                                     {isCancelledRequest(req) ? 'Cancellation Note:' : 'Reason:'} {req.rejectionReason}
                                                 </p>
                                             ) : null}

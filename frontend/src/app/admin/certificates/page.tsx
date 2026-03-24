@@ -323,7 +323,7 @@ export default function AdminCertificates() {
                                                 {req.status}
                                             </Badge>
                                             {req.status === 'REJECTED' && req.rejectionReason ? (
-                                                <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                <p className="max-w-65 whitespace-normal text-xs text-red-700">
                                                     Reason: {req.rejectionReason}
                                                 </p>
                                             ) : null}
@@ -467,7 +467,7 @@ export default function AdminCertificates() {
                                             )}
                                             {req.status === 'REJECTED' && (
                                                 <div className="space-y-2">
-                                                    <div className="text-xs font-semibold text-red-600 italic break-words max-w-xs">
+                                                    <div className="text-xs font-semibold text-red-600 italic wrap-break-word max-w-xs">
                                                         Request Denied
                                                         {req.rejectionReason ? `: ${req.rejectionReason}` : ''}
                                                     </div>

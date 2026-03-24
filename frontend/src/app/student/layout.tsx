@@ -60,7 +60,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                   - Desktop (md:): static inline sidebar inside flex row
                 */}
                 <aside className={[
-                    'flex flex-shrink-0 flex-col border-r bg-white transition-all duration-300',
+                    'flex shrink-0 flex-col border-r bg-white transition-all duration-300',
                     'fixed inset-y-0 left-0 z-40 w-64',
                     'md:static md:inset-y-auto md:z-auto',
                     isSidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-20',
@@ -68,7 +68,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                     <div className="flex items-center justify-between border-b border-slate-200 p-4">
                         {isSidebarOpen ? (
                             <h2 className="flex items-center gap-2 text-lg font-bold text-blue-900">
-                                <div className="h-2 w-2 min-w-[8px] rounded-full bg-blue-500" />
+                                <div className="h-2 w-2 min-w-2 rounded-full bg-blue-500" />
                                 Student Panel
                             </h2>
                         ) : (

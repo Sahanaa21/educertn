@@ -324,7 +324,7 @@ export default function AdminVerifications() {
                                                 {getStatusLabel(req)}
                                             </Badge>
                                             {req.status === 'REJECTED' && req.rejectionReason ? (
-                                                <p className="max-w-[260px] whitespace-normal text-xs text-red-700">
+                                                <p className="max-w-65 whitespace-normal text-xs text-red-700">
                                                     {isCancelledRequest(req) ? 'Cancellation Note:' : 'Reason:'} {req.rejectionReason}
                                                 </p>
                                             ) : null}
@@ -374,7 +374,7 @@ export default function AdminVerifications() {
                                                     ) : null}
                                                 </>
                                             ) : (
-                                                <div className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 break-words max-w-xs">
+                                                <div className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 wrap-break-word max-w-xs">
                                                     User cancelled this request. No further admin action is needed.
                                                 </div>
                                             )}
