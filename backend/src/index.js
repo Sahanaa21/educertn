@@ -14,6 +14,7 @@ const certificateRoutes_1 = __importDefault(require("./routes/certificateRoutes"
 const verificationRoutes_1 = __importDefault(require("./routes/verificationRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const supportRoutes_1 = __importDefault(require("./routes/supportRoutes"));
+const academicServicesRoutes_1 = __importDefault(require("./routes/academicServicesRoutes"));
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -68,6 +69,7 @@ app.use('/api/auth', authRoutes_1.default);
 app.use('/api', certificateRoutes_1.default);
 app.use('/api', verificationRoutes_1.default);
 app.use('/api', supportRoutes_1.default);
+app.use('/api', academicServicesRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use((err, _req, res, _next) => {
     if (err instanceof multer_1.default.MulterError) {

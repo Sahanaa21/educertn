@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight, Files } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const menuItems = [
     { name: 'My Requests', href: '/student/requests', icon: Clock },
     { name: 'Apply Certificate', href: '/student/apply', icon: FileText },
+    { name: 'Academic Services', href: '/student/academic-services', icon: Files },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {

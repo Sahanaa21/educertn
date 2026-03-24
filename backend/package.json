@@ -30,7 +30,6 @@
     "multer": "^2.1.1",
     "nodemailer": "^8.0.1",
     "pg": "^8.20.0",
-    "prisma": "^6.19.2",
     "razorpay": "^2.9.6"
   },
   "devDependencies": {
@@ -41,6 +40,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.3.5",
     "@types/nodemailer": "^7.0.11",
+    "prisma": "^6.19.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

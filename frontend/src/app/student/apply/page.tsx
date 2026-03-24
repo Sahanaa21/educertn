@@ -12,6 +12,7 @@ import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { openRazorpayCheckout } from '@/lib/razorpay';
+import Link from 'next/link';
 
 const CERTIFICATE_OPTIONS = [
     { value: 'grade_card_correction', label: 'Grade Card Correction', fee: 1200 },
@@ -263,6 +264,14 @@ export default function ApplyCertificate() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">Apply for Certificate</h1>
                 <p className="text-slate-500 mt-1">Fill out the form below to request a new certificate or document.</p>
+            </div>
+
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                For photocopy and challenge re-evaluation requests, use the dedicated student service page.
+                {' '}
+                <Link href="/student/academic-services" className="font-semibold underline underline-offset-2">
+                    Go to Academic Services
+                </Link>
             </div>
 
             <form onSubmit={submitApplication}>

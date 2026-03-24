@@ -36,12 +36,9 @@ const BRANCH_OPTIONS = new Set([
     'AERONAUTICAL',
 ]);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const FIXED_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
 const getAdminAllowlist = () => {
-    const configured = (process.env.ADMIN_ALLOWED_EMAILS || process.env.ADMIN_EMAIL_ALLOWLIST || 'coe@gat.ac.in')
-        .split(',')
-        .map((item) => item.trim().toLowerCase())
-        .filter(Boolean);
-    return new Set(configured);
+    return new Set(FIXED_ADMIN_ALLOWLIST);
 };
 const isAllowlistedAdminEmail = (email) => getAdminAllowlist().has(email.toLowerCase());
 const getDestinationByRole = (role) => {

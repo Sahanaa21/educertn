@@ -9,6 +9,7 @@ import certificateRoutes from './routes/certificateRoutes';
 import verificationRoutes from './routes/verificationRoutes';
 import adminRoutes from './routes/adminRoutes';
 import supportRoutes from './routes/supportRoutes';
+import academicServicesRoutes from './routes/academicServicesRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
 
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', certificateRoutes);
 app.use('/api', verificationRoutes);
 app.use('/api', supportRoutes);
+app.use('/api', academicServicesRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -37,6 +37,18 @@ enum IssueStatus {
   CLOSED
 }
 
+enum AcademicServiceType {
+  PHOTOCOPY
+  REEVALUATION
+}
+
+enum AcademicServiceStatus {
+  PENDING
+  UNDER_REVIEW
+  RESULT_PUBLISHED
+  REJECTED
+}
+
 enum CopyType {
   SOFT_COPY
   HARD_COPY
@@ -53,6 +65,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   certificateRequests CertificateRequest[]
+  academicServiceRequests AcademicServiceRequest[]
   studentProfile      StudentProfile?
   companyProfile      CompanyProfile?
 }
@@ -135,7 +148,31 @@ model PortalSettings {
   maintenanceMode    Boolean  @default(false)
   allowCompanySignup Boolean  @default(true)
   smtpFromName       String
+  adminAllowedEmails String   @default("")
+  academicServicesEnabled Boolean @default(false)
+  academicServicesStartAt DateTime?
+  academicServicesEndAt DateTime?
   updatedAt          DateTime @updatedAt
+}
+
+model AcademicServiceRequest {
+  id               String                @id @default(uuid())
+  requestId        String                @unique
+  userId           String
+  user             User                  @relation(fields: [userId], references: [id])
+  serviceType      AcademicServiceType
+  semester         String
+  courseCount      Int
+  courseNames      Json
+  amount           Float
+  paymentStatus    String                @default("PENDING")
+  paymentOrderId   String?
+  status           AcademicServiceStatus @default(PENDING)
+  adminRemarks     String?
+  resultSummary    String?
+  attachmentUrls   Json?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 }
 
 model StudentProfile {

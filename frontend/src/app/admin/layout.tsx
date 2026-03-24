@@ -8,7 +8,8 @@ import {
     Users,
     Settings,
     LogOut,
-    CheckSquare
+    CheckSquare,
+    ClipboardList
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -16,6 +17,7 @@ const menuItems = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Certificates', href: '/admin/certificates', icon: FileText },
     { name: 'Verifications', href: '/admin/verifications', icon: CheckSquare },
+    { name: 'Academic Services', href: '/admin/academic-services', icon: ClipboardList },
     { name: 'Issues', href: '/admin/issues', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
