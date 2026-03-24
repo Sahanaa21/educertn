@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
 import { openRazorpayCheckout } from '@/lib/razorpay';
@@ -37,7 +36,7 @@ export default function StudentAcademicServicesPage() {
     const [serviceType, setServiceType] = useState<string>('PHOTOCOPY');
     const [semester, setSemester] = useState('');
     const [courseCount, setCourseCount] = useState('1');
-    const [courseNamesText, setCourseNamesText] = useState('');
+    const [courseNames, setCourseNames] = useState<string[]>(['']);
 
     const selectedService = SERVICE_OPTIONS.find((option) => option.value === serviceType) || SERVICE_OPTIONS[0];
     const totalAmount = useMemo(() => Number(courseCount || 0) * selectedService.unitFee, [courseCount, selectedService.unitFee]);
@@ -51,12 +50,20 @@ export default function StudentAcademicServicesPage() {
         return token;
     }, [router]);
 
-    const parseCourseNames = (value: string) => {
-        return value
-            .split(/\n|,/)
-            .map((item) => item.trim())
-            .filter(Boolean);
-    };
+    useEffect(() => {
+        const count = Number(courseCount);
+        if (!Number.isInteger(count) || count < 1 || count > 7) return;
+
+        setCourseNames((prev) => {
+            const next = [...prev];
+            if (next.length < count) {
+                while (next.length < count) next.push('');
+            } else if (next.length > count) {
+                next.length = count;
+            }
+            return next;
+        });
+    }, [courseCount]);
 
     const fetchData = useCallback(async () => {
         const token = getStudentToken();
@@ -100,7 +107,7 @@ export default function StudentAcademicServicesPage() {
         if (!token) return;
 
         const parsedCount = Number(courseCount);
-        const courseNames = parseCourseNames(courseNamesText);
+        const normalizedCourseNames = courseNames.map((name) => name.trim()).filter(Boolean);
 
         if (!semester.trim()) {
             toast.error('Semester is required');
@@ -110,7 +117,7 @@ export default function StudentAcademicServicesPage() {
             toast.error('Number of courses must be between 1 and 7');
             return;
         }
-        if (courseNames.length !== parsedCount) {
+        if (normalizedCourseNames.length !== parsedCount) {
             toast.error('Enter course names matching the selected count');
             return;
         }
@@ -127,7 +134,7 @@ export default function StudentAcademicServicesPage() {
                     serviceType,
                     semester: semester.trim(),
                     courseCount: parsedCount,
-                    courseNames,
+                    courseNames: normalizedCourseNames,
                 })
             });
 
@@ -173,7 +180,7 @@ export default function StudentAcademicServicesPage() {
             }
 
             toast.success('Request submitted successfully');
-            setCourseNamesText('');
+            setCourseNames(Array.from({ length: 1 }, () => ''));
             setSemester('');
             setCourseCount('1');
             await fetchData();
@@ -293,13 +300,16 @@ export default function StudentAcademicServicesPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Number of Courses</Label>
-                            <Input
-                                type="number"
-                                min={1}
-                                max={7}
-                                value={courseCount}
-                                onChange={(e) => setCourseCount(String(e.target.value || '1'))}
-                            />
+                            <Select value={courseCount} onValueChange={(value) => setCourseCount(value || '1')}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select number of courses" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Array.from({ length: 7 }, (_, index) => String(index + 1)).map((value) => (
+                                        <SelectItem key={value} value={value}>{value}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label>Total Fee</Label>
@@ -307,14 +317,23 @@ export default function StudentAcademicServicesPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         <Label>Course Names</Label>
-                        <Textarea
-                            value={courseNamesText}
-                            onChange={(e) => setCourseNamesText(e.target.value)}
-                            placeholder="Enter one course name per line"
-                            rows={5}
-                        />
+                        {courseNames.map((courseName, index) => (
+                            <Input
+                                key={`course-${index + 1}`}
+                                value={courseName}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setCourseNames((prev) => {
+                                        const next = [...prev];
+                                        next[index] = value;
+                                        return next;
+                                    });
+                                }}
+                                placeholder={`Course ${index + 1} name`}
+                            />
+                        ))}
                     </div>
 
                     <Button onClick={submitRequest} disabled={!availability?.active || submitting}>

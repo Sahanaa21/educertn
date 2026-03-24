@@ -25,13 +25,38 @@ const BRANCH_OPTIONS = new Set([
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const FIXED_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
+const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
 
-const getAdminAllowlist = () => {
-    return new Set(FIXED_ADMIN_ALLOWLIST);
+const parseAdminAllowlist = (raw: string | null | undefined) => {
+    return String(raw || '')
+        .split(/[\n,;]/)
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => EMAIL_REGEX.test(item));
 };
 
-const isAllowlistedAdminEmail = (email: string) => getAdminAllowlist().has(email.toLowerCase());
+const getAdminAllowlist = async () => {
+    const allowlist = new Set(DEFAULT_ADMIN_ALLOWLIST);
+
+    try {
+        const settings = await (prisma as any).portalSettings.findUnique({
+            where: { id: 1 },
+            select: { adminAllowedEmails: true }
+        });
+
+        for (const email of parseAdminAllowlist(settings?.adminAllowedEmails)) {
+            allowlist.add(email);
+        }
+    } catch {
+        // Fall back to the default allowlist when settings are unavailable.
+    }
+
+    return allowlist;
+};
+
+const isAllowlistedAdminEmail = async (email: string) => {
+    const allowlist = await getAdminAllowlist();
+    return allowlist.has(email.toLowerCase());
+};
 
 const getDestinationByRole = (role: string) => {
     if (role === 'ADMIN') return '/admin';
@@ -301,7 +326,7 @@ export const requestUnifiedOtp = async (req: Request, res: Response): Promise<an
 
     try {
         const existingUser = await prisma.user.findUnique({ where: { email } });
-        const adminEmail = isAllowlistedAdminEmail(email);
+        const adminEmail = await isAllowlistedAdminEmail(email);
 
         if (intent === 'signup' && existingUser) {
             return res.status(409).json({ message: 'This email is already registered. Please login instead.' });
@@ -350,7 +375,7 @@ export const verifyUnifiedOtp = async (req: Request, res: Response): Promise<any
         }
 
         let user = await prisma.user.findUnique({ where: { email } });
-        const adminEmail = isAllowlistedAdminEmail(email);
+        const adminEmail = await isAllowlistedAdminEmail(email);
 
         if (!user && adminEmail) {
             user = await prisma.user.create({
@@ -454,7 +479,7 @@ export const completeUnifiedProfile = async (req: Request, res: Response): Promi
             });
         }
 
-        if (isAllowlistedAdminEmail(user.email)) {
+        if (await isAllowlistedAdminEmail(user.email)) {
             return res.status(400).json({ message: 'This email is reserved for admin access only.' });
         }
 

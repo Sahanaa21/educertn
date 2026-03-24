@@ -11,7 +11,14 @@ import {
 
 const PHOTOCOPY_FEE = 500;
 const REEVALUATION_FEE = 3000;
-const FIXED_ADMIN_ALLOWLIST = 'sahanaa2060@gmail.com';
+const DEFAULT_ADMIN_ALLOWLIST = 'sahanaa2060@gmail.com';
+
+const parseAdminAllowlist = (raw: string | null | undefined) => {
+    return String(raw || '')
+        .split(/[\n,;]/)
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item));
+};
 
 const getSettings = async () => {
     return await (prisma as any).portalSettings.upsert({
@@ -24,7 +31,7 @@ const getSettings = async () => {
             maintenanceMode: false,
             allowCompanySignup: true,
             smtpFromName: 'Global Academy of Technology',
-            adminAllowedEmails: FIXED_ADMIN_ALLOWLIST,
+            adminAllowedEmails: DEFAULT_ADMIN_ALLOWLIST,
             academicServicesEnabled: false,
             academicServicesStartAt: null,
             academicServicesEndAt: null,
@@ -482,11 +489,18 @@ export const updateAcademicServiceSettingsAdmin = async (req: Request, res: Resp
             academicServicesEnabled,
             academicServicesStartAt,
             academicServicesEndAt,
+            adminAllowedEmails,
         } = req.body as {
             academicServicesEnabled?: boolean;
             academicServicesStartAt?: string | null;
             academicServicesEndAt?: string | null;
+            adminAllowedEmails?: string;
         };
+
+        const allowlistEmails = parseAdminAllowlist(adminAllowedEmails);
+        if (allowlistEmails.length === 0) {
+            return res.status(400).json({ message: 'Provide at least one valid admin email' });
+        }
 
         const start = academicServicesStartAt ? new Date(academicServicesStartAt) : null;
         const end = academicServicesEndAt ? new Date(academicServicesEndAt) : null;
@@ -509,7 +523,7 @@ export const updateAcademicServiceSettingsAdmin = async (req: Request, res: Resp
                 academicServicesEnabled: Boolean(academicServicesEnabled),
                 academicServicesStartAt: start,
                 academicServicesEndAt: end,
-                adminAllowedEmails: FIXED_ADMIN_ALLOWLIST,
+                adminAllowedEmails: allowlistEmails.join(', '),
             },
             create: {
                 id: 1,
@@ -518,7 +532,7 @@ export const updateAcademicServiceSettingsAdmin = async (req: Request, res: Resp
                 maintenanceMode: false,
                 allowCompanySignup: true,
                 smtpFromName: 'Global Academy of Technology',
-                adminAllowedEmails: FIXED_ADMIN_ALLOWLIST,
+                adminAllowedEmails: allowlistEmails.join(', '),
                 academicServicesEnabled: Boolean(academicServicesEnabled),
                 academicServicesStartAt: start,
                 academicServicesEndAt: end,

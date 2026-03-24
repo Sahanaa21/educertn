@@ -9,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UploadCloud, Building2, CreditCard, ArrowLeft, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, ClipboardList, FilePlus, LogOut, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, UploadCloud, Building2, CreditCard, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, ClipboardList, FilePlus, LogOut, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
 import { openRazorpayCheckout } from '@/lib/razorpay';
@@ -31,7 +30,6 @@ type VerificationRequest = {
 const VERIFICATION_FEE = 5000;
 const MAX_TEMPLATE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TEMPLATE_EXTENSIONS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CompanyVerification() {
     const router = useRouter();
@@ -42,9 +40,6 @@ export default function CompanyVerification() {
 
     // Auth States
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [loginEmail, setLoginEmail] = useState('');
-    const [otp, setOtp] = useState('');
-    const [step, setStep] = useState(1);
 
     // Form States
     const [companyName, setCompanyName] = useState('');
@@ -67,11 +62,10 @@ export default function CompanyVerification() {
         sessionStorage.removeItem('companyToken');
         sessionStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
-        setStep(1);
         setPanelView('application');
         setMainLoading(false);
         toast.error('Session expired. Please login again.');
-        router.push('/company');
+        router.push('/auth');
     };
 
     const fetchRequests = async (token: string) => {
@@ -148,91 +142,6 @@ export default function CompanyVerification() {
             setIsSidebarOpen(false);
         }
     }, [pathname, requests.length]);
-
-    const handleSendOtp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!loginEmail.trim()) return toast.error('Please enter your official email.');
-        if (!EMAIL_REGEX.test(loginEmail.trim())) return toast.error('Enter a valid company email address.');
-        setLoading(true);
-
-        try {
-            const res = await apiFetch('/api/auth/company/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: loginEmail.trim().toLowerCase() })
-            }, {
-                timeoutMs: 25000,
-                retries: 0,
-            });
-            let data: any = null;
-            try {
-                data = await res.json();
-            } catch {
-                data = null;
-            }
-
-            if (res.ok) {
-                toast.success(`OTP sent to ${loginEmail}`);
-                setStep(2);
-            } else {
-                toast.error(data?.message || 'Failed to send OTP.');
-            }
-        } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
-                setStep(2);
-                toast.message('Server is slow, but OTP may still arrive. Enter OTP once received.');
-            } else {
-                toast.error('Network error.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerifyOtp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!otp) return toast.error('Please enter the OTP.');
-        if (!/^\d{6}$/.test(otp.trim())) return toast.error('OTP must be exactly 6 digits.');
-        setLoading(true);
-
-        try {
-            const res = await apiFetch('/api/auth/company/verify-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: loginEmail.trim().toLowerCase(), otp: otp.trim() })
-            }, {
-                timeoutMs: 45000,
-                retries: 0,
-            });
-            const raw = await res.text();
-            let data: any = null;
-            try {
-                data = raw ? JSON.parse(raw) : null;
-            } catch {
-                data = null;
-            }
-
-            if (res.ok) {
-                toast.success('Login successful!');
-                sessionStorage.setItem('companyToken', data.token);
-                sessionStorage.setItem('companyEmail', loginEmail.trim().toLowerCase());
-                setCompanyEmail(loginEmail.trim().toLowerCase());
-                setIsAuthenticated(true);
-                fetchRequests(data.token);
-                router.push('/company');
-            } else {
-                if (res.status === 400 || res.status === 401) {
-                    toast.error(data?.message || 'Invalid OTP or email. Please try again.');
-                } else {
-                    toast.error(data?.message || 'Failed to verify OTP.');
-                }
-            }
-        } catch (error) {
-            toast.error('Network error.');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const validateVerificationForm = () => {
         if (!companyName.trim() || !contactPerson.trim() || !studentName.trim() || !usn.trim()) {
@@ -550,8 +459,7 @@ export default function CompanyVerification() {
         sessionStorage.removeItem('companyToken');
         sessionStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
-        setStep(1);
-        router.push('/company');
+        router.push('/auth');
     };
 
     const filteredCompanyRequests = requests.filter((req) => {

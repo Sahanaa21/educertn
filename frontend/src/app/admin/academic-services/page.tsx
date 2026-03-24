@@ -127,6 +127,7 @@ export default function AdminAcademicServicesPage() {
                     academicServicesEnabled: settings.academicServicesEnabled,
                     academicServicesStartAt: fromLocalInputDateTime(settings.academicServicesStartAt),
                     academicServicesEndAt: fromLocalInputDateTime(settings.academicServicesEndAt),
+                    adminAllowedEmails: settings.adminAllowedEmails,
                 })
             });
 
@@ -288,8 +289,14 @@ export default function AdminAcademicServicesPage() {
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Admin Allowed Email</Label>
-                            <Input value={settings.adminAllowedEmails} readOnly />
+                            <Label>Admin Allowed Emails</Label>
+                            <Textarea
+                                value={settings.adminAllowedEmails}
+                                onChange={(e) => setSettings((prev) => ({ ...prev, adminAllowedEmails: e.target.value }))}
+                                rows={3}
+                                placeholder="coe@gat.ac.in, principal@gat.ac.in"
+                            />
+                            <p className="text-xs text-slate-500">Separate multiple emails with commas or new lines.</p>
                         </div>
                         <div className="flex items-center gap-2 pt-7">
                             <input

@@ -1,9 +1,44 @@
+"use client";
+
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { GraduationCap, Building2, SearchCheck, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api';
+
+type AcademicAvailability = {
+  active: boolean;
+  enabled: boolean;
+  startAt: string | null;
+  endAt: string | null;
+};
 
 export default function Home() {
+  const [academicAvailability, setAcademicAvailability] = useState<AcademicAvailability | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadAvailability = async () => {
+      try {
+        const res = await apiFetch('/api/academic-services/availability');
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (mounted) {
+          setAcademicAvailability(data);
+        }
+      } catch {
+        // Keep the section hidden if the service status is unavailable.
+      }
+    };
+
+    void loadAvailability();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="flex flex-col w-full">
       {/* Hero Section */}
@@ -91,6 +126,14 @@ export default function Home() {
 
 
           </div>
+
+          {academicAvailability?.active ? (
+            <div className="mt-6">
+              <Link href="/student/academic-services" className="inline-flex items-center justify-center rounded-md font-bold transition-colors bg-emerald-500 text-white hover:bg-emerald-600 w-full sm:w-auto h-12 px-8">
+                Apply for Photocopy / Re-evaluation
+              </Link>
+            </div>
+          ) : null}
         </div>
       </section>
 

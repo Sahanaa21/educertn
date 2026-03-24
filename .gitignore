@@ -26,6 +26,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 recent_images.txt
+backend/tsc_backend_err.txt
+frontend/build_error.txt
 
 # OS files
 .DS_Store
