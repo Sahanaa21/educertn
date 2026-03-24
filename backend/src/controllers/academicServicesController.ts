@@ -377,6 +377,9 @@ export const updateAcademicServiceRequest = async (req: Request, res: Response):
         }
 
         if (action === 'MARK_REFUND_COMPLETED') {
+            if (existing.paymentStatus !== 'REFUND_INITIATED') {
+                return res.status(400).json({ message: 'Refund can be completed only after refund is initiated' });
+            }
             const updated = await (prisma as any).academicServiceRequest.update({
                 where: { id },
                 data: { paymentStatus: 'REFUND_COMPLETED' }
@@ -397,6 +400,10 @@ export const updateAcademicServiceRequest = async (req: Request, res: Response):
 
         if (status === 'RESULT_PUBLISHED' && !nextResultSummary) {
             return res.status(400).json({ message: 'Result summary is required when publishing results' });
+        }
+
+        if (status === 'RESULT_PUBLISHED' && existing.paymentStatus !== 'PAID') {
+            return res.status(400).json({ message: 'Result can be published only for paid requests' });
         }
 
         const data: any = {

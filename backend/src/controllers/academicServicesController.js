@@ -340,6 +340,9 @@ const updateAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
             return res.status(404).json({ message: 'Request not found' });
         }
         if (action === 'MARK_REFUND_COMPLETED') {
+            if (existing.paymentStatus !== 'REFUND_INITIATED') {
+                return res.status(400).json({ message: 'Refund can be completed only after refund is initiated' });
+            }
             const updated = yield prisma_1.prisma.academicServiceRequest.update({
                 where: { id },
                 data: { paymentStatus: 'REFUND_COMPLETED' }
@@ -349,10 +352,21 @@ const updateAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
         }
+        const nextRemarks = typeof adminRemarks === 'string' ? adminRemarks.trim() : String(existing.adminRemarks || '').trim();
+        const nextResultSummary = typeof resultSummary === 'string' ? resultSummary.trim() : String(existing.resultSummary || '').trim();
+        if (status === 'REJECTED' && !nextRemarks) {
+            return res.status(400).json({ message: 'Admin remarks are required when rejecting a request' });
+        }
+        if (status === 'RESULT_PUBLISHED' && !nextResultSummary) {
+            return res.status(400).json({ message: 'Result summary is required when publishing results' });
+        }
+        if (status === 'RESULT_PUBLISHED' && existing.paymentStatus !== 'PAID') {
+            return res.status(400).json({ message: 'Result can be published only for paid requests' });
+        }
         const data = {
             status,
-            adminRemarks: typeof adminRemarks === 'string' ? adminRemarks.trim() : existing.adminRemarks,
-            resultSummary: typeof resultSummary === 'string' ? resultSummary.trim() : existing.resultSummary,
+            adminRemarks: nextRemarks,
+            resultSummary: nextResultSummary,
         };
         if (status === 'REJECTED' && existing.paymentStatus === 'PAID') {
             data.paymentStatus = 'REFUND_INITIATED';

@@ -337,7 +337,7 @@ export default function AdminAcademicServicesPage() {
             </Card>
 
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                Rejected requests require admin remarks. Published results require a result summary.
+                Rejected requests require admin remarks. Published results require a result summary and are allowed only for paid requests.
             </div>
 
             <Card>
