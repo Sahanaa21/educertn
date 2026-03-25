@@ -60,8 +60,8 @@ const isAllowlistedAdminEmail = async (email: string) => {
 
 const getDestinationByRole = (role: string) => {
     if (role === 'ADMIN') return '/admin';
-    if (role === 'COMPANY') return '/company/apply';
-    return '/student/apply';
+    if (role === 'COMPANY') return '/company';
+    return '/student';
 };
 
 const sendOtpEmail = async (normalizedEmail: string, subject: string) => {

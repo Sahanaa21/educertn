@@ -551,7 +551,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                     ) : null}
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-3">
+                                            <td className="py-3 px-3 min-w-[180px]">
                                                 <div className="flex flex-col gap-2">
                                                     {request.status === 'PENDING' ? (
                                                         <Button

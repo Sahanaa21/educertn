@@ -1,10 +1,36 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, User, ClipboardList, SearchCheck } from 'lucide-react';
+import { FileText, User, ClipboardList, SearchCheck, Loader2 } from 'lucide-react';
 
 export default function StudentServicesHome() {
+    const router = useRouter();
+    const [mounted, setMounted] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        const token = sessionStorage.getItem('token');
+        
+        if (!token) {
+            // Redirect to home page if not authenticated
+            router.replace('/');
+            return;
+        }
+        
+        setIsAuthenticated(true);
+    }, [router]);
+
+    if (!mounted || !isAuthenticated) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
     return (
         <div className="space-y-6">
             <div>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { GraduationCap, Building2, SearchCheck, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
 type AcademicAvailability = {
@@ -15,17 +16,38 @@ type AcademicAvailability = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [academicAvailability, setAcademicAvailability] = useState<AcademicAvailability | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    setMounted(true);
+    const token = sessionStorage.getItem('token');
+    const companyToken = sessionStorage.getItem('companyToken');
+    
+    if (token) {
+      setIsAuthenticated(true);
+      router.replace('/student');
+      return;
+    }
+    
+    if (companyToken) {
+      setIsAuthenticated(true);
+      router.replace('/company');
+      return;
+    }
+  }, [router]);
+
+  useEffect(() => {
+    let isMounted = true;
 
     const loadAvailability = async () => {
       try {
         const res = await apiFetch('/api/academic-services/availability');
         if (!res.ok) return;
         const data = await res.json().catch(() => null);
-        if (mounted) {
+        if (isMounted) {
           setAcademicAvailability(data);
         }
       } catch {
@@ -35,7 +57,7 @@ export default function Home() {
 
     void loadAvailability();
     return () => {
-      mounted = false;
+      isMounted = false;
     };
   }, []);
 

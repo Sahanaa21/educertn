@@ -45,8 +45,8 @@ const getDestinationByRole = (role) => {
     if (role === 'ADMIN')
         return '/admin';
     if (role === 'COMPANY')
-        return '/company/apply';
-    return '/student/apply';
+        return '/company';
+    return '/student';
 };
 const sendOtpEmail = (normalizedEmail, subject) => __awaiter(void 0, void 0, void 0, function* () {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
