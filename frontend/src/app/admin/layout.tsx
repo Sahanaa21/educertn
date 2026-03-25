@@ -106,7 +106,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                     <nav className="flex flex-col gap-1 px-3 py-4 flex-1">
                         {menuItems.map((item) => {
-                            const isActive = pathname === item.href;
+                            const isActive = item.href === '/admin/academic-services'
+                                ? pathname.startsWith('/admin/academic-services')
+                                : pathname === item.href;
                             const Icon = item.icon;
                             return (
                                 <Link

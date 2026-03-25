@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
 
@@ -18,8 +18,6 @@ type SettingsState = {
     academicServicesEndAt: string;
     adminAllowedEmails: string;
 };
-
-const STATUS_OPTIONS = ['PENDING', 'UNDER_REVIEW', 'RESULT_PUBLISHED', 'REJECTED'] as const;
 
 const toLocalInputDateTime = (value: string | null | undefined) => {
     if (!value) return '';
@@ -34,22 +32,18 @@ const fromLocalInputDateTime = (value: string) => {
     return new Date(value).toISOString();
 };
 
-export default function AdminAcademicServicesPage() {
+export default function AdminAcademicServicesHubPage() {
     const router = useRouter();
 
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [requests, setRequests] = useState<any[]>([]);
-    const [savingSettings, setSavingSettings] = useState(false);
-    const [updatingId, setUpdatingId] = useState<string | null>(null);
-    const [uploadingId, setUploadingId] = useState<string | null>(null);
     const [settings, setSettings] = useState<SettingsState>({
         academicServicesEnabled: false,
         academicServicesStartAt: '',
         academicServicesEndAt: '',
         adminAllowedEmails: 'sahanaa2060@gmail.com',
     });
-    const [rowState, setRowState] = useState<Record<string, { status: string; adminRemarks: string; resultSummary: string }>>({});
-    const [rowFiles, setRowFiles] = useState<Record<string, FileList | null>>({});
 
     const tokenOrRedirect = useCallback(() => {
         const token = sessionStorage.getItem('adminToken');
@@ -68,11 +62,11 @@ export default function AdminAcademicServicesPage() {
         try {
             const [settingsRes, requestsRes] = await Promise.all([
                 apiFetch('/api/admin/academic-services/settings', {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
                 }),
                 apiFetch('/api/admin/academic-services', {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
             ]);
 
             if (settingsRes.ok) {
@@ -86,22 +80,11 @@ export default function AdminAcademicServicesPage() {
             }
 
             if (requestsRes.ok) {
-                const requestsJson = await requestsRes.json();
-                const list = Array.isArray(requestsJson) ? requestsJson : [];
-                setRequests(list);
-
-                const initialState: Record<string, { status: string; adminRemarks: string; resultSummary: string }> = {};
-                for (const item of list) {
-                    initialState[item.id] = {
-                        status: item.status || 'PENDING',
-                        adminRemarks: item.adminRemarks || '',
-                        resultSummary: item.resultSummary || '',
-                    };
-                }
-                setRowState(initialState);
+                const list = await requestsRes.json();
+                setRequests(Array.isArray(list) ? list : []);
             }
         } catch {
-            toast.error('Failed to load academic service admin data');
+            toast.error('Failed to load academic services admin data');
         } finally {
             setLoading(false);
         }
@@ -115,7 +98,7 @@ export default function AdminAcademicServicesPage() {
         const token = tokenOrRedirect();
         if (!token) return;
 
-        setSavingSettings(true);
+        setSaving(true);
         try {
             const res = await apiFetch('/api/admin/academic-services/settings', {
                 method: 'PUT',
@@ -128,7 +111,7 @@ export default function AdminAcademicServicesPage() {
                     academicServicesStartAt: fromLocalInputDateTime(settings.academicServicesStartAt),
                     academicServicesEndAt: fromLocalInputDateTime(settings.academicServicesEndAt),
                     adminAllowedEmails: settings.adminAllowedEmails,
-                })
+                }),
             });
 
             const json = await res.json().catch(() => null);
@@ -142,132 +125,17 @@ export default function AdminAcademicServicesPage() {
         } catch {
             toast.error('Network error while saving settings');
         } finally {
-            setSavingSettings(false);
-        }
-    };
-
-    const updateRequest = async (id: string) => {
-        const token = tokenOrRedirect();
-        if (!token) return;
-
-        const state = rowState[id];
-        if (!state) return;
-
-        if (state.status === 'REJECTED' && !state.adminRemarks.trim()) {
-            toast.error('Admin remarks are mandatory for rejected requests');
-            return;
-        }
-
-        if (state.status === 'RESULT_PUBLISHED' && !state.resultSummary.trim()) {
-            toast.error('Result summary is mandatory when publishing results');
-            return;
-        }
-
-        setUpdatingId(id);
-        try {
-            const res = await apiFetch(`/api/admin/academic-services/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    status: state.status,
-                    adminRemarks: state.adminRemarks,
-                    resultSummary: state.resultSummary,
-                })
-            });
-
-            const json = await res.json().catch(() => null);
-            if (!res.ok) {
-                toast.error(json?.message || 'Failed to update request');
-                return;
-            }
-
-            toast.success('Request updated');
-            await fetchData();
-        } catch {
-            toast.error('Network error while updating request');
-        } finally {
-            setUpdatingId(null);
-        }
-    };
-
-    const markRefundCompleted = async (id: string) => {
-        const token = tokenOrRedirect();
-        if (!token) return;
-
-        setUpdatingId(id);
-        try {
-            const res = await apiFetch(`/api/admin/academic-services/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ action: 'MARK_REFUND_COMPLETED' })
-            });
-
-            const json = await res.json().catch(() => null);
-            if (!res.ok) {
-                toast.error(json?.message || 'Failed to mark refund completed');
-                return;
-            }
-
-            toast.success('Refund marked as completed');
-            await fetchData();
-        } catch {
-            toast.error('Network error while updating refund');
-        } finally {
-            setUpdatingId(null);
-        }
-    };
-
-    const uploadAttachments = async (id: string) => {
-        const token = tokenOrRedirect();
-        if (!token) return;
-
-        const files = rowFiles[id];
-        if (!files || files.length === 0) {
-            toast.error('Select one or more files first');
-            return;
-        }
-
-        const formData = new FormData();
-        for (const file of Array.from(files)) {
-            formData.append('files', file);
-        }
-
-        setUploadingId(id);
-        try {
-            const res = await apiFetch(`/api/admin/academic-services/${id}/attachments`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData,
-            });
-
-            const json = await res.json().catch(() => null);
-            if (!res.ok) {
-                toast.error(json?.message || 'Failed to upload attachments');
-                return;
-            }
-
-            toast.success('Attachments uploaded');
-            await fetchData();
-        } catch {
-            toast.error('Network error while uploading attachments');
-        } finally {
-            setUploadingId(null);
+            setSaving(false);
         }
     };
 
     const summary = useMemo(() => {
+        const photocopy = requests.filter((item) => item.serviceType === 'PHOTOCOPY');
+        const reevaluation = requests.filter((item) => item.serviceType === 'REEVALUATION');
         return {
             total: requests.length,
-            pending: requests.filter((item) => item.status === 'PENDING').length,
-            underReview: requests.filter((item) => item.status === 'UNDER_REVIEW').length,
-            published: requests.filter((item) => item.status === 'RESULT_PUBLISHED').length,
-            rejected: requests.filter((item) => item.status === 'REJECTED').length,
+            photocopy: photocopy.length,
+            reevaluation: reevaluation.length,
         };
     }, [requests]);
 
@@ -279,8 +147,29 @@ export default function AdminAcademicServicesPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold text-slate-900">Academic Services</h1>
-                <p className="text-sm text-slate-500">Manage photocopy and challenge re-evaluation requests.</p>
+                <p className="text-sm text-slate-500">Use separate pages for Photocopy and Re-evaluation tables.</p>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Service Tables</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Link href="/admin/academic-services/photocopy" className="rounded-md border p-4 hover:bg-slate-50 transition-colors">
+                        <p className="font-semibold text-slate-900">Photocopy Requests</p>
+                        <p className="text-sm text-slate-500 mt-1">Manage pending, processing and completed photocopy requests.</p>
+                        <Badge variant="outline" className="mt-2">Total: {summary.photocopy}</Badge>
+                    </Link>
+                    <Link href="/admin/academic-services/re-evaluation" className="rounded-md border p-4 hover:bg-slate-50 transition-colors">
+                        <p className="font-semibold text-slate-900">Re-evaluation Requests</p>
+                        <p className="text-sm text-slate-500 mt-1">Manage under review and result published re-evaluation requests.</p>
+                        <Badge variant="outline" className="mt-2">Total: {summary.reevaluation}</Badge>
+                    </Link>
+                    <div className="md:col-span-2">
+                        <Badge variant="outline">All Academic Service Requests: {summary.total}</Badge>
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader>
@@ -324,146 +213,7 @@ export default function AdminAcademicServicesPage() {
                             />
                         </div>
                     </div>
-                    <Button onClick={saveSettings} disabled={savingSettings}>
-                        {savingSettings ? 'Saving...' : 'Save Window Settings'}
-                    </Button>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Request Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
-                    <Badge variant="outline">Total: {summary.total}</Badge>
-                    <Badge variant="outline">Pending: {summary.pending}</Badge>
-                    <Badge variant="outline">Review: {summary.underReview}</Badge>
-                    <Badge variant="outline">Published: {summary.published}</Badge>
-                    <Badge variant="outline">Rejected: {summary.rejected}</Badge>
-                </CardContent>
-            </Card>
-
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                Rejected requests require admin remarks. Published results require a result summary and are allowed only for paid requests.
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>All Requests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-6">
-                        {requests.length === 0 ? (
-                            <p className="text-sm text-slate-500">No requests found.</p>
-                        ) : requests.map((request) => {
-                            const current = rowState[request.id] || {
-                                status: request.status,
-                                adminRemarks: request.adminRemarks || '',
-                                resultSummary: request.resultSummary || '',
-                            };
-
-                            return (
-                                <div key={request.id} className="rounded-md border p-4 space-y-3">
-                                    <div className="flex flex-wrap gap-2 items-center text-sm">
-                                        <span className="font-semibold">{request.requestId}</span>
-                                        <Badge variant="outline">{request.serviceType}</Badge>
-                                        <Badge variant="outline">{request.status}</Badge>
-                                        <Badge variant="outline">Payment: {request.paymentStatus}</Badge>
-                                        <span className="text-slate-500">{request.user?.email || 'Unknown student'}</span>
-                                    </div>
-
-                                    <div className="text-sm text-slate-600">
-                                        Semester: {request.semester} | Courses: {request.courseCount} | Amount: Rs {Number(request.amount || 0).toFixed(2)}
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div className="space-y-2">
-                                            <Label>Status</Label>
-                                            <Select
-                                                value={current.status}
-                                                onValueChange={(value) => {
-                                                    const safeValue = value || 'PENDING';
-                                                    setRowState((prev) => ({
-                                                        ...prev,
-                                                        [request.id]: {
-                                                            ...current,
-                                                            status: safeValue,
-                                                        }
-                                                    }));
-                                                }}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {STATUS_OPTIONS.map((option) => (
-                                                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2 md:col-span-2">
-                                            <Label>Admin Remarks</Label>
-                                            <Textarea
-                                                value={current.adminRemarks}
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    setRowState((prev) => ({
-                                                        ...prev,
-                                                        [request.id]: {
-                                                            ...current,
-                                                            adminRemarks: value,
-                                                        }
-                                                    }));
-                                                }}
-                                                rows={2}
-                                            />
-                                        </div>
-                                        <div className="space-y-2 md:col-span-3">
-                                            <Label>Result Summary</Label>
-                                            <Textarea
-                                                value={current.resultSummary}
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    setRowState((prev) => ({
-                                                        ...prev,
-                                                        [request.id]: {
-                                                            ...current,
-                                                            resultSummary: value,
-                                                        }
-                                                    }));
-                                                }}
-                                                rows={2}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button size="sm" onClick={() => updateRequest(request.id)} disabled={updatingId === request.id}>
-                                            {updatingId === request.id ? 'Saving...' : 'Update Request'}
-                                        </Button>
-                                        {request.paymentStatus === 'REFUND_INITIATED' ? (
-                                            <Button size="sm" variant="outline" onClick={() => markRefundCompleted(request.id)} disabled={updatingId === request.id}>
-                                                Mark Refund Completed
-                                            </Button>
-                                        ) : null}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Upload Attachment Files (optional)</Label>
-                                        <Input
-                                            type="file"
-                                            multiple
-                                            onChange={(e) => setRowFiles((prev) => ({ ...prev, [request.id]: e.target.files }))}
-                                        />
-                                        <Button size="sm" variant="outline" onClick={() => uploadAttachments(request.id)} disabled={uploadingId === request.id}>
-                                            {uploadingId === request.id ? 'Uploading...' : 'Upload Attachments'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <Button onClick={saveSettings} disabled={saving}>{saving ? 'Saving...' : 'Save Window Settings'}</Button>
                 </CardContent>
             </Card>
         </div>

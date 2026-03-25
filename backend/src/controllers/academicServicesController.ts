@@ -354,7 +354,11 @@ export const getStudentAcademicServiceRequests = async (req: Request, res: Respo
 
 export const getAllAcademicServiceRequests = async (_req: Request, res: Response): Promise<any> => {
     try {
+        const rawServiceType = String((_req.query?.serviceType as string) || '').toUpperCase();
+        const serviceType = ['PHOTOCOPY', 'REEVALUATION'].includes(rawServiceType) ? rawServiceType : null;
+
         const requests = await (prisma as any).academicServiceRequest.findMany({
+            where: serviceType ? { serviceType } : undefined,
             include: {
                 user: { select: { email: true, name: true } }
             },
@@ -405,12 +409,21 @@ export const updateAcademicServiceRequest = async (req: Request, res: Response):
             return res.status(400).json({ message: 'Admin remarks are required when rejecting a request' });
         }
 
-        if (status === 'RESULT_PUBLISHED' && !nextResultSummary) {
+        if (status === 'RESULT_PUBLISHED' && existing.paymentStatus !== 'PAID') {
+            return res.status(400).json({ message: 'Result can be published only for paid requests' });
+        }
+
+        if (status === 'RESULT_PUBLISHED' && existing.serviceType === 'REEVALUATION' && !nextResultSummary) {
             return res.status(400).json({ message: 'Result summary is required when publishing results' });
         }
 
-        if (status === 'RESULT_PUBLISHED' && existing.paymentStatus !== 'PAID') {
-            return res.status(400).json({ message: 'Result can be published only for paid requests' });
+        if (status === 'RESULT_PUBLISHED' && existing.serviceType === 'PHOTOCOPY') {
+            const attachments = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
+            if (attachments.length < 2) {
+                return res.status(400).json({
+                    message: 'Upload both answer sheet copy and course evaluation scheme before marking photocopy request as completed'
+                });
+            }
         }
 
         const data: any = {
