@@ -96,6 +96,9 @@ export default function AuthPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim().toLowerCase(), intent: mode })
+            }, {
+                timeoutMs: 45000,
+                retries: 0,
             });
 
             const data = await res.json().catch(() => null);
@@ -106,8 +109,13 @@ export default function AuthPage() {
 
             toast.success('OTP sent successfully.');
             setStep('otp');
-        } catch {
-            toast.error('Network error. Please try again.');
+        } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                setStep('otp');
+                toast.message('Server is slow. OTP may still arrive. Enter OTP once received.');
+            } else {
+                toast.error('Network error. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -127,6 +135,9 @@ export default function AuthPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() })
+            }, {
+                timeoutMs: 45000,
+                retries: 0,
             });
 
             const data = await res.json().catch(() => null);
@@ -243,7 +254,7 @@ export default function AuthPage() {
                 <CardHeader className="text-center space-y-2">
                     <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">{title}</CardTitle>
                     <CardDescription>
-                        Use your institutional email for OTP-based access. Admin access is restricted to authorized emails.
+                        Use your email for OTP-based access. Admin access is restricted to authorized emails.
                     </CardDescription>
                 </CardHeader>
 
