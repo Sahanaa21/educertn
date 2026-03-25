@@ -47,12 +47,20 @@ export default function Header() {
                             {link.label}
                         </Link>
                     ))}
-                    <Link
-                        href="/auth"
-                        className="inline-flex items-center justify-center rounded-md bg-blue-900 px-4 py-2 text-white hover:bg-blue-800 transition-colors"
-                    >
-                        Sign Up / Login
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href="/auth"
+                            className="inline-flex items-center justify-center rounded-md border border-blue-900 px-4 py-2 text-blue-900 hover:bg-blue-50 transition-colors"
+                        >
+                            Login
+                        </Link>
+                        <Link
+                            href="/auth?mode=signup"
+                            className="inline-flex items-center justify-center rounded-md bg-blue-900 px-4 py-2 text-white hover:bg-blue-800 transition-colors"
+                        >
+                            Sign Up
+                        </Link>
+                    </div>
                 </nav>
 
                 {/* Mobile Menu Button */}
@@ -81,13 +89,22 @@ export default function Header() {
                                 {link.label}
                             </Link>
                         ))}
-                        <Link
-                            href="/auth"
-                            className="rounded-md px-3 py-2 text-sm font-semibold bg-blue-900 text-white hover:bg-blue-800 text-center"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            Sign Up / Login
-                        </Link>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                            <Link
+                                href="/auth"
+                                className="rounded-md px-3 py-2 text-sm font-semibold border border-blue-900 text-blue-900 hover:bg-blue-50 text-center"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Login
+                            </Link>
+                            <Link
+                                href="/auth?mode=signup"
+                                className="rounded-md px-3 py-2 text-sm font-semibold bg-blue-900 text-white hover:bg-blue-800 text-center"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Sign Up
+                            </Link>
+                        </div>
                     </div>
                 </nav>
             )}

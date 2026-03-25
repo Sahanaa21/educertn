@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -51,6 +51,20 @@ export default function AuthPage() {
     const [contactPerson, setContactPerson] = useState('');
 
     const title = useMemo(() => mode === 'login' ? 'Sign In' : 'Create Account', [mode]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const queryMode = new URLSearchParams(window.location.search).get('mode');
+
+        if (queryMode === 'signup') {
+            setMode('signup');
+            return;
+        }
+
+        if (queryMode === 'login') {
+            setMode('login');
+        }
+    }, []);
 
     const storeSessionAndRedirect = (data: any) => {
         const user = data?.user;
@@ -262,23 +276,30 @@ export default function AuthPage() {
                     <form onSubmit={requestOtp}>
                         <CardContent className="space-y-4 pt-4">
                             <div className="space-y-2">
-                                <Label htmlFor="mode">Action</Label>
-                                <Select value={mode} onValueChange={(value) => setMode((value || 'login') as AuthMode)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select action" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="login">Login</SelectItem>
-                                        <SelectItem value="signup">Sign Up</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label>Action</Label>
+                                <div className="grid grid-cols-2 rounded-lg border bg-slate-50 p-1">
+                                    <button
+                                        type="button"
+                                        className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${mode === 'login' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                        onClick={() => setMode('login')}
+                                    >
+                                        Login
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${mode === 'signup' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                        onClick={() => setMode('signup')}
+                                    >
+                                        Sign Up
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="you@gat.ac.in"
+                                    placeholder="you@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
