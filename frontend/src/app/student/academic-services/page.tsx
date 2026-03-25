@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,17 @@ type Availability = {
 const SERVICE_OPTIONS = [
     { value: 'PHOTOCOPY', label: 'Photocopy', unitFee: 500 },
     { value: 'REEVALUATION', label: 'Challenge Re-evaluation', unitFee: 3000 },
+] as const;
+
+const SEMESTER_OPTIONS = [
+    '1st Semester',
+    '2nd Semester',
+    '3rd Semester',
+    '4th Semester',
+    '5th Semester',
+    '6th Semester',
+    '7th Semester',
+    '8th Semester',
 ] as const;
 
 export default function StudentAcademicServicesPage() {
@@ -296,7 +307,16 @@ export default function StudentAcademicServicesPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Semester</Label>
-                            <Input value={semester} onChange={(e) => setSemester(e.target.value)} placeholder="e.g. 6th Semester" />
+                            <Select value={semester} onValueChange={(value) => setSemester(value || '')}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select semester" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SEMESTER_OPTIONS.map((option) => (
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label>Number of Courses</Label>
@@ -310,10 +330,6 @@ export default function StudentAcademicServicesPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Total Fee</Label>
-                            <Input value={`Rs ${Number.isFinite(totalAmount) ? totalAmount : 0}`} readOnly />
                         </div>
                     </div>
 
@@ -336,11 +352,18 @@ export default function StudentAcademicServicesPage() {
                         ))}
                     </div>
 
-                    <Button onClick={submitRequest} disabled={!availability?.active || submitting}>
+                </CardContent>
+                <CardFooter className="bg-slate-50 border-t flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+                    <div className="flex flex-col text-center sm:text-left">
+                        <span className="text-xs text-amber-700 mt-1 font-medium">Please verify all details before payment. Submitted requests cannot be edited or cancelled.</span>
+                        <span className="text-sm text-slate-500">Total Amount Payable</span>
+                        <span className="text-2xl font-bold text-slate-900">₹ {Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : '0.00'}</span>
+                    </div>
+                    <Button onClick={submitRequest} disabled={!availability?.active || submitting} className="w-full sm:w-auto">
                         {submitting ? 'Submitting...' : 'Submit and Pay'}
                     </Button>
-                    {!availability?.active ? <p className="text-xs text-amber-700">Requests are disabled outside the configured date window.</p> : null}
-                </CardContent>
+                </CardFooter>
+                {!availability?.active ? <p className="px-6 pb-5 text-xs text-amber-700">Requests are disabled outside the configured date window.</p> : null}
             </Card>
 
             <Card>
