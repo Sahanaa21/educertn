@@ -43,9 +43,9 @@ router.post('/student/academic-services/:id/create-payment-order', authenticate,
 router.post('/student/academic-services/:id/verify-payment', authenticate, requireRole('STUDENT'), verifyAcademicServicePayment);
 
 router.get('/admin/academic-services', authenticate, requireRole('ADMIN'), getAllAcademicServiceRequests);
-router.put('/admin/academic-services/:id', authenticate, requireRole('ADMIN'), updateAcademicServiceRequest);
-router.post('/admin/academic-services/:id/attachments', authenticate, requireRole('ADMIN'), upload.array('files', 5), uploadAcademicServiceAttachments);
 router.get('/admin/academic-services/settings', authenticate, requireRole('ADMIN'), getAcademicServiceSettingsAdmin);
 router.put('/admin/academic-services/settings', authenticate, requireRole('ADMIN'), updateAcademicServiceSettingsAdmin);
+router.put('/admin/academic-services/:id', authenticate, requireRole('ADMIN'), updateAcademicServiceRequest);
+router.post('/admin/academic-services/:id/attachments', authenticate, requireRole('ADMIN'), upload.array('files', 5), uploadAcademicServiceAttachments);
 
 export default router;
