@@ -118,12 +118,21 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
     }, [fetchData]);
 
     const uploadFilesForRequest = async (id: string, token: string, request: any) => {
+        if (request?.status === 'RESULT_PUBLISHED' || request?.status === 'REJECTED') {
+            toast.error('Cannot upload files for completed or rejected requests');
+            return false;
+        }
+
         const formData = new FormData();
 
         if (request?.serviceType === 'PHOTOCOPY') {
             const selected = photocopyFiles[id];
             if (!selected?.answerSheet || !selected?.evaluationScheme) {
                 toast.error('Select both answer sheet copy and course evaluation scheme files');
+                return false;
+            }
+            if (selected.answerSheet.size <= 0 || selected.evaluationScheme.size <= 0) {
+                toast.error('Selected files are invalid. Please reselect the files.');
                 return false;
             }
             formData.append('files', selected.answerSheet);
@@ -134,7 +143,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                 toast.error('Select one or more files first');
                 return false;
             }
-            for (const file of Array.from(files)) {
+            const selected = Array.from(files).filter((file) => file.size > 0);
+            if (selected.length === 0) {
+                toast.error('Selected files are invalid. Please choose valid files.');
+                return false;
+            }
+            for (const file of selected) {
                 formData.append('files', file);
             }
         }
@@ -304,7 +318,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
+            <div className="flex flex-col xl:flex-row xl:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">Service:</span>
                     <Select value={serviceFilter} onValueChange={(value) => setServiceFilter((value as ServiceType) || 'ALL')}>
@@ -334,7 +348,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                     </Select>
                 </div>
 
-                <div className="flex gap-4 text-xs font-semibold">
+                <div className="flex flex-wrap gap-4 text-xs font-semibold">
                     <span className="flex items-center text-yellow-500"><CheckCircle className="h-3 w-3 mr-1" /> PENDING: {counts.pending}</span>
                     <span className="flex items-center text-blue-500"><CheckCircle className="h-3 w-3 mr-1" /> REVIEW: {counts.review}</span>
                     <span className="flex items-center text-green-500"><CheckCircle className="h-3 w-3 mr-1" /> COMPLETED/PUBLISHED: {counts.completedOrPublished}</span>
@@ -343,7 +357,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
                 <div className="text-xs font-semibold text-slate-300">PHOTOCOPY: {counts.photocopy} | RE-EVALUATION: {counts.reevaluation}</div>
 
-                <div className="ml-auto relative w-full sm:w-72">
+                <div className="xl:ml-auto relative w-full sm:w-72">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search by ID, student, semester"
@@ -356,18 +370,18 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
             <Card className="overflow-hidden shadow-md border border-slate-200">
                 <div className="overflow-x-auto w-full pb-2">
-                        <table className="w-full min-w-[1300px] text-sm">
+                        <table className="w-full min-w-[1360px] text-sm table-auto">
                             <thead className="bg-slate-900 border-b">
                                 <tr className="hover:bg-slate-900 border-slate-700">
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Request</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Service</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Student</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Details</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Payment</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Status</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Remarks</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Files</th>
-                                    <th className="py-2 pr-3 text-slate-200 font-semibold">Actions</th>
+                                    <th className="py-3 px-4 min-w-[170px] text-left text-slate-200 font-semibold">Request</th>
+                                    <th className="py-3 px-3 min-w-[120px] text-left text-slate-200 font-semibold">Service</th>
+                                    <th className="py-3 px-3 min-w-[190px] text-left text-slate-200 font-semibold">Student</th>
+                                    <th className="py-3 px-3 min-w-[170px] text-left text-slate-200 font-semibold">Details</th>
+                                    <th className="py-3 px-3 min-w-[120px] text-left text-slate-200 font-semibold">Payment</th>
+                                    <th className="py-3 px-3 min-w-[150px] text-left text-slate-200 font-semibold">Status</th>
+                                    <th className="py-3 px-3 min-w-[240px] text-left text-slate-200 font-semibold">Remarks</th>
+                                    <th className="py-3 px-3 min-w-[280px] text-left text-slate-200 font-semibold">Files</th>
+                                    <th className="py-3 px-3 min-w-[180px] text-left text-slate-200 font-semibold">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -385,36 +399,36 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
                                     return (
                                         <tr key={request.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 border-b align-top">
-                                            <td className="py-3 pr-3">
+                                            <td className="py-3 px-4">
                                                 <div className="font-semibold text-slate-900">{request.requestId}</div>
                                                 <div className="text-xs text-slate-500">{new Date(request.createdAt).toLocaleString()}</div>
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-3 px-3">
                                                 <Badge variant="outline" className={rowServiceType === 'PHOTOCOPY' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-violet-500 text-violet-700 bg-violet-50'}>
                                                     {rowServiceType === 'PHOTOCOPY' ? 'Photocopy' : 'Re-evaluation'}
                                                 </Badge>
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-3 px-3">
                                                 <div className="font-medium text-slate-900">{request.user?.name || 'Student'}</div>
                                                 <div className="text-xs text-blue-700">{request.user?.email || '-'}</div>
                                             </td>
-                                            <td className="py-3 pr-3 text-xs text-slate-700">
+                                            <td className="py-3 px-3 text-xs text-slate-700">
                                                 <div>Semester: {request.semester}</div>
                                                 <div>Courses: {request.courseCount}</div>
                                                 <div className="max-w-xs break-words">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
                                             </td>
-                                            <td className="py-3 pr-3 text-xs">
+                                            <td className="py-3 px-3 text-xs">
                                                 <div className="font-semibold text-slate-800">{request.paymentStatus}</div>
                                                 <div className="text-slate-500">Rs {Number(request.amount || 0).toFixed(2)}</div>
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-3 px-3">
                                                 <div className="space-y-2">
                                                     <Badge variant="outline" className={badgeClass(request.status)}>
                                                         {STATUS_LABELS[rowServiceType][request.status] || request.status}
                                                     </Badge>
                                                 </div>
                                             </td>
-                                            <td className="py-3 pr-3 min-w-[260px]">
+                                            <td className="py-3 px-3">
                                                 <div className="space-y-2">
                                                     <Textarea
                                                         value={current.adminRemarks}
@@ -430,6 +444,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                         }}
                                                         rows={2}
                                                         placeholder="Admin remarks"
+                                                        disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                     />
                                                     {rowServiceType === 'REEVALUATION' ? (
                                                         <Textarea
@@ -446,11 +461,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                             }}
                                                             rows={2}
                                                             placeholder="Result summary (required for result published)"
+                                                            disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                         />
                                                     ) : null}
                                                 </div>
                                             </td>
-                                            <td className="py-3 pr-3 min-w-[280px]">
+                                            <td className="py-3 px-3">
                                                 <div className="space-y-2">
                                                     {rowServiceType === 'PHOTOCOPY' ? (
                                                         <>
@@ -458,6 +474,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                                 <Label className="text-xs">Answer Sheet Copy</Label>
                                                                 <Input
                                                                     type="file"
+                                                                    disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                                     onChange={(e) => {
                                                                         const file = e.target.files?.[0] || null;
                                                                         setPhotocopyFiles((prev) => ({
@@ -474,6 +491,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                                 <Label className="text-xs">Course Evaluation Scheme</Label>
                                                                 <Input
                                                                     type="file"
+                                                                    disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                                     onChange={(e) => {
                                                                         const file = e.target.files?.[0] || null;
                                                                         setPhotocopyFiles((prev) => ({
@@ -489,7 +507,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Input type="file" multiple onChange={(e) => setRowFiles((prev) => ({ ...prev, [request.id]: e.target.files }))} />
+                                                            <Input
+                                                                type="file"
+                                                                multiple
+                                                                disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
+                                                                onChange={(e) => setRowFiles((prev) => ({ ...prev, [request.id]: e.target.files }))}
+                                                            />
                                                         </>
                                                     )}
 
@@ -505,7 +528,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                                 }
                                                             });
                                                         }}
-                                                        disabled={uploadingId === request.id}
+                                                        disabled={uploadingId === request.id || request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                     >
                                                         {uploadingId === request.id ? 'Uploading...' : 'Upload Files'}
                                                     </Button>
@@ -528,7 +551,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                     ) : null}
                                                 </div>
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-3 px-3">
                                                 <div className="flex flex-col gap-2">
                                                     {request.status === 'PENDING' ? (
                                                         <Button

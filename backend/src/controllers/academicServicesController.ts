@@ -452,8 +452,9 @@ export const uploadAcademicServiceAttachments = async (req: Request, res: Respon
     try {
         const id = String(req.params.id || '');
         const files = (req.files || []) as Express.Multer.File[];
+        const validFiles = files.filter((file) => Number(file.size || 0) > 0);
 
-        if (!id || files.length === 0) {
+        if (!id || validFiles.length === 0) {
             return res.status(400).json({ message: 'Files are required' });
         }
 
@@ -462,8 +463,12 @@ export const uploadAcademicServiceAttachments = async (req: Request, res: Respon
             return res.status(404).json({ message: 'Request not found' });
         }
 
+        if (existing.status === 'RESULT_PUBLISHED' || existing.status === 'REJECTED') {
+            return res.status(400).json({ message: 'Attachments cannot be updated for completed or rejected requests' });
+        }
+
         const prev = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
-        const newUrls = files.map((file) => `/uploads/${path.basename(file.path)}`);
+        const newUrls = validFiles.map((file) => `/uploads/${path.basename(file.path)}`);
         const merged = [...prev, ...newUrls];
 
         const updated = await (prisma as any).academicServiceRequest.update({
