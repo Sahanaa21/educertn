@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight, Files } from 'lucide-react';
+import { FileText, Clock, LogOut, Menu, ChevronLeft, ChevronRight, Files, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const menuItems = [
+    { name: 'Profile', href: '/student/profile', icon: User },
     { name: 'My Requests', href: '/student/requests', icon: Clock },
     { name: 'Apply Certificate', href: '/student/apply', icon: FileText },
     { name: 'Academic Services', href: '/student/academic-services', icon: Files },

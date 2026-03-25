@@ -19,6 +19,13 @@ type Availability = {
     endAt: string | null;
 };
 
+type StudentInfo = {
+    name: string;
+    usn: string;
+    branch: string;
+    year: string;
+};
+
 const SERVICE_OPTIONS = [
     { value: 'PHOTOCOPY', label: 'Photocopy', unitFee: 500 },
     { value: 'REEVALUATION', label: 'Challenge Re-evaluation', unitFee: 3000 },
@@ -43,6 +50,12 @@ export default function StudentAcademicServicesPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [payingId, setPayingId] = useState<string | null>(null);
+    const [studentInfo, setStudentInfo] = useState<StudentInfo>({
+        name: '',
+        usn: '',
+        branch: '',
+        year: '',
+    });
 
     const [serviceType, setServiceType] = useState<string>('PHOTOCOPY');
     const [semester, setSemester] = useState('');
@@ -82,11 +95,14 @@ export default function StudentAcademicServicesPage() {
 
         setLoading(true);
         try {
-            const [availabilityRes, requestsRes] = await Promise.all([
+            const [availabilityRes, requestsRes, meRes] = await Promise.all([
                 apiFetch('/api/student/academic-services/availability', {
                     headers: { Authorization: `Bearer ${token}` }
                 }),
                 apiFetch('/api/student/academic-services', {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                apiFetch('/api/auth/me', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
             ]);
@@ -101,6 +117,16 @@ export default function StudentAcademicServicesPage() {
             if (requestsRes.ok) {
                 const requestsJson = await requestsRes.json();
                 setRequests(Array.isArray(requestsJson) ? requestsJson : []);
+            }
+
+            if (meRes.ok) {
+                const meJson = await meRes.json().catch(() => null);
+                setStudentInfo({
+                    name: String(meJson?.user?.name || '').trim(),
+                    usn: String(meJson?.studentProfile?.usn || '').trim(),
+                    branch: String(meJson?.studentProfile?.branch || '').trim(),
+                    year: String(meJson?.studentProfile?.yearOfPassing || '').trim(),
+                });
             }
         } catch {
             toast.error('Failed to load academic services data');
@@ -130,6 +156,10 @@ export default function StudentAcademicServicesPage() {
         }
         if (normalizedCourseNames.length !== parsedCount) {
             toast.error('Enter course names matching the selected count');
+            return;
+        }
+        if (!studentInfo.name || !studentInfo.usn || !studentInfo.branch || !studentInfo.year) {
+            toast.error('Student profile is incomplete. Please update Name, USN, Branch and Year in your profile.');
             return;
         }
 
@@ -289,6 +319,28 @@ export default function StudentAcademicServicesPage() {
                     <CardTitle>New Request</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                        <p className="mb-3 text-sm font-semibold text-slate-700">Student Information</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Name</Label>
+                                <Input value={studentInfo.name || 'Not available'} readOnly disabled />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>USN</Label>
+                                <Input value={studentInfo.usn || 'Not available'} readOnly disabled />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Branch</Label>
+                                <Input value={studentInfo.branch || 'Not available'} readOnly disabled />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Year</Label>
+                                <Input value={studentInfo.year || 'Not available'} readOnly disabled />
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Service Type</Label>
