@@ -82,7 +82,7 @@ export default function Home() {
             <div className="mt-4 h-1 w-20 bg-yellow-500 mx-auto rounded-full"></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-6xl mx-auto">
 
             <Card className="flex flex-col border-none shadow-lg hover:shadow-xl transition-shadow bg-white overflow-hidden group">
               <div className="h-2 w-full bg-blue-600"></div>
@@ -120,17 +120,33 @@ export default function Home() {
               </CardFooter>
             </Card>
 
+            <Card className="flex flex-col border-none shadow-lg hover:shadow-xl transition-shadow bg-white overflow-hidden group">
+              <div className="h-2 w-full bg-emerald-500"></div>
+              <CardHeader className="pb-4">
+                <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 mb-4 group-hover:scale-110 transition-transform">
+                  <SearchCheck size={24} />
+                </div>
+                <CardTitle className="text-xl">Academic Services</CardTitle>
+                <CardDescription className="text-base mt-2 leading-relaxed">
+                  Apply for photocopy and challenge re-evaluation services during the active request window announced by the admin office.
+                </CardDescription>
+                <p className={`text-sm font-semibold mt-2 ${academicAvailability?.active ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {academicAvailability?.active ? 'Status: OPEN NOW' : 'Status: CURRENTLY CLOSED'}
+                </p>
+              </CardHeader>
+              <CardFooter className="mt-auto pt-6 border-t bg-slate-50">
+                <Link
+                  href={academicAvailability?.active ? '/student/academic-services' : '/auth'}
+                  className={`inline-flex items-center text-sm font-semibold ${academicAvailability?.active ? 'text-emerald-700 hover:text-emerald-800' : 'text-slate-600 hover:text-slate-700'}`}
+                >
+                  {academicAvailability?.active ? 'Apply for Academic Services' : 'Sign in to Check Availability'} <ArrowRight size={16} className="ml-2" />
+                </Link>
+              </CardFooter>
+            </Card>
+
 
 
           </div>
-
-          {academicAvailability?.active ? (
-            <div className="mt-6">
-              <Link href="/student/academic-services" className="inline-flex items-center justify-center rounded-md font-bold transition-colors bg-emerald-500 text-white hover:bg-emerald-600 w-full sm:w-auto h-12 px-8">
-                Apply for Photocopy / Re-evaluation
-              </Link>
-            </div>
-          ) : null}
         </div>
       </section>
 

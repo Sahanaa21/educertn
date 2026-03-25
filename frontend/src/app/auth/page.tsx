@@ -268,7 +268,7 @@ export default function AuthPage() {
                 <CardHeader className="text-center space-y-2">
                     <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">{title}</CardTitle>
                     <CardDescription>
-                        Use your email for OTP-based access. Admin access is restricted to authorized emails.
+                        Use your email for OTP-based access.
                     </CardDescription>
                 </CardHeader>
 
