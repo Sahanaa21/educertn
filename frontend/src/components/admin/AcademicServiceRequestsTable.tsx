@@ -13,12 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { apiFetch, API_BASE } from '@/lib/api';
 import { RefreshCw, Search, FileText, CheckCircle, XCircle } from 'lucide-react';
 
-const STATUS_OPTIONS = ['PENDING', 'UNDER_REVIEW', 'RESULT_PUBLISHED', 'REJECTED'] as const;
-
 type ServiceType = 'PHOTOCOPY' | 'REEVALUATION' | 'ALL';
 
 type RowState = {
-    status: string;
     adminRemarks: string;
     resultSummary: string;
 };
@@ -104,7 +101,6 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
             const initialState: Record<string, RowState> = {};
             for (const item of list) {
                 initialState[item.id] = {
-                    status: item.status || 'PENDING',
                     adminRemarks: item.adminRemarks || '',
                     resultSummary: item.resultSummary || '',
                 };
@@ -167,7 +163,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
         }
     };
 
-    const updateRequest = async (id: string) => {
+    const updateRequestStatus = async (id: string, nextStatus: 'PENDING' | 'UNDER_REVIEW' | 'RESULT_PUBLISHED' | 'REJECTED') => {
         const token = tokenOrRedirect();
         if (!token) return;
 
@@ -175,12 +171,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
         const request = requests.find((item) => item.id === id);
         if (!state || !request) return;
 
-        if (state.status === 'REJECTED' && !state.adminRemarks.trim()) {
+        if (nextStatus === 'REJECTED' && !state.adminRemarks.trim()) {
             toast.error('Admin remarks are required for rejected requests');
             return;
         }
 
-        if (request.serviceType === 'REEVALUATION' && state.status === 'RESULT_PUBLISHED' && !state.resultSummary.trim()) {
+        if (request.serviceType === 'REEVALUATION' && nextStatus === 'RESULT_PUBLISHED' && !state.resultSummary.trim()) {
             toast.error('Result summary is required for re-evaluation when publishing result');
             return;
         }
@@ -190,12 +186,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
             ? Boolean(photocopyFiles[id]?.answerSheet && photocopyFiles[id]?.evaluationScheme)
             : true;
 
-        if (request.serviceType === 'PHOTOCOPY' && state.status === 'RESULT_PUBLISHED' && currentAttachmentCount < 2 && !hasBothFilesReady) {
+        if (request.serviceType === 'PHOTOCOPY' && nextStatus === 'RESULT_PUBLISHED' && currentAttachmentCount < 2 && !hasBothFilesReady) {
             toast.error('Upload both answer sheet copy and course evaluation scheme before marking completed');
             return;
         }
 
-        if (request.serviceType === 'PHOTOCOPY' && state.status === 'RESULT_PUBLISHED' && currentAttachmentCount < 2 && hasBothFilesReady) {
+        if (request.serviceType === 'PHOTOCOPY' && nextStatus === 'RESULT_PUBLISHED' && currentAttachmentCount < 2 && hasBothFilesReady) {
             const uploaded = await uploadFilesForRequest(id, token, request);
             if (!uploaded) return;
         }
@@ -209,7 +205,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    status: state.status,
+                    status: nextStatus,
                     adminRemarks: state.adminRemarks,
                     resultSummary: state.resultSummary,
                 }),
@@ -382,7 +378,6 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                 ) : filteredRequests.map((request) => {
                                     const rowServiceType = request.serviceType === 'PHOTOCOPY' ? 'PHOTOCOPY' : 'REEVALUATION';
                                     const current = rowState[request.id] || {
-                                        status: request.status,
                                         adminRemarks: request.adminRemarks || '',
                                         resultSummary: request.resultSummary || '',
                                     };
@@ -417,28 +412,6 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                     <Badge variant="outline" className={badgeClass(request.status)}>
                                                         {STATUS_LABELS[rowServiceType][request.status] || request.status}
                                                     </Badge>
-                                                    <Select
-                                                        value={current.status}
-                                                        onValueChange={(value) => {
-                                                            const safeValue = value || 'PENDING';
-                                                            setRowState((prev) => ({
-                                                                ...prev,
-                                                                [request.id]: {
-                                                                    ...current,
-                                                                    status: safeValue,
-                                                                },
-                                                            }));
-                                                        }}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {STATUS_OPTIONS.map((option) => (
-                                                                <SelectItem key={option} value={option}>{STATUS_LABELS[rowServiceType][option]}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
                                                 </div>
                                             </td>
                                             <td className="py-3 pr-3 min-w-[260px]">
@@ -557,9 +530,49 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                             </td>
                                             <td className="py-3 pr-3">
                                                 <div className="flex flex-col gap-2">
-                                                    <Button size="sm" onClick={() => updateRequest(request.id)} disabled={updatingId === request.id}>
-                                                        {updatingId === request.id ? 'Saving...' : 'Update Request'}
-                                                    </Button>
+                                                    {request.status === 'PENDING' ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-blue-700 border-blue-300 hover:bg-blue-50"
+                                                            onClick={() => updateRequestStatus(request.id, 'UNDER_REVIEW')}
+                                                            disabled={updatingId === request.id}
+                                                        >
+                                                            {updatingId === request.id ? 'Updating...' : (rowServiceType === 'PHOTOCOPY' ? 'Mark Processing' : 'Mark Under Review')}
+                                                        </Button>
+                                                    ) : null}
+
+                                                    {request.status === 'UNDER_REVIEW' ? (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-slate-900 hover:bg-slate-800 text-white"
+                                                            onClick={() => updateRequestStatus(request.id, 'RESULT_PUBLISHED')}
+                                                            disabled={updatingId === request.id}
+                                                        >
+                                                            {updatingId === request.id ? 'Updating...' : (rowServiceType === 'PHOTOCOPY' ? 'Mark Completed' : 'Publish Result')}
+                                                        </Button>
+                                                    ) : null}
+
+                                                    {(request.status === 'PENDING' || request.status === 'UNDER_REVIEW') ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-red-700 border-red-300 hover:bg-red-50"
+                                                            onClick={() => updateRequestStatus(request.id, 'REJECTED')}
+                                                            disabled={updatingId === request.id || !current.adminRemarks.trim()}
+                                                        >
+                                                            {updatingId === request.id ? 'Updating...' : 'Reject'}
+                                                        </Button>
+                                                    ) : null}
+
+                                                    {request.status === 'RESULT_PUBLISHED' ? (
+                                                        <span className="text-xs font-semibold text-green-700">Completed</span>
+                                                    ) : null}
+
+                                                    {request.status === 'REJECTED' ? (
+                                                        <span className="text-xs font-semibold text-red-700">Rejected</span>
+                                                    ) : null}
+
                                                     {request.paymentStatus === 'REFUND_INITIATED' ? (
                                                         <Button
                                                             size="sm"
@@ -582,6 +595,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
             <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                 Photocopy requests require both files before marking Completed. Re-evaluation requests require result summary before Result Published.
+                Use Admin Remarks before clicking Reject.
             </div>
         </div>
     );
