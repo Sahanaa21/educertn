@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch, API_BASE } from '@/lib/api';
-import { RefreshCw, Search, FileText } from 'lucide-react';
+import { RefreshCw, Search, FileText, CheckCircle, XCircle } from 'lucide-react';
 
 const STATUS_OPTIONS = ['PENDING', 'UNDER_REVIEW', 'RESULT_PUBLISHED', 'REJECTED'] as const;
 
@@ -45,10 +45,10 @@ const STATUS_LABELS: Record<'PHOTOCOPY' | 'REEVALUATION', Record<string, string>
 };
 
 const badgeClass = (status: string) => {
-    if (status === 'RESULT_PUBLISHED') return 'border-green-500 text-green-700 bg-green-50';
-    if (status === 'UNDER_REVIEW') return 'border-blue-500 text-blue-700 bg-blue-50';
-    if (status === 'REJECTED') return 'border-red-500 text-red-700 bg-red-50';
-    return 'border-amber-500 text-amber-700 bg-amber-50';
+    if (status === 'RESULT_PUBLISHED') return 'border-green-500 text-green-700 bg-green-50 font-bold tracking-wider';
+    if (status === 'UNDER_REVIEW') return 'border-blue-500 text-blue-700 bg-blue-50 font-bold tracking-wider';
+    if (status === 'REJECTED') return 'border-red-500 text-red-700 bg-red-50 font-bold tracking-wider';
+    return 'border-amber-500 text-amber-700 bg-amber-50 font-bold tracking-wider';
 };
 
 const parseAttachmentUrls = (value: unknown): string[] => {
@@ -339,10 +339,10 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                 </div>
 
                 <div className="flex gap-4 text-xs font-semibold">
-                    <span className="text-yellow-500">PENDING: {counts.pending}</span>
-                    <span className="text-blue-500">REVIEW: {counts.review}</span>
-                    <span className="text-green-500">COMPLETED/PUBLISHED: {counts.completedOrPublished}</span>
-                    <span className="text-red-500">REJECTED: {counts.rejected}</span>
+                    <span className="flex items-center text-yellow-500"><CheckCircle className="h-3 w-3 mr-1" /> PENDING: {counts.pending}</span>
+                    <span className="flex items-center text-blue-500"><CheckCircle className="h-3 w-3 mr-1" /> REVIEW: {counts.review}</span>
+                    <span className="flex items-center text-green-500"><CheckCircle className="h-3 w-3 mr-1" /> COMPLETED/PUBLISHED: {counts.completedOrPublished}</span>
+                    <span className="flex items-center text-red-500"><XCircle className="h-3 w-3 mr-1" /> REJECTED: {counts.rejected}</span>
                 </div>
 
                 <div className="text-xs font-semibold text-slate-300">PHOTOCOPY: {counts.photocopy} | RE-EVALUATION: {counts.reevaluation}</div>
