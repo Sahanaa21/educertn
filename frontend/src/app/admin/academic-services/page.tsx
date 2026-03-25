@@ -1,16 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
+import AcademicServiceRequestsTable from '@/components/admin/AcademicServiceRequestsTable';
 
 type SettingsState = {
     academicServicesEnabled: boolean;
@@ -34,10 +33,10 @@ const fromLocalInputDateTime = (value: string) => {
 
 export default function AdminAcademicServicesHubPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [requests, setRequests] = useState<any[]>([]);
     const [settings, setSettings] = useState<SettingsState>({
         academicServicesEnabled: false,
         academicServicesStartAt: '',
@@ -60,14 +59,9 @@ export default function AdminAcademicServicesHubPage() {
 
         setLoading(true);
         try {
-            const [settingsRes, requestsRes] = await Promise.all([
-                apiFetch('/api/admin/academic-services/settings', {
-                    headers: { Authorization: `Bearer ${token}` },
-                }),
-                apiFetch('/api/admin/academic-services', {
-                    headers: { Authorization: `Bearer ${token}` },
-                }),
-            ]);
+            const settingsRes = await apiFetch('/api/admin/academic-services/settings', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
 
             if (settingsRes.ok) {
                 const settingsJson = await settingsRes.json();
@@ -79,10 +73,6 @@ export default function AdminAcademicServicesHubPage() {
                 });
             }
 
-            if (requestsRes.ok) {
-                const list = await requestsRes.json();
-                setRequests(Array.isArray(list) ? list : []);
-            }
         } catch {
             toast.error('Failed to load academic services admin data');
         } finally {
@@ -129,47 +119,27 @@ export default function AdminAcademicServicesHubPage() {
         }
     };
 
-    const summary = useMemo(() => {
-        const photocopy = requests.filter((item) => item.serviceType === 'PHOTOCOPY');
-        const reevaluation = requests.filter((item) => item.serviceType === 'REEVALUATION');
-        return {
-            total: requests.length,
-            photocopy: photocopy.length,
-            reevaluation: reevaluation.length,
-        };
-    }, [requests]);
-
     if (loading) {
         return <div className="p-8 text-center text-slate-500">Loading academic services admin panel...</div>;
     }
+
+    const serviceTypeParam = String(searchParams.get('serviceType') || '').toUpperCase();
+    const initialServiceFilter = serviceTypeParam === 'PHOTOCOPY' || serviceTypeParam === 'REEVALUATION'
+        ? serviceTypeParam
+        : 'ALL';
 
     return (
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold text-slate-900">Academic Services</h1>
-                <p className="text-sm text-slate-500">Use separate pages for Photocopy and Re-evaluation tables.</p>
+                <p className="text-sm text-slate-500">Unified workflow for photocopy and re-evaluation requests.</p>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Service Tables</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Link href="/admin/academic-services/photocopy" className="rounded-md border p-4 hover:bg-slate-50 transition-colors">
-                        <p className="font-semibold text-slate-900">Photocopy Requests</p>
-                        <p className="text-sm text-slate-500 mt-1">Manage pending, processing and completed photocopy requests.</p>
-                        <Badge variant="outline" className="mt-2">Total: {summary.photocopy}</Badge>
-                    </Link>
-                    <Link href="/admin/academic-services/re-evaluation" className="rounded-md border p-4 hover:bg-slate-50 transition-colors">
-                        <p className="font-semibold text-slate-900">Re-evaluation Requests</p>
-                        <p className="text-sm text-slate-500 mt-1">Manage under review and result published re-evaluation requests.</p>
-                        <Badge variant="outline" className="mt-2">Total: {summary.reevaluation}</Badge>
-                    </Link>
-                    <div className="md:col-span-2">
-                        <Badge variant="outline">All Academic Service Requests: {summary.total}</Badge>
-                    </div>
-                </CardContent>
-            </Card>
+            <AcademicServiceRequestsTable
+                title="Academic Services"
+                description="Manage both Photocopy and Re-evaluation requests in one smart table."
+                initialServiceFilter={initialServiceFilter as 'ALL' | 'PHOTOCOPY' | 'REEVALUATION'}
+            />
 
             <Card>
                 <CardHeader>
