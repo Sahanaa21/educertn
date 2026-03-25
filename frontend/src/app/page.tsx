@@ -64,9 +64,6 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/auth" className="inline-flex items-center justify-center rounded-md font-semibold transition-colors bg-white text-blue-900 hover:bg-slate-100 w-full sm:w-auto h-12 px-8">
-              Sign Up / Login
-            </Link>
             <Link href="/student/apply" className="inline-flex items-center justify-center rounded-md font-bold transition-colors bg-yellow-500 text-blue-950 hover:bg-yellow-400 w-full sm:w-auto h-12 px-8">
               Request Certificate
             </Link>
