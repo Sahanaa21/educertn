@@ -1,14 +1,66 @@
 "use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, User, ClipboardList, SearchCheck } from 'lucide-react';
 
-export default function StudentRootRedirect() {
-    const router = useRouter();
+export default function StudentServicesHome() {
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">Student Services</h1>
+                <p className="text-slate-500 mt-1">Choose the service you want to access.</p>
+            </div>
 
-    useEffect(() => {
-        router.replace('/student/apply');
-    }, [router]);
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Link href="/student/apply" className="block">
+                    <Card className="h-full border-none shadow-md hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                                Apply for Certificate
+                            </CardTitle>
+                            <CardDescription>Submit a new certificate request.</CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
 
-    return null;
+                <Link href="/student/requests" className="block">
+                    <Card className="h-full border-none shadow-md hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <ClipboardList className="h-5 w-5 text-indigo-600" />
+                                My Requests
+                            </CardTitle>
+                            <CardDescription>Track status and download issued certificates.</CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
+
+                <Link href="/student/academic-services" className="block">
+                    <Card className="h-full border-none shadow-md hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <SearchCheck className="h-5 w-5 text-emerald-600" />
+                                Photocopy and Re-evaluation
+                            </CardTitle>
+                            <CardDescription>Apply for academic services when the window is open.</CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
+
+                <Link href="/student/profile" className="block">
+                    <Card className="h-full border-none shadow-md hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <User className="h-5 w-5 text-slate-700" />
+                                Student Profile
+                            </CardTitle>
+                            <CardDescription>View profile details used for requests.</CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
+            </div>
+        </div>
+    );
 }

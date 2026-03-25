@@ -292,7 +292,7 @@ export default function ApplyCertificate() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="branch">Branch</Label>
-                                <Select onValueChange={(val: any) => setBranch(val)} required>
+                                <Select value={branch} onValueChange={(val: any) => setBranch(val)} required>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Branch" />
                                     </SelectTrigger>
