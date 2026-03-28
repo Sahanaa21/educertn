@@ -1,15 +1,62 @@
+const { PrismaClient } = require('@prisma/client');
+
 const API_BASE = process.env.API_BASE || 'http://localhost:5000';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@gat.ac.in';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const prisma = new PrismaClient();
+
+async function getAdminEmail() {
+  const explicitEmail = String(process.env.ADMIN_TEST_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (explicitEmail) {
+    return explicitEmail;
+  }
+
+  const adminUser = await prisma.user.findFirst({
+    where: { role: 'ADMIN' },
+    orderBy: { createdAt: 'asc' },
+    select: { email: true },
+  });
+
+  if (!adminUser?.email) {
+    throw new Error('No ADMIN user found in database. Set ADMIN_TEST_EMAIL to run this test.');
+  }
+
+  return String(adminUser.email).toLowerCase();
+}
 
 async function adminLogin() {
-  const res = await fetch(`${API_BASE}/api/auth/admin/login`, {
+  const adminEmail = await getAdminEmail();
+
+  const requestOtpRes = await fetch(`${API_BASE}/api/auth/request-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+    body: JSON.stringify({ email: adminEmail, intent: 'login' }),
+  });
+
+  const requestOtpData = await requestOtpRes.json().catch(() => null);
+  if (!requestOtpRes.ok) {
+    throw new Error(`Admin OTP request failed (${requestOtpRes.status}): ${JSON.stringify(requestOtpData)}`);
+  }
+
+  const latestOtp = await prisma.oTP.findFirst({
+    where: { email: adminEmail },
+    orderBy: { createdAt: 'desc' },
+    select: { otp: true },
+  });
+
+  if (!latestOtp?.otp) {
+    throw new Error('Admin OTP not found in database after OTP request.');
+  }
+
+  const res = await fetch(`${API_BASE}/api/auth/verify-unified-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: adminEmail, otp: latestOtp.otp }),
   });
 
   const data = await res.json();
+  if (data?.requiresRegistration) {
+    throw new Error('Admin login returned requiresRegistration=true. Ensure this email is configured as admin.');
+  }
+
   if (!res.ok || !data.token) {
     throw new Error(`Admin login failed (${res.status}): ${JSON.stringify(data)}`);
   }
@@ -102,5 +149,11 @@ async function updateIssue(token, id) {
     console.error('Issue report integration test: FAIL');
     console.error(error.message || error);
     process.exitCode = 1;
+  } finally {
+    try {
+      await prisma.$disconnect();
+    } catch (_) {
+      // ignore disconnect errors in test script
+    }
   }
 })();

@@ -2,7 +2,12 @@ import { NextFunction, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { verifyToken } from '../utils/auth';
 
-const ADMIN_BYPASS_PATHS = ['/api/auth/admin/login', '/api/health'];
+const ADMIN_BYPASS_PATHS = [
+    '/api/auth/admin/login',
+    '/api/auth/request-otp',
+    '/api/auth/verify-unified-otp',
+    '/api/health'
+];
 
 export const maintenanceModeGuard = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
