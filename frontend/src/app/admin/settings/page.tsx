@@ -26,8 +26,6 @@ export default function AdminSettingsPage() {
     });
     const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [saving, setSaving] = useState(false);
-    const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
-    const [savingPw, setSavingPw] = useState(false);
 
     useEffect(() => {
         const token = sessionStorage.getItem('adminToken');
@@ -95,50 +93,6 @@ export default function AdminSettingsPage() {
             toast.error('Network error while saving settings');
         } finally {
             setSaving(false);
-        }
-    };
-
-    const changePassword = async () => {
-        if (!pwForm.current || !pwForm.newPw || !pwForm.confirm) {
-            toast.error('All password fields are required.');
-            return;
-        }
-        if (pwForm.newPw !== pwForm.confirm) {
-            toast.error('New passwords do not match.');
-            return;
-        }
-        if (pwForm.newPw.length < 8) {
-            toast.error('New password must be at least 8 characters.');
-            return;
-        }
-
-        const token = sessionStorage.getItem('adminToken');
-        if (!token) {
-            toast.error('Admin session not found. Please login again.');
-            return;
-        }
-
-        setSavingPw(true);
-        try {
-            const res = await fetch(`${API_BASE}/api/admin/change-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                toast.error(data.message || 'Failed to change password');
-                return;
-            }
-            toast.success('Password changed successfully.');
-            setPwForm({ current: '', newPw: '', confirm: '' });
-        } catch {
-            toast.error('Network error while changing password');
-        } finally {
-            setSavingPw(false);
         }
     };
 
@@ -219,53 +173,6 @@ export default function AdminSettingsPage() {
             <div className="flex justify-end">
                 <Button onClick={saveSettings} disabled={saving}>{saving ? 'Saving...' : 'Save Settings'}</Button>
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Change Admin Password</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="currentPw">Current Password</Label>
-                        <Input
-                            id="currentPw"
-                            type="password"
-                            placeholder="••••••••"
-                            value={pwForm.current}
-                            onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="newPw">New Password</Label>
-                        <Input
-                            id="newPw"
-                            type="password"
-                            placeholder="Min. 8 characters"
-                            value={pwForm.newPw}
-                            onChange={(e) => setPwForm((p) => ({ ...p, newPw: e.target.value }))}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="confirmPw">Confirm New Password</Label>
-                        <Input
-                            id="confirmPw"
-                            type="password"
-                            placeholder="Re-enter new password"
-                            value={pwForm.confirm}
-                            onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
-                        />
-                    </div>
-                    <div className="flex justify-end">
-                        <Button
-                            variant="destructive"
-                            onClick={changePassword}
-                            disabled={savingPw}
-                        >
-                            {savingPw ? 'Changing...' : 'Change Password'}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     );
 }

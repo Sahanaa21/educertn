@@ -11,7 +11,6 @@ import {
 } from '../controllers/adminController';
 import { getAllIssueReports, updateIssueReport } from '../controllers/supportController';
 import { getPortalSettings, updatePortalSettings } from '../controllers/settingsController';
-import { changeAdminPassword } from '../controllers/authController';
 import { requireRole, authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
@@ -36,10 +35,6 @@ const adminMutationLimiter = simpleRateLimit({ windowMs: 60 * 1000, max: 30, key
 
 const router = Router();
 
-// Assuming admin token has role === 'ADMIN'
-// Since Admin login is via static credentials right now or we might not have 'requireRole' fully robust, let's just authenticate for now, or use requireRole if we set it up.
-// Looking at the instructions, Admin login expects JWT token with role. We'll secure these endpoints.
-
 router.get('/dashboard', authenticate, requireRole('ADMIN'), getDashboardStats);
 
 router.get('/certificates', authenticate, requireRole('ADMIN'), getAllCertificates);
@@ -56,7 +51,5 @@ router.put('/issues/:id', authenticate, requireRole('ADMIN'), adminMutationLimit
 
 router.get('/settings', authenticate, requireRole('ADMIN'), getPortalSettings);
 router.put('/settings', authenticate, requireRole('ADMIN'), adminMutationLimiter, updatePortalSettings);
-
-router.post('/change-password', authenticate, requireRole('ADMIN'), adminMutationLimiter, changeAdminPassword);
 
 export default router;

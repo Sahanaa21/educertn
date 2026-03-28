@@ -1,15 +1,9 @@
 import { Request, Response } from 'express';
-import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { generateToken, verifyToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SCRYPT_PREFIX = 'scrypt';
-const SCRYPT_N = 16384;
-const SCRYPT_R = 8;
-const SCRYPT_P = 1;
-const SCRYPT_KEYLEN = 64;
 const BRANCH_OPTIONS = new Set([
     'CSE',
     'ISE',
@@ -22,8 +16,6 @@ const BRANCH_OPTIONS = new Set([
     'CIVIL',
     'AERONAUTICAL',
 ]);
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
 
@@ -86,60 +78,6 @@ const sendOtpEmail = async (normalizedEmail: string, subject: string) => {
             expiresAt
         }
     });
-};
-
-const safeCompareStrings = (a: string, b: string) => {
-    const aBuffer = Buffer.from(a);
-    const bBuffer = Buffer.from(b);
-
-    if (aBuffer.length !== bBuffer.length) {
-        return false;
-    }
-
-    return crypto.timingSafeEqual(aBuffer, bBuffer);
-};
-
-const hashPassword = (plainPassword: string) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto
-        .scryptSync(plainPassword, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P })
-        .toString('hex');
-
-    return `${SCRYPT_PREFIX}$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`;
-};
-
-const isScryptHash = (value: string | null | undefined) => {
-    return typeof value === 'string' && value.startsWith(`${SCRYPT_PREFIX}$`);
-};
-
-const verifyPassword = (plainPassword: string, storedPassword: string | null | undefined) => {
-    if (!storedPassword) {
-        return false;
-    }
-
-    if (!isScryptHash(storedPassword)) {
-        return safeCompareStrings(plainPassword, storedPassword);
-    }
-
-    try {
-        const [prefix, n, r, p, salt, storedHash] = storedPassword.split('$');
-
-        if (!prefix || !n || !r || !p || !salt || !storedHash) {
-            return false;
-        }
-
-        const derivedHash = crypto
-            .scryptSync(plainPassword, salt, Buffer.from(storedHash, 'hex').length, {
-                N: Number(n),
-                r: Number(r),
-                p: Number(p),
-            })
-            .toString('hex');
-
-        return safeCompareStrings(derivedHash, storedHash);
-    } catch {
-        return false;
-    }
 };
 
 const isInvalidRecipientError = (error: unknown) => {
@@ -568,77 +506,5 @@ export const getCurrentProfile = async (req: Request, res: Response): Promise<an
     } catch (error) {
         console.error('Get profile failed:', error);
         return res.status(500).json({ message: 'Server error' });
-    }
-};
-
-export const adminLogin = async (req: Request, res: Response): Promise<any> => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password required' });
-    }
-
-    if (!EMAIL_REGEX.test(email)) {
-        return res.status(400).json({ message: 'Enter a valid email address' });
-    }
-
-    try {
-        const user = await prisma.user.findUnique({ where: { email, role: 'ADMIN' } });
-
-        if (!user || !verifyPassword(password, user.password)) {
-            await sleep(400);
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        if (!isScryptHash(user.password)) {
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { password: hashPassword(password) }
-            });
-        }
-
-        const token = generateToken({ id: user.id, role: user.role }, '8h');
-
-        res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
-export const changeAdminPassword = async (req: Request, res: Response): Promise<any> => {
-    const adminId = (req as any).user?.id;
-    const currentPassword = String(req.body?.currentPassword || '');
-    const newPassword = String(req.body?.newPassword || '');
-
-    if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: 'Current and new password are required' });
-    }
-
-    if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
-        return res.status(400).json({ message: 'New password must be at least 8 characters and include letters and numbers' });
-    }
-
-    try {
-        const user = await prisma.user.findUnique({ where: { id: adminId } });
-        if (!user || user.role !== 'ADMIN') {
-            return res.status(403).json({ message: 'Unauthorized' });
-        }
-
-        if (!verifyPassword(currentPassword, user.password)) {
-            return res.status(401).json({ message: 'Current password is incorrect' });
-        }
-
-        if (verifyPassword(newPassword, user.password)) {
-            return res.status(400).json({ message: 'New password must be different from the current password' });
-        }
-
-        await prisma.user.update({ where: { id: adminId }, data: { password: hashPassword(newPassword) } });
-
-        res.json({ message: 'Password updated successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
     }
 };

@@ -3,7 +3,6 @@ import { prisma } from '../config/prisma';
 import { verifyToken } from '../utils/auth';
 
 const ADMIN_BYPASS_PATHS = [
-    '/api/auth/admin/login',
     '/api/auth/request-otp',
     '/api/auth/verify-unified-otp',
     '/api/health'

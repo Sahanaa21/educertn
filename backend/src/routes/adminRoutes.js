@@ -7,7 +7,6 @@ const express_1 = require("express");
 const adminController_1 = require("../controllers/adminController");
 const supportController_1 = require("../controllers/supportController");
 const settingsController_1 = require("../controllers/settingsController");
-const authController_1 = require("../controllers/authController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -43,5 +42,4 @@ router.get('/issues', authMiddleware_1.authenticate, (0, authMiddleware_1.requir
 router.put('/issues/:id', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, supportController_1.updateIssueReport);
 router.get('/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), settingsController_1.getPortalSettings);
 router.put('/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, settingsController_1.updatePortalSettings);
-router.post('/change-password', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, authController_1.changeAdminPassword);
 exports.default = router;
