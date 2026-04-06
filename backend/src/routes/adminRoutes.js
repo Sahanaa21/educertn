@@ -27,9 +27,6 @@ const verificationResponseUpload = (0, multer_1.default)({
 });
 const adminMutationLimiter = (0, rateLimit_1.simpleRateLimit)({ windowMs: 60 * 1000, max: 30, keyPrefix: 'admin-mutation' });
 const router = (0, express_1.Router)();
-// Assuming admin token has role === 'ADMIN'
-// Since Admin login is via static credentials right now or we might not have 'requireRole' fully robust, let's just authenticate for now, or use requireRole if we set it up.
-// Looking at the instructions, Admin login expects JWT token with role. We'll secure these endpoints.
 router.get('/dashboard', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminController_1.getDashboardStats);
 router.get('/certificates', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminController_1.getAllCertificates);
 router.put('/certificates/:id/status', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, upload.single('file'), adminController_1.updateCertificateStatus);

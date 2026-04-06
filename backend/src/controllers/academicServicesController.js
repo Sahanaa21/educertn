@@ -18,7 +18,13 @@ const prisma_1 = require("../config/prisma");
 const razorpay_1 = require("../config/razorpay");
 const PHOTOCOPY_FEE = 500;
 const REEVALUATION_FEE = 3000;
-const FIXED_ADMIN_ALLOWLIST = 'sahanaa2060@gmail.com';
+const DEFAULT_ADMIN_ALLOWLIST = 'sahanaa2060@gmail.com';
+const parseAdminAllowlist = (raw) => {
+    return String(raw || '')
+        .split(/[\n,;]/)
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item));
+};
 const getSettings = () => __awaiter(void 0, void 0, void 0, function* () {
     return yield prisma_1.prisma.portalSettings.upsert({
         where: { id: 1 },
@@ -30,7 +36,7 @@ const getSettings = () => __awaiter(void 0, void 0, void 0, function* () {
             maintenanceMode: false,
             allowCompanySignup: true,
             smtpFromName: 'Global Academy of Technology',
-            adminAllowedEmails: FIXED_ADMIN_ALLOWLIST,
+            adminAllowedEmails: DEFAULT_ADMIN_ALLOWLIST,
             academicServicesEnabled: false,
             academicServicesStartAt: null,
             academicServicesEndAt: null,
@@ -316,8 +322,12 @@ const getStudentAcademicServiceRequests = (req, res) => __awaiter(void 0, void 0
 });
 exports.getStudentAcademicServiceRequests = getStudentAcademicServiceRequests;
 const getAllAcademicServiceRequests = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
+        const rawServiceType = String(((_a = _req.query) === null || _a === void 0 ? void 0 : _a.serviceType) || '').toUpperCase();
+        const serviceType = ['PHOTOCOPY', 'REEVALUATION'].includes(rawServiceType) ? rawServiceType : null;
         const requests = yield prisma_1.prisma.academicServiceRequest.findMany({
+            where: serviceType ? { serviceType } : undefined,
             include: {
                 user: { select: { email: true, name: true } }
             },
@@ -357,11 +367,19 @@ const updateAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
         if (status === 'REJECTED' && !nextRemarks) {
             return res.status(400).json({ message: 'Admin remarks are required when rejecting a request' });
         }
-        if (status === 'RESULT_PUBLISHED' && !nextResultSummary) {
-            return res.status(400).json({ message: 'Result summary is required when publishing results' });
-        }
         if (status === 'RESULT_PUBLISHED' && existing.paymentStatus !== 'PAID') {
             return res.status(400).json({ message: 'Result can be published only for paid requests' });
+        }
+        if (status === 'RESULT_PUBLISHED' && existing.serviceType === 'REEVALUATION' && !nextResultSummary) {
+            return res.status(400).json({ message: 'Result summary is required when publishing results' });
+        }
+        if (status === 'RESULT_PUBLISHED' && existing.serviceType === 'PHOTOCOPY') {
+            const attachments = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
+            if (attachments.length < 2) {
+                return res.status(400).json({
+                    message: 'Upload both answer sheet copy and course evaluation scheme before marking photocopy request as completed'
+                });
+            }
         }
         const data = {
             status,
@@ -387,15 +405,19 @@ const uploadAcademicServiceAttachments = (req, res) => __awaiter(void 0, void 0,
     try {
         const id = String(req.params.id || '');
         const files = (req.files || []);
-        if (!id || files.length === 0) {
+        const validFiles = files.filter((file) => Number(file.size || 0) > 0);
+        if (!id || validFiles.length === 0) {
             return res.status(400).json({ message: 'Files are required' });
         }
         const existing = yield prisma_1.prisma.academicServiceRequest.findUnique({ where: { id } });
         if (!existing) {
             return res.status(404).json({ message: 'Request not found' });
         }
+        if (existing.status === 'RESULT_PUBLISHED' || existing.status === 'REJECTED') {
+            return res.status(400).json({ message: 'Attachments cannot be updated for completed or rejected requests' });
+        }
         const prev = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
-        const newUrls = files.map((file) => `/uploads/${path_1.default.basename(file.path)}`);
+        const newUrls = validFiles.map((file) => `/uploads/${path_1.default.basename(file.path)}`);
         const merged = [...prev, ...newUrls];
         const updated = yield prisma_1.prisma.academicServiceRequest.update({
             where: { id },
@@ -430,7 +452,11 @@ const getAcademicServiceSettingsAdmin = (_req, res) => __awaiter(void 0, void 0,
 exports.getAcademicServiceSettingsAdmin = getAcademicServiceSettingsAdmin;
 const updateAcademicServiceSettingsAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { academicServicesEnabled, academicServicesStartAt, academicServicesEndAt, } = req.body;
+        const { academicServicesEnabled, academicServicesStartAt, academicServicesEndAt, adminAllowedEmails, } = req.body;
+        const allowlistEmails = parseAdminAllowlist(adminAllowedEmails);
+        if (allowlistEmails.length === 0) {
+            return res.status(400).json({ message: 'Provide at least one valid admin email' });
+        }
         const start = academicServicesStartAt ? new Date(academicServicesStartAt) : null;
         const end = academicServicesEndAt ? new Date(academicServicesEndAt) : null;
         if (start && Number.isNaN(start.getTime())) {
@@ -448,7 +474,7 @@ const updateAcademicServiceSettingsAdmin = (req, res) => __awaiter(void 0, void 
                 academicServicesEnabled: Boolean(academicServicesEnabled),
                 academicServicesStartAt: start,
                 academicServicesEndAt: end,
-                adminAllowedEmails: FIXED_ADMIN_ALLOWLIST,
+                adminAllowedEmails: allowlistEmails.join(', '),
             },
             create: {
                 id: 1,
@@ -457,7 +483,7 @@ const updateAcademicServiceSettingsAdmin = (req, res) => __awaiter(void 0, void 
                 maintenanceMode: false,
                 allowCompanySignup: true,
                 smtpFromName: 'Global Academy of Technology',
-                adminAllowedEmails: FIXED_ADMIN_ALLOWLIST,
+                adminAllowedEmails: allowlistEmails.join(', '),
                 academicServicesEnabled: Boolean(academicServicesEnabled),
                 academicServicesStartAt: start,
                 academicServicesEndAt: end,

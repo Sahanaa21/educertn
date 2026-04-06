@@ -29,8 +29,8 @@ router.get('/student/academic-services', authMiddleware_1.authenticate, (0, auth
 router.post('/student/academic-services/:id/create-payment-order', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('STUDENT'), academicServicesController_1.createAcademicServicePaymentOrder);
 router.post('/student/academic-services/:id/verify-payment', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('STUDENT'), academicServicesController_1.verifyAcademicServicePayment);
 router.get('/admin/academic-services', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), academicServicesController_1.getAllAcademicServiceRequests);
-router.put('/admin/academic-services/:id', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), academicServicesController_1.updateAcademicServiceRequest);
-router.post('/admin/academic-services/:id/attachments', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), upload.array('files', 5), academicServicesController_1.uploadAcademicServiceAttachments);
 router.get('/admin/academic-services/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), academicServicesController_1.getAcademicServiceSettingsAdmin);
 router.put('/admin/academic-services/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), academicServicesController_1.updateAcademicServiceSettingsAdmin);
+router.put('/admin/academic-services/:id', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), academicServicesController_1.updateAcademicServiceRequest);
+router.post('/admin/academic-services/:id/attachments', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), upload.array('files', 5), academicServicesController_1.uploadAcademicServiceAttachments);
 exports.default = router;

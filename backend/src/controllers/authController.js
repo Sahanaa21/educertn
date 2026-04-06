@@ -8,21 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changeAdminPassword = exports.adminLogin = exports.getCurrentProfile = exports.completeUnifiedProfile = exports.verifyUnifiedOtp = exports.requestUnifiedOtp = exports.verifyOtp = exports.companyLogin = exports.studentLogin = void 0;
-const crypto_1 = __importDefault(require("crypto"));
+exports.getCurrentProfile = exports.completeUnifiedProfile = exports.verifyUnifiedOtp = exports.requestUnifiedOtp = exports.verifyOtp = exports.companyLogin = exports.studentLogin = void 0;
 const prisma_1 = require("../config/prisma");
 const auth_1 = require("../utils/auth");
 const email_1 = require("../utils/email");
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SCRYPT_PREFIX = 'scrypt';
-const SCRYPT_N = 16384;
-const SCRYPT_R = 8;
-const SCRYPT_P = 1;
-const SCRYPT_KEYLEN = 64;
 const BRANCH_OPTIONS = new Set([
     'CSE',
     'ISE',
@@ -35,12 +26,33 @@ const BRANCH_OPTIONS = new Set([
     'CIVIL',
     'AERONAUTICAL',
 ]);
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const FIXED_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
-const getAdminAllowlist = () => {
-    return new Set(FIXED_ADMIN_ALLOWLIST);
+const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
+const parseAdminAllowlist = (raw) => {
+    return String(raw || '')
+        .split(/[\n,;]/)
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => EMAIL_REGEX.test(item));
 };
-const isAllowlistedAdminEmail = (email) => getAdminAllowlist().has(email.toLowerCase());
+const getAdminAllowlist = () => __awaiter(void 0, void 0, void 0, function* () {
+    const allowlist = new Set(DEFAULT_ADMIN_ALLOWLIST);
+    try {
+        const settings = yield prisma_1.prisma.portalSettings.findUnique({
+            where: { id: 1 },
+            select: { adminAllowedEmails: true }
+        });
+        for (const email of parseAdminAllowlist(settings === null || settings === void 0 ? void 0 : settings.adminAllowedEmails)) {
+            allowlist.add(email);
+        }
+    }
+    catch (_a) {
+        // Fall back to the default allowlist when settings are unavailable.
+    }
+    return allowlist;
+});
+const isAllowlistedAdminEmail = (email) => __awaiter(void 0, void 0, void 0, function* () {
+    const allowlist = yield getAdminAllowlist();
+    return allowlist.has(email.toLowerCase());
+});
 const getDestinationByRole = (role) => {
     if (role === 'ADMIN')
         return '/admin';
@@ -65,49 +77,6 @@ const sendOtpEmail = (normalizedEmail, subject) => __awaiter(void 0, void 0, voi
         }
     });
 });
-const safeCompareStrings = (a, b) => {
-    const aBuffer = Buffer.from(a);
-    const bBuffer = Buffer.from(b);
-    if (aBuffer.length !== bBuffer.length) {
-        return false;
-    }
-    return crypto_1.default.timingSafeEqual(aBuffer, bBuffer);
-};
-const hashPassword = (plainPassword) => {
-    const salt = crypto_1.default.randomBytes(16).toString('hex');
-    const hash = crypto_1.default
-        .scryptSync(plainPassword, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P })
-        .toString('hex');
-    return `${SCRYPT_PREFIX}$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`;
-};
-const isScryptHash = (value) => {
-    return typeof value === 'string' && value.startsWith(`${SCRYPT_PREFIX}$`);
-};
-const verifyPassword = (plainPassword, storedPassword) => {
-    if (!storedPassword) {
-        return false;
-    }
-    if (!isScryptHash(storedPassword)) {
-        return safeCompareStrings(plainPassword, storedPassword);
-    }
-    try {
-        const [prefix, n, r, p, salt, storedHash] = storedPassword.split('$');
-        if (!prefix || !n || !r || !p || !salt || !storedHash) {
-            return false;
-        }
-        const derivedHash = crypto_1.default
-            .scryptSync(plainPassword, salt, Buffer.from(storedHash, 'hex').length, {
-            N: Number(n),
-            r: Number(r),
-            p: Number(p),
-        })
-            .toString('hex');
-        return safeCompareStrings(derivedHash, storedHash);
-    }
-    catch (_a) {
-        return false;
-    }
-};
 const isInvalidRecipientError = (error) => {
     const message = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
     return [
@@ -258,7 +227,7 @@ const requestUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     try {
         const existingUser = yield prisma_1.prisma.user.findUnique({ where: { email } });
-        const adminEmail = isAllowlistedAdminEmail(email);
+        const adminEmail = yield isAllowlistedAdminEmail(email);
         if (intent === 'signup' && existingUser) {
             return res.status(409).json({ message: 'This email is already registered. Please login instead.' });
         }
@@ -299,7 +268,7 @@ const verifyUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
         let user = yield prisma_1.prisma.user.findUnique({ where: { email } });
-        const adminEmail = isAllowlistedAdminEmail(email);
+        const adminEmail = yield isAllowlistedAdminEmail(email);
         if (!user && adminEmail) {
             user = yield prisma_1.prisma.user.create({
                 data: {
@@ -391,7 +360,7 @@ const completeUnifiedProfile = (req, res) => __awaiter(void 0, void 0, void 0, f
                 }
             });
         }
-        if (isAllowlistedAdminEmail(user.email)) {
+        if (yield isAllowlistedAdminEmail(user.email)) {
             return res.status(400).json({ message: 'This email is reserved for admin access only.' });
         }
         if (role === 'STUDENT') {
@@ -475,65 +444,3 @@ const getCurrentProfile = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getCurrentProfile = getCurrentProfile;
-const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
-    const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
-    const password = String(((_b = req.body) === null || _b === void 0 ? void 0 : _b.password) || '');
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password required' });
-    }
-    if (!EMAIL_REGEX.test(email)) {
-        return res.status(400).json({ message: 'Enter a valid email address' });
-    }
-    try {
-        const user = yield prisma_1.prisma.user.findUnique({ where: { email, role: 'ADMIN' } });
-        if (!user || !verifyPassword(password, user.password)) {
-            yield sleep(400);
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-        if (!isScryptHash(user.password)) {
-            yield prisma_1.prisma.user.update({
-                where: { id: user.id },
-                data: { password: hashPassword(password) }
-            });
-        }
-        const token = (0, auth_1.generateToken)({ id: user.id, role: user.role }, '8h');
-        res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-exports.adminLogin = adminLogin;
-const changeAdminPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
-    const adminId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-    const currentPassword = String(((_b = req.body) === null || _b === void 0 ? void 0 : _b.currentPassword) || '');
-    const newPassword = String(((_c = req.body) === null || _c === void 0 ? void 0 : _c.newPassword) || '');
-    if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: 'Current and new password are required' });
-    }
-    if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
-        return res.status(400).json({ message: 'New password must be at least 8 characters and include letters and numbers' });
-    }
-    try {
-        const user = yield prisma_1.prisma.user.findUnique({ where: { id: adminId } });
-        if (!user || user.role !== 'ADMIN') {
-            return res.status(403).json({ message: 'Unauthorized' });
-        }
-        if (!verifyPassword(currentPassword, user.password)) {
-            return res.status(401).json({ message: 'Current password is incorrect' });
-        }
-        if (verifyPassword(newPassword, user.password)) {
-            return res.status(400).json({ message: 'New password must be different from the current password' });
-        }
-        yield prisma_1.prisma.user.update({ where: { id: adminId }, data: { password: hashPassword(newPassword) } });
-        res.json({ message: 'Password updated successfully' });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-exports.changeAdminPassword = changeAdminPassword;

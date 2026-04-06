@@ -12,7 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.maintenanceModeGuard = void 0;
 const prisma_1 = require("../config/prisma");
 const auth_1 = require("../utils/auth");
-const ADMIN_BYPASS_PATHS = ['/api/auth/request-otp', '/api/auth/verify-unified-otp', '/api/health'];
+const ADMIN_BYPASS_PATHS = [
+    '/api/auth/request-otp',
+    '/api/auth/verify-unified-otp',
+    '/api/health'
+];
 const maintenanceModeGuard = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {
