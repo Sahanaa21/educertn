@@ -287,14 +287,16 @@ export const requestUnifiedOtp = async (req: Request, res: Response): Promise<an
     } catch (error) {
         console.error('[OTP Request] Failed with error:', error);
         const errorMsg = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : 'No stack trace';
         console.error('[OTP Request] Error details:', errorMsg);
+        console.error('[OTP Request] Stack:', errorStack);
         
         if (isInvalidRecipientError(error)) {
             return res.status(400).json({ message: 'Invalid email entered. Please check and try again.' });
         }
         return res.status(500).json({ 
             message: 'Failed to send OTP. Please try again.',
-            error: process.env.NODE_ENV === 'development' ? errorMsg : undefined
+            debug: process.env.NODE_ENV === 'development' ? { error: errorMsg, stack: errorStack } : undefined
         });
     }
 };
