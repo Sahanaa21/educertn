@@ -219,9 +219,12 @@ const requestUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functi
     if (!email) {
         return res.status(400).json({ message: 'Email is required' });
     }
+    console.log('[OTP] Email validation started for:', email);
     if (!EMAIL_REGEX.test(email)) {
+        console.log('[OTP] Email validation failed');
         return res.status(400).json({ message: 'Enter a valid email address' });
     }
+    console.log('[OTP] Email validation passed');
     if (!['login', 'signup'].includes(intent)) {
         return res.status(400).json({ message: 'Invalid intent' });
     }
@@ -251,11 +254,12 @@ const requestUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (isInvalidRecipientError(error)) {
             return res.status(400).json({ message: 'Invalid email entered. Please check and try again.' });
         }
-        return res.status(500).json({
+        const errorResponse = {
             message: 'Failed to send OTP. Please try again.',
-            error: `${errorMsg}`,
-            type: error instanceof Error ? error.constructor.name : typeof error
-        });
+            errorMessage: String(errorMsg),
+            errorType: error instanceof Error ? error.constructor.name : typeof error
+        };
+        return res.status(500).json(errorResponse);
     }
 });
 exports.requestUnifiedOtp = requestUnifiedOtp;
