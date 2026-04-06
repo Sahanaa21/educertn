@@ -226,23 +226,33 @@ const requestUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functi
         return res.status(400).json({ message: 'Invalid intent' });
     }
     try {
+        console.log(`[OTP Request] Starting for email: ${email}, intent: ${intent}`);
         const existingUser = yield prisma_1.prisma.user.findUnique({ where: { email } });
+        console.log(`[OTP Request] User lookup completed: ${existingUser ? 'found' : 'not found'}`);
         const adminEmail = yield isAllowlistedAdminEmail(email);
+        console.log(`[OTP Request] Admin check completed: ${adminEmail ? 'admin' : 'not admin'}`);
         if (intent === 'signup' && existingUser) {
             return res.status(409).json({ message: 'This email is already registered. Please login instead.' });
         }
         if (intent === 'login' && !existingUser && !adminEmail) {
             return res.status(404).json({ message: 'Email is not registered. Please sign up first.' });
         }
+        console.log(`[OTP Request] Sending OTP email to ${email}`);
         yield sendOtpEmail(email, 'Your OTP for Global Academy of Technology');
+        console.log(`[OTP Request] OTP sent successfully to ${email}`);
         return res.json({ message: 'OTP sent successfully' });
     }
     catch (error) {
-        console.error('Unified OTP request failed:', error);
+        console.error('[OTP Request] Failed with error:', error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error('[OTP Request] Error details:', errorMsg);
         if (isInvalidRecipientError(error)) {
             return res.status(400).json({ message: 'Invalid email entered. Please check and try again.' });
         }
-        return res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
+        return res.status(500).json({
+            message: 'Failed to send OTP. Please try again.',
+            error: process.env.NODE_ENV === 'development' ? errorMsg : undefined
+        });
     }
 });
 exports.requestUnifiedOtp = requestUnifiedOtp;
