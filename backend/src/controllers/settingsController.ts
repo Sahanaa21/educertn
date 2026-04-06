@@ -174,10 +174,6 @@ export const removeAdminEmail = async (req: Request, res: Response): Promise<any
             return res.status(400).json({ message: 'Enter a valid email address' });
         }
 
-        if (DEFAULT_ADMIN_ALLOWLIST.includes(email)) {
-            return res.status(400).json({ message: 'Primary admin email cannot be removed' });
-        }
-
         const settings = await (prisma as any).portalSettings.upsert({
             where: { id: 1 },
             update: {},
@@ -185,15 +181,23 @@ export const removeAdminEmail = async (req: Request, res: Response): Promise<any
         });
 
         const currentAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(settings?.adminAllowedEmails));
-        const nextAllowlist = currentAllowlist.filter((item) => item !== email);
-
-        if (nextAllowlist.length === currentAllowlist.length) {
+        if (!currentAllowlist.includes(email)) {
             return res.status(404).json({ message: 'Admin email not found in allowlist' });
         }
 
-        if (nextAllowlist.length < 1) {
-            return res.status(400).json({ message: 'At least one admin email must remain' });
+        if (currentAllowlist.length <= 1) {
+            return res.status(400).json({ message: 'Cannot remove the last admin email' });
         }
+
+        const authUserId = String((req as any).user?.id || '').trim();
+        if (authUserId) {
+            const currentAdmin = await prisma.user.findUnique({ where: { id: authUserId }, select: { email: true } });
+            if (currentAdmin?.email?.toLowerCase() === email) {
+                return res.status(400).json({ message: 'You cannot remove your own admin email while signed in' });
+            }
+        }
+
+        const nextAllowlist = currentAllowlist.filter((entry) => entry !== email);
 
         await (prisma as any).portalSettings.update({
             where: { id: 1 },
@@ -201,7 +205,7 @@ export const removeAdminEmail = async (req: Request, res: Response): Promise<any
         });
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser && existingUser.role === 'ADMIN') {
+        if (existingUser?.role === 'ADMIN') {
             await prisma.user.update({
                 where: { id: existingUser.id },
                 data: { role: 'STUDENT' }

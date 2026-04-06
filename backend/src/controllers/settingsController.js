@@ -138,7 +138,7 @@ const registerAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.registerAdminEmail = registerAdminEmail;
 const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c;
     try {
         const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
         if (!email) {
@@ -147,28 +147,32 @@ const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (!EMAIL_REGEX.test(email)) {
             return res.status(400).json({ message: 'Enter a valid email address' });
         }
-        if (DEFAULT_ADMIN_ALLOWLIST.includes(email)) {
-            return res.status(400).json({ message: 'Primary admin email cannot be removed' });
-        }
         const settings = yield prisma_1.prisma.portalSettings.upsert({
             where: { id: 1 },
             update: {},
             create: DEFAULT_SETTINGS
         });
         const currentAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(settings === null || settings === void 0 ? void 0 : settings.adminAllowedEmails));
-        const nextAllowlist = currentAllowlist.filter((item) => item !== email);
-        if (nextAllowlist.length === currentAllowlist.length) {
+        if (!currentAllowlist.includes(email)) {
             return res.status(404).json({ message: 'Admin email not found in allowlist' });
         }
-        if (nextAllowlist.length < 1) {
-            return res.status(400).json({ message: 'At least one admin email must remain' });
+        if (currentAllowlist.length <= 1) {
+            return res.status(400).json({ message: 'Cannot remove the last admin email' });
         }
+        const authUserId = String(((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || '').trim();
+        if (authUserId) {
+            const currentAdmin = yield prisma_1.prisma.user.findUnique({ where: { id: authUserId }, select: { email: true } });
+            if (((_c = currentAdmin === null || currentAdmin === void 0 ? void 0 : currentAdmin.email) === null || _c === void 0 ? void 0 : _c.toLowerCase()) === email) {
+                return res.status(400).json({ message: 'You cannot remove your own admin email while signed in' });
+            }
+        }
+        const nextAllowlist = currentAllowlist.filter((entry) => entry !== email);
         yield prisma_1.prisma.portalSettings.update({
             where: { id: 1 },
             data: { adminAllowedEmails: nextAllowlist.join('\n') }
         });
         const existingUser = yield prisma_1.prisma.user.findUnique({ where: { email } });
-        if (existingUser && existingUser.role === 'ADMIN') {
+        if ((existingUser === null || existingUser === void 0 ? void 0 : existingUser.role) === 'ADMIN') {
             yield prisma_1.prisma.user.update({
                 where: { id: existingUser.id },
                 data: { role: 'STUDENT' }
