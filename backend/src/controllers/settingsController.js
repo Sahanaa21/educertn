@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.registerAdminEmail = exports.updatePortalSettings = exports.getPortalSettings = void 0;
+exports.removeAdminEmail = exports.registerAdminEmail = exports.updatePortalSettings = exports.getPortalSettings = void 0;
 const prisma_1 = require("../config/prisma");
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
@@ -137,3 +137,51 @@ const registerAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.registerAdminEmail = registerAdminEmail;
+const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+        if (!EMAIL_REGEX.test(email)) {
+            return res.status(400).json({ message: 'Enter a valid email address' });
+        }
+        if (DEFAULT_ADMIN_ALLOWLIST.includes(email)) {
+            return res.status(400).json({ message: 'Primary admin email cannot be removed' });
+        }
+        const settings = yield prisma_1.prisma.portalSettings.upsert({
+            where: { id: 1 },
+            update: {},
+            create: DEFAULT_SETTINGS
+        });
+        const currentAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(settings === null || settings === void 0 ? void 0 : settings.adminAllowedEmails));
+        const nextAllowlist = currentAllowlist.filter((item) => item !== email);
+        if (nextAllowlist.length === currentAllowlist.length) {
+            return res.status(404).json({ message: 'Admin email not found in allowlist' });
+        }
+        if (nextAllowlist.length < 1) {
+            return res.status(400).json({ message: 'At least one admin email must remain' });
+        }
+        yield prisma_1.prisma.portalSettings.update({
+            where: { id: 1 },
+            data: { adminAllowedEmails: nextAllowlist.join('\n') }
+        });
+        const existingUser = yield prisma_1.prisma.user.findUnique({ where: { email } });
+        if (existingUser && existingUser.role === 'ADMIN') {
+            yield prisma_1.prisma.user.update({
+                where: { id: existingUser.id },
+                data: { role: 'STUDENT' }
+            });
+        }
+        return res.json({
+            message: 'Admin email removed successfully',
+            adminAllowedEmails: nextAllowlist.join('\n')
+        });
+    }
+    catch (error) {
+        console.error('Error removing admin email:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+exports.removeAdminEmail = removeAdminEmail;

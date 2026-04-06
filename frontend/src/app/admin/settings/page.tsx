@@ -18,6 +18,7 @@ type AdminSettingsState = {
 };
 
 export default function AdminSettingsPage() {
+    const defaultAdminEmail = 'sahanaa2060@gmail.com';
     const [settings, setSettings] = useState<AdminSettingsState>({
         supportEmail: 'support@gat.ac.in',
         frontendUrl: 'http://localhost:3000',
@@ -28,8 +29,14 @@ export default function AdminSettingsPage() {
     });
     const [newAdminEmail, setNewAdminEmail] = useState('');
     const [registeringAdmin, setRegisteringAdmin] = useState(false);
+    const [removingAdminEmail, setRemovingAdminEmail] = useState('');
     const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [saving, setSaving] = useState(false);
+
+    const adminEmailList = settings.adminAllowedEmails
+        .split(/\r?\n/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean);
 
     useEffect(() => {
         const token = sessionStorage.getItem('adminToken');
@@ -144,6 +151,47 @@ export default function AdminSettingsPage() {
         }
     };
 
+    const removeAdmin = async (email: string) => {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) {
+            toast.error('Admin session not found. Please login again.');
+            return;
+        }
+
+        if (email === defaultAdminEmail) {
+            toast.error('Primary admin email cannot be removed.');
+            return;
+        }
+
+        setRemovingAdminEmail(email);
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/settings/admin-emails`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.message || 'Failed to remove admin email');
+                return;
+            }
+
+            setSettings((prev) => ({
+                ...prev,
+                adminAllowedEmails: data.adminAllowedEmails || prev.adminAllowedEmails
+            }));
+            toast.success('Admin email removed successfully');
+        } catch {
+            toast.error('Network error while removing admin email');
+        } finally {
+            setRemovingAdminEmail('');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -242,14 +290,26 @@ export default function AdminSettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="adminAllowedEmails">Registered Admin Emails</Label>
-                            <textarea
-                                id="adminAllowedEmails"
-                                value={settings.adminAllowedEmails}
-                                readOnly
-                                rows={6}
-                                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm bg-slate-50"
-                            />
+                            <Label>Registered Admin Emails</Label>
+                            <div className="space-y-2 rounded-md border border-slate-200 p-3 bg-slate-50">
+                                {adminEmailList.length === 0 && (
+                                    <p className="text-sm text-slate-500">No admin emails configured.</p>
+                                )}
+                                {adminEmailList.map((email) => (
+                                    <div key={email} className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-2">
+                                        <span className="text-sm text-slate-700 break-all">{email}</span>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={email === defaultAdminEmail || removingAdminEmail === email}
+                                            onClick={() => removeAdmin(email)}
+                                        >
+                                            {removingAdminEmail === email ? 'Removing...' : email === defaultAdminEmail ? 'Primary Admin' : 'Remove'}
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

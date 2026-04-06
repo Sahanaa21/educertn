@@ -161,3 +161,59 @@ export const registerAdminEmail = async (req: Request, res: Response): Promise<a
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+export const removeAdminEmail = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const email = String(req.body?.email || '').trim().toLowerCase();
+
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        if (!EMAIL_REGEX.test(email)) {
+            return res.status(400).json({ message: 'Enter a valid email address' });
+        }
+
+        if (DEFAULT_ADMIN_ALLOWLIST.includes(email)) {
+            return res.status(400).json({ message: 'Primary admin email cannot be removed' });
+        }
+
+        const settings = await (prisma as any).portalSettings.upsert({
+            where: { id: 1 },
+            update: {},
+            create: DEFAULT_SETTINGS
+        });
+
+        const currentAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(settings?.adminAllowedEmails));
+        const nextAllowlist = currentAllowlist.filter((item) => item !== email);
+
+        if (nextAllowlist.length === currentAllowlist.length) {
+            return res.status(404).json({ message: 'Admin email not found in allowlist' });
+        }
+
+        if (nextAllowlist.length < 1) {
+            return res.status(400).json({ message: 'At least one admin email must remain' });
+        }
+
+        await (prisma as any).portalSettings.update({
+            where: { id: 1 },
+            data: { adminAllowedEmails: nextAllowlist.join('\n') }
+        });
+
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser && existingUser.role === 'ADMIN') {
+            await prisma.user.update({
+                where: { id: existingUser.id },
+                data: { role: 'STUDENT' }
+            });
+        }
+
+        return res.json({
+            message: 'Admin email removed successfully',
+            adminAllowedEmails: nextAllowlist.join('\n')
+        });
+    } catch (error) {
+        console.error('Error removing admin email:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};

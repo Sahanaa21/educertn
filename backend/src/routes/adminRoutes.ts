@@ -10,7 +10,7 @@ import {
 	uploadVerificationCompletedFile
 } from '../controllers/adminController';
 import { getAllIssueReports, updateIssueReport } from '../controllers/supportController';
-import { getPortalSettings, registerAdminEmail, updatePortalSettings } from '../controllers/settingsController';
+import { getPortalSettings, registerAdminEmail, removeAdminEmail, updatePortalSettings } from '../controllers/settingsController';
 import { requireRole, authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
@@ -52,5 +52,6 @@ router.put('/issues/:id', authenticate, requireRole('ADMIN'), adminMutationLimit
 router.get('/settings', authenticate, requireRole('ADMIN'), getPortalSettings);
 router.put('/settings', authenticate, requireRole('ADMIN'), adminMutationLimiter, updatePortalSettings);
 router.post('/settings/admin-emails', authenticate, requireRole('ADMIN'), adminMutationLimiter, registerAdminEmail);
+router.delete('/settings/admin-emails', authenticate, requireRole('ADMIN'), adminMutationLimiter, removeAdminEmail);
 
 export default router;
