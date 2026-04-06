@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "prisma generate && tsc -p tsconfig.json",
+    "postinstall": "prisma db push --skip-generate || true",
     "db:ping": "node scripts/db_ping.js",
     "db:push": "prisma db push",
     "migrate:upload-extensions": "node scripts/migrate_upload_extensions.js",
