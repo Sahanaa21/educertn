@@ -39,4 +39,5 @@ router.get('/issues', authMiddleware_1.authenticate, (0, authMiddleware_1.requir
 router.put('/issues/:id', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, supportController_1.updateIssueReport);
 router.get('/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), settingsController_1.getPortalSettings);
 router.put('/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, settingsController_1.updatePortalSettings);
+router.post('/settings/admin-emails', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, settingsController_1.registerAdminEmail);
 exports.default = router;

@@ -14,6 +14,7 @@ type AdminSettingsState = {
     maintenanceMode: boolean;
     allowCompanySignup: boolean;
     smtpFromName: string;
+    adminAllowedEmails: string;
 };
 
 export default function AdminSettingsPage() {
@@ -23,7 +24,10 @@ export default function AdminSettingsPage() {
         maintenanceMode: false,
         allowCompanySignup: true,
         smtpFromName: 'Global Academy of Technology',
+        adminAllowedEmails: 'sahanaa2060@gmail.com',
     });
+    const [newAdminEmail, setNewAdminEmail] = useState('');
+    const [registeringAdmin, setRegisteringAdmin] = useState(false);
     const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [saving, setSaving] = useState(false);
 
@@ -44,6 +48,7 @@ export default function AdminSettingsPage() {
                         maintenanceMode: data.maintenanceMode,
                         allowCompanySignup: data.allowCompanySignup,
                         smtpFromName: data.smtpFromName,
+                        adminAllowedEmails: data.adminAllowedEmails || '',
                     });
                 }
             } catch {
@@ -93,6 +98,49 @@ export default function AdminSettingsPage() {
             toast.error('Network error while saving settings');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const registerAdmin = async () => {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) {
+            toast.error('Admin session not found. Please login again.');
+            return;
+        }
+
+        const email = newAdminEmail.trim().toLowerCase();
+        if (!email) {
+            toast.error('Enter an admin email to register.');
+            return;
+        }
+
+        setRegisteringAdmin(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/settings/admin-emails`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.message || 'Failed to register admin email');
+                return;
+            }
+
+            setSettings((prev) => ({
+                ...prev,
+                adminAllowedEmails: data.adminAllowedEmails || prev.adminAllowedEmails
+            }));
+            setNewAdminEmail('');
+            toast.success('Admin email registered successfully');
+        } catch {
+            toast.error('Network error while registering admin email');
+        } finally {
+            setRegisteringAdmin(false);
         }
     };
 
@@ -164,6 +212,43 @@ export default function AdminSettingsPage() {
                                 checked={settings.allowCompanySignup}
                                 onChange={(e) => setSettings((s) => ({ ...s, allowCompanySignup: e.target.checked }))}
                                 className="h-4 w-4"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Admin Registration</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="newAdminEmail">Register New Admin Email</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    id="newAdminEmail"
+                                    type="email"
+                                    placeholder="new-admin@example.com"
+                                    value={newAdminEmail}
+                                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                                />
+                                <Button onClick={registerAdmin} disabled={registeringAdmin}>
+                                    {registeringAdmin ? 'Registering...' : 'Register'}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                Registered admins can login using OTP and access the admin dashboard.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="adminAllowedEmails">Registered Admin Emails</Label>
+                            <textarea
+                                id="adminAllowedEmails"
+                                value={settings.adminAllowedEmails}
+                                readOnly
+                                rows={6}
+                                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm bg-slate-50"
                             />
                         </div>
                     </CardContent>
