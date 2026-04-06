@@ -296,7 +296,8 @@ export const requestUnifiedOtp = async (req: Request, res: Response): Promise<an
         }
         return res.status(500).json({ 
             message: 'Failed to send OTP. Please try again.',
-            debug: process.env.NODE_ENV === 'development' ? { error: errorMsg, stack: errorStack } : undefined
+            error: `${errorMsg}`,
+            type: error instanceof Error ? error.constructor.name : typeof error
         });
     }
 };
