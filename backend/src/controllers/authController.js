@@ -219,47 +219,30 @@ const requestUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functi
     if (!email) {
         return res.status(400).json({ message: 'Email is required' });
     }
-    console.log('[OTP] Email validation started for:', email);
     if (!EMAIL_REGEX.test(email)) {
-        console.log('[OTP] Email validation failed');
         return res.status(400).json({ message: 'Enter a valid email address' });
     }
-    console.log('[OTP] Email validation passed');
     if (!['login', 'signup'].includes(intent)) {
         return res.status(400).json({ message: 'Invalid intent' });
     }
     try {
-        console.log(`[OTP Request] Starting for email: ${email}, intent: ${intent}`);
         const existingUser = yield prisma_1.prisma.user.findUnique({ where: { email } });
-        console.log(`[OTP Request] User lookup completed: ${existingUser ? 'found' : 'not found'}`);
         const adminEmail = yield isAllowlistedAdminEmail(email);
-        console.log(`[OTP Request] Admin check completed: ${adminEmail ? 'admin' : 'not admin'}`);
         if (intent === 'signup' && existingUser) {
             return res.status(409).json({ message: 'This email is already registered. Please login instead.' });
         }
         if (intent === 'login' && !existingUser && !adminEmail) {
             return res.status(404).json({ message: 'Email is not registered. Please sign up first.' });
         }
-        console.log(`[OTP Request] Sending OTP email to ${email}`);
         yield sendOtpEmail(email, 'Your OTP for Global Academy of Technology');
-        console.log(`[OTP Request] OTP sent successfully to ${email}`);
         return res.json({ message: 'OTP sent successfully' });
     }
     catch (error) {
-        console.error('[OTP Request] Failed with error:', error);
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        const errorStack = error instanceof Error ? error.stack : 'No stack trace';
-        console.error('[OTP Request] Error details:', errorMsg);
-        console.error('[OTP Request] Stack:', errorStack);
+        console.error('Unified OTP request failed:', error);
         if (isInvalidRecipientError(error)) {
             return res.status(400).json({ message: 'Invalid email entered. Please check and try again.' });
         }
-        const errorResponse = {
-            message: 'Failed to send OTP. Please try again.',
-            errorMessage: String(errorMsg),
-            errorType: error instanceof Error ? error.constructor.name : typeof error
-        };
-        return res.status(500).json(errorResponse);
+        return res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
     }
 });
 exports.requestUnifiedOtp = requestUnifiedOtp;
