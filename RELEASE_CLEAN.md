@@ -31,4 +31,4 @@ Use this checklist before each demo or handover release.
 - Keep production-only vars in provider secrets, not repo files.
 - Confirm ownership transfer details (accounts/billing/access).
 - Keep rollback-ready copy of previous env values.
-- Follow `backend/HANDOVER_KEYS_CHECKLIST.md` for official key swap.
+- Follow `backend/HANDOVER_KEYS_CHECKLIST.md` for the final key swap.
