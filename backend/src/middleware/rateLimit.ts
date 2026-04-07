@@ -26,6 +26,8 @@ export const simpleRateLimit = ({ windowMs, max, keyPrefix }: RateLimitOptions) 
         }
 
         if (existing.count >= max) {
+            const retryAfterSeconds = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+            res.setHeader('Retry-After', String(retryAfterSeconds));
             return res.status(429).json({
                 message: 'Too many requests. Please try again shortly.'
             });

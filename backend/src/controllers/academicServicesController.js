@@ -18,7 +18,7 @@ const prisma_1 = require("../config/prisma");
 const zwitch_1 = require("../config/zwitch");
 const PHOTOCOPY_FEE = 500;
 const REEVALUATION_FEE = 3000;
-const DEFAULT_ADMIN_ALLOWLIST = 'sahanaa2060@gmail.com';
+const DEFAULT_ADMIN_ALLOWLIST = String(process.env.ADMIN_BOOTSTRAP_EMAILS || '').trim();
 const parseAdminAllowlist = (raw) => {
     return String(raw || '')
         .split(/[\n,;]/)

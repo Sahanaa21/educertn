@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
+import { escapeHtml } from '../utils/html';
 
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
 
@@ -45,16 +46,24 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                 const settings = await (prisma as any).portalSettings.findUnique({ where: { id: 1 } });
                 const notifyEmail = settings?.supportEmail || process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER;
                 if (notifyEmail) {
+                    const safeTitle = escapeHtml(issue.title);
+                    const safeCategory = escapeHtml(issue.category);
+                    const safeStatus = escapeHtml(issue.status);
+                    const safeReportedByName = escapeHtml(issue.reportedByName || 'Anonymous');
+                    const safeReportedByEmail = escapeHtml(issue.reportedByEmail || 'Email not provided');
+                    const safeRole = escapeHtml(issue.role || 'Unknown');
+                    const safePageUrl = escapeHtml(issue.pageUrl || 'N/A');
+                    const safeDescription = escapeHtml(issue.description);
                     const html = `
                         <h2>New Issue Report Submitted</h2>
-                        <p><strong>Title:</strong> ${issue.title}</p>
-                        <p><strong>Category:</strong> ${issue.category}</p>
-                        <p><strong>Status:</strong> ${issue.status}</p>
-                        <p><strong>Reported By:</strong> ${issue.reportedByName || 'Anonymous'} (${issue.reportedByEmail || 'Email not provided'})</p>
-                        <p><strong>Role:</strong> ${issue.role || 'Unknown'}</p>
-                        <p><strong>Page:</strong> ${issue.pageUrl || 'N/A'}</p>
+                        <p><strong>Title:</strong> ${safeTitle}</p>
+                        <p><strong>Category:</strong> ${safeCategory}</p>
+                        <p><strong>Status:</strong> ${safeStatus}</p>
+                        <p><strong>Reported By:</strong> ${safeReportedByName} (${safeReportedByEmail})</p>
+                        <p><strong>Role:</strong> ${safeRole}</p>
+                        <p><strong>Page:</strong> ${safePageUrl}</p>
                         <p><strong>Description:</strong></p>
-                        <p>${issue.description}</p>
+                        <p>${safeDescription}</p>
                     `;
                     await sendEmail(notifyEmail, '[GAT Portal] New Issue Report', html);
                 }

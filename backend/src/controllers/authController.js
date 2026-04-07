@@ -26,7 +26,10 @@ const BRANCH_OPTIONS = new Set([
     'CIVIL',
     'AERONAUTICAL',
 ]);
-const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
+const DEFAULT_ADMIN_ALLOWLIST = String(process.env.ADMIN_BOOTSTRAP_EMAILS || '')
+    .split(/[\n,;]/)
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
 const parseAdminAllowlist = (raw) => {
     return String(raw || '')
         .split(/[\n,;]/)

@@ -3,3 +3,13 @@ node_modules
 .env
 
 /generated/prisma
+
+# runtime and debug artifacts
+uploads/
+*.log
+dump.txt
+out.json
+test_out*.txt
+prisma_*.txt
+tsc_*.txt
+src_error.log

@@ -3,6 +3,18 @@ import { prisma } from '../config/prisma';
 import { generateToken, verifyToken } from '../utils/auth';
 import { sendEmail } from '../utils/email';
 
+const getAuthCookieOptions = () => ({
+    httpOnly: true,
+    secure: String(process.env.NODE_ENV || '').toLowerCase() === 'production',
+    sameSite: String(process.env.NODE_ENV || '').toLowerCase() === 'production' ? ('none' as const) : ('lax' as const),
+    path: '/',
+    maxAge: 24 * 60 * 60 * 1000
+});
+
+const setAuthCookie = (res: Response, token: string) => {
+    res.cookie('token', token, getAuthCookieOptions());
+};
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BRANCH_OPTIONS = new Set([
     'CSE',
@@ -17,7 +29,10 @@ const BRANCH_OPTIONS = new Set([
     'AERONAUTICAL',
 ]);
 
-const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
+const DEFAULT_ADMIN_ALLOWLIST = String(process.env.ADMIN_BOOTSTRAP_EMAILS || '')
+    .split(/[\n,;]/)
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
 
 const parseAdminAllowlist = (raw: string | null | undefined) => {
     return String(raw || '')
@@ -239,6 +254,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
 
         await prisma.oTP.deleteMany({ where: { email } });
 
+        setAuthCookie(res, token);
         res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     } catch (error) {
         console.error(error);
@@ -361,6 +377,7 @@ export const verifyUnifiedOtp = async (req: Request, res: Response): Promise<any
         }
 
         const token = generateToken({ id: user.id, role: user.role });
+        setAuthCookie(res, token);
         return res.json({
             token,
             user: { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -458,6 +475,8 @@ export const completeUnifiedProfile = async (req: Request, res: Response): Promi
 
         const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
         const token = generateToken({ id: user.id, role: updatedUser?.role || role });
+
+        setAuthCookie(res, token);
 
         return res.json({
             token,

@@ -1,8 +1,0 @@
-Loaded Prisma config from ..\..\..\sahan\educertn\backend\prisma.config.ts.
-
-Prisma schema loaded from ..\..\..\sahan\educertn\backend\prisma\schema.prisma.
-Datasource "db": PostgreSQL database "postgres", schema "public" at "db.iibndmxymqwnjsdhqjjp.supabase.co:5432"
-
-Error: P1001: Can't reach database server at `db.iibndmxymqwnjsdhqjjp.supabase.co:5432`
-
-Please make sure your database server is running at `db.iibndmxymqwnjsdhqjjp.supabase.co:5432`.

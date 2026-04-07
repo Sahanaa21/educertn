@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
+import { sendEmail } from '../utils/email';
+import { escapeHtml } from '../utils/html';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -108,44 +110,51 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
 
-        const order = await createZwitchOrder({
-            amountPaise: VERIFICATION_FEE * 100,
-            receipt: `ver-${requestId}-${Date.now()}`.slice(0, 40),
-            description: `Verification Request ${requestId}`,
-            notes: {
-                requestType: 'VERIFICATION',
-                requestId: created.id,
-                companyEmail: authEmail
-            }
-        });
-
-        if (!order.id) {
-            return res.status(502).json({ message: 'Payment provider did not return an order id' });
-        }
-
-        await prisma.verificationRequest.update({
-            where: { id: created.id },
-            data: { paymentOrderId: order.id }
-        });
-
-        res.status(201).json({
-            request: created,
-            amount: VERIFICATION_FEE,
-            zwitchOrder: {
-                id: order.id,
-                amount: order.amount,
-                currency: order.currency,
-                name: 'Global Academy of Technology',
+        try {
+            const order = await createZwitchOrder({
+                amountPaise: VERIFICATION_FEE * 100,
+                receipt: `ver-${requestId}-${Date.now()}`.slice(0, 40),
                 description: `Verification Request ${requestId}`,
-                checkoutUrl: order.checkoutUrl,
-                accessKey: order.accessKey,
-                fallbackAccessKey: order.fallbackAccessKey,
-                environment: order.environment
+                notes: {
+                    requestType: 'VERIFICATION',
+                    requestId: created.id,
+                    companyEmail: authEmail
+                }
+            });
+
+            if (!order.id) {
+                throw new Error('Payment provider did not return an order id');
             }
-        });
+
+            await prisma.verificationRequest.update({
+                where: { id: created.id },
+                data: { paymentOrderId: order.id }
+            });
+
+            res.status(201).json({
+                request: created,
+                amount: VERIFICATION_FEE,
+                zwitchOrder: {
+                    id: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: 'Global Academy of Technology',
+                    description: `Verification Request ${requestId}`,
+                    checkoutUrl: order.checkoutUrl,
+                    accessKey: order.accessKey,
+                    fallbackAccessKey: order.fallbackAccessKey,
+                    environment: order.environment
+                }
+            });
+        } catch (paymentError) {
+            await prisma.verificationRequest.delete({ where: { id: created.id } }).catch(() => undefined);
+            throw paymentError;
+        }
     } catch (error) {
         console.error('Error creating verification request:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        const status = message.includes('Payment provider') || message.includes('Payment gateway') ? 503 : 500;
+        res.status(status).json({ message: status === 503 ? 'Payment provider is temporarily unavailable. Please try again shortly.' : 'Internal server error' });
     }
 };
 
@@ -338,7 +347,35 @@ export const completeVerificationRequest = async (req: Request, res: Response): 
             data: { status: 'COMPLETED' }
         });
 
-        // TODO: Send completion email here
+        if (updated.companyEmail) {
+            const safeContactPerson = escapeHtml(updated.contactPerson || 'there');
+            const safeRequestId = escapeHtml(updated.requestId);
+            const emailHtml = `
+                <h2>Verification Request Completed</h2>
+                <p>Hello ${safeContactPerson},</p>
+                <p>Your verification request <strong>${safeRequestId}</strong> has been marked as complete.</p>
+                <p>You can now download the completed response from the portal if it is available.</p>
+                <p>Thank you,</p>
+                <p>Global Academy of Technology</p>
+            `;
+
+            const attachments = updated.completedFile
+                ? [{
+                    filename: `${updated.requestId}-completed-file${path.extname(updated.completedFile || '') || ''}`,
+                    path: updated.completedFile
+                }]
+                : undefined;
+
+            void sendEmail(
+                updated.companyEmail,
+                'Verification Completed – Global Academy of Technology',
+                emailHtml,
+                attachments
+            ).catch((emailErr) => {
+                console.error('Failed to send verification completion email:', emailErr);
+            });
+        }
+
         res.json(updated);
     } catch (error) {
         console.error('Error completing verification request:', error);

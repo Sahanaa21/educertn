@@ -16,6 +16,7 @@ exports.cancelStudentCertificateRequest = exports.downloadStudentIssuedCertifica
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
+const email_1 = require("../utils/email");
 const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const resolveStoredFilePath = (storedPath) => {
@@ -296,7 +297,19 @@ const completeCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 
             data: { status: 'COMPLETED' },
             include: { user: true }
         });
-        // TODO: Send completion email here
+        if (updated.user?.email) {
+            const emailHtml = `
+                <h2>Your Certificate Request is Complete</h2>
+                <p>Hello ${updated.studentName},</p>
+                <p>Your request for <strong>${String(updated.certificateType || '').replace('_', ' ')}</strong> (Request ID: ${updated.id}) has been marked as complete.</p>
+                <p>You can now download your issued certificate from the portal if it is available.</p>
+                <p>Thank you,</p>
+                <p>Global Academy of Technology</p>
+            `;
+            void (0, email_1.sendEmail)(updated.user.email, 'Certificate Request Completed', emailHtml).catch((emailErr) => {
+                console.error('Failed to send certificate completion email:', emailErr);
+            });
+        }
         res.json(updated);
     }
     catch (error) {

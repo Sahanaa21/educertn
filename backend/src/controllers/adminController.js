@@ -132,15 +132,6 @@ const updateCertificateStatus = (req, res) => __awaiter(void 0, void 0, void 0, 
         const request = yield prisma_1.prisma.certificateRequest.findUnique({ where: { id }, include: { user: true } });
         if (!request)
             return res.status(404).json({ message: 'Not found' });
-        require('fs').appendFileSync('dump.txt', JSON.stringify({
-            stage: 'start',
-            id,
-            reqBody: req.body,
-            reqFile: req.file,
-            requestCopyType: request.copyType,
-            requestEmailed: request.softCopyEmailed,
-            requestPosted: request.physicalCopyPosted
-        }) + '\n');
         let updateData = {};
         let refundMarkedInitiated = false;
         if (action === 'MARK_REFUND_COMPLETED') {

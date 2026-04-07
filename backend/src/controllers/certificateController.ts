@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
+import { sendEmail } from '../utils/email';
+import { escapeHtml } from '../utils/html';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -137,43 +139,50 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
 
-        const order = await createZwitchOrder({
-            amountPaise: Math.round(amount * 100),
-            receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
-            description: `Certificate Request ${id}`,
-            notes: {
-                requestType: 'CERTIFICATE',
-                requestId: id,
-                userId: String(userId)
-            }
-        });
-
-        if (!order.id) {
-            return res.status(502).json({ message: 'Payment provider did not return an order id' });
-        }
-
-        await prisma.certificateRequest.update({
-            where: { id: certificateRequest.id },
-            data: { paymentOrderId: order.id }
-        });
-
-        res.status(201).json({
-            request: certificateRequest,
-            zwitchOrder: {
-                id: order.id,
-                amount: order.amount,
-                currency: order.currency,
-                name: 'Global Academy of Technology',
+        try {
+            const order = await createZwitchOrder({
+                amountPaise: Math.round(amount * 100),
+                receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
                 description: `Certificate Request ${id}`,
-                checkoutUrl: order.checkoutUrl,
-                accessKey: order.accessKey,
-                fallbackAccessKey: order.fallbackAccessKey,
-                environment: order.environment
+                notes: {
+                    requestType: 'CERTIFICATE',
+                    requestId: id,
+                    userId: String(userId)
+                }
+            });
+
+            if (!order.id) {
+                throw new Error('Payment provider did not return an order id');
             }
-        });
+
+            await prisma.certificateRequest.update({
+                where: { id: certificateRequest.id },
+                data: { paymentOrderId: order.id }
+            });
+
+            res.status(201).json({
+                request: certificateRequest,
+                zwitchOrder: {
+                    id: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: 'Global Academy of Technology',
+                    description: `Certificate Request ${id}`,
+                    checkoutUrl: order.checkoutUrl,
+                    accessKey: order.accessKey,
+                    fallbackAccessKey: order.fallbackAccessKey,
+                    environment: order.environment
+                }
+            });
+        } catch (paymentError) {
+            await prisma.certificateRequest.delete({ where: { id: certificateRequest.id } }).catch(() => undefined);
+            throw paymentError;
+        }
     } catch (error: any) {
         console.error('Error creating certificate request:', error);
-        res.status(500).json({ message: error.message || 'Internal server error', details: error });
+        const message = String(error?.message || 'Internal server error');
+        const status = message.includes('Payment provider') || message.includes('Payment gateway') ? 503 : 500;
+        res.status(status).json({ message, details: status === 500 ? error : undefined });
     }
 };
 
@@ -328,7 +337,24 @@ export const completeCertificateRequest = async (req: Request, res: Response): P
             include: { user: true }
         });
 
-        // TODO: Send completion email here
+        if (updated.user?.email) {
+            const safeStudentName = escapeHtml(updated.studentName);
+            const safeCertificateType = escapeHtml(String(updated.certificateType || '').replace('_', ' '));
+            const safeRequestId = escapeHtml(updated.id);
+            const emailHtml = `
+                <h2>Your Certificate Request is Complete</h2>
+                <p>Hello ${safeStudentName},</p>
+                <p>Your request for <strong>${safeCertificateType}</strong> (Request ID: ${safeRequestId}) has been marked as complete.</p>
+                <p>You can now download your issued certificate from the portal if it is available.</p>
+                <p>Thank you,</p>
+                <p>Global Academy of Technology</p>
+            `;
+
+            void sendEmail(updated.user.email, 'Certificate Request Completed', emailHtml).catch((emailErr) => {
+                console.error('Failed to send certificate completion email:', emailErr);
+            });
+        }
+
         res.json(updated);
     } catch (error) {
         console.error('Error completing request:', error);

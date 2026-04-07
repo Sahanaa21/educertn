@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
+import { escapeHtml } from '../utils/html';
 
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
     if (!storedPath) return null;
@@ -127,16 +128,6 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
         const request = await prisma.certificateRequest.findUnique({ where: { id }, include: { user: true } }) as any;
         if (!request) return res.status(404).json({ message: 'Not found' });
 
-        require('fs').appendFileSync('dump.txt', JSON.stringify({
-            stage: 'start',
-            id,
-            reqBody: req.body,
-            reqFile: req.file,
-            requestCopyType: request.copyType,
-            requestEmailed: request.softCopyEmailed,
-            requestPosted: request.physicalCopyPosted
-        }) + '\n');
-
         let updateData: any = {};
         let refundMarkedInitiated = false;
 
@@ -197,11 +188,15 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
         if (updated.user?.email) {
             if (status === 'REJECTED' && request.status !== 'REJECTED') {
                 const safeReason = String(rejectionReason || updated.rejectionReason || '').trim();
+                const safeStudentName = escapeHtml(updated.studentName);
+                const safeCertificateType = escapeHtml(updated.certificateType.replace('_', ' '));
+                const safeRequestId = escapeHtml(updated.id);
+                const safeReasonHtml = escapeHtml(safeReason || 'No reason was provided.');
                 const emailHtml = `
                     <h2>Your Certificate Request Was Rejected</h2>
-                    <p>Hello ${updated.studentName},</p>
-                    <p>Your request for <strong>${updated.certificateType.replace('_', ' ')}</strong> (Request ID: ${updated.id}) was rejected by the admin team.</p>
-                    <p><strong>Reason:</strong> ${safeReason || 'No reason was provided.'}</p>
+                    <p>Hello ${safeStudentName},</p>
+                    <p>Your request for <strong>${safeCertificateType}</strong> (Request ID: ${safeRequestId}) was rejected by the admin team.</p>
+                    <p><strong>Reason:</strong> ${safeReasonHtml}</p>
                     ${refundMarkedInitiated ? '<p><strong>Refund:</strong> Refund has been initiated. It may take 5-7 working days. You will be updated once completed.</p>' : ''}
                     <p>Please review the reason and submit a corrected request if needed.</p>
                     <p>Thank you,</p>
@@ -214,10 +209,13 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
             }
 
             if ((action === 'UPLOAD_SOFT_COPY' || req.file) && !request.softCopyEmailed) {
+                const safeStudentName = escapeHtml(updated.studentName);
+                const safeCertificateType = escapeHtml(updated.certificateType.replace('_', ' '));
+                const safeRequestId = escapeHtml(updated.id);
                 const emailHtml = `
                     <h2>Your Certificate Soft Copy is Ready</h2>
-                    <p>Hello ${updated.studentName},</p>
-                    <p>Your request for a <strong>${updated.certificateType.replace('_', ' ')}</strong> (Request ID: ${updated.id}) has been processed.</p>
+                    <p>Hello ${safeStudentName},</p>
+                    <p>Your request for a <strong>${safeCertificateType}</strong> (Request ID: ${safeRequestId}) has been processed.</p>
                     <p>Please find your soft copy document attached to this email.</p>
                     ${updated.copyType === 'BOTH' && !updated.physicalCopyPosted ? '<p>Your physical hard copies are still being processed and will be dispatched shortly.</p>' : ''}
                     <p>Thank you,</p>
@@ -232,10 +230,13 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
             }
 
             if (action === 'MARK_POSTED' && !request.physicalCopyPosted) {
+                const safeStudentName = escapeHtml(updated.studentName);
+                const safeCertificateType = escapeHtml(updated.certificateType.replace('_', ' '));
+                const safeRequestId = escapeHtml(updated.id);
                 const emailHtml = `
                     <h2>Your Certificate Hard Copy Dispatched</h2>
-                    <p>Hello ${updated.studentName},</p>
-                    <p>Your physical hard copies for <strong>${updated.certificateType.replace('_', ' ')}</strong> (Request ID: ${updated.id}) have been dispatched to your provided address.</p>
+                    <p>Hello ${safeStudentName},</p>
+                    <p>Your physical hard copies for <strong>${safeCertificateType}</strong> (Request ID: ${safeRequestId}) have been dispatched to your provided address.</p>
                     ${updated.copyType === 'BOTH' && !updated.softCopyEmailed ? '<p>Your soft copy will be emailed to you shortly.</p>' : ''}
                     <p>Thank you,</p>
                     <p>Global Academy of Technology</p>
@@ -245,10 +246,13 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 
             // Generic completion fallback if status manually set to COMPLETED without actions
             if (status === 'COMPLETED' && !action && request.status !== 'COMPLETED') {
+                const safeStudentName = escapeHtml(updated.studentName);
+                const safeCertificateType = escapeHtml(updated.certificateType.replace('_', ' '));
+                const safeRequestId = escapeHtml(updated.id);
                 const emailHtml = `
                     <h2>Your Certificate Request is Complete</h2>
-                    <p>Hello ${updated.studentName},</p>
-                    <p>Your request for a <strong>${updated.certificateType.replace('_', ' ')}</strong> (Request ID: ${updated.id}) has been manually marked as complete.</p>
+                    <p>Hello ${safeStudentName},</p>
+                    <p>Your request for a <strong>${safeCertificateType}</strong> (Request ID: ${safeRequestId}) has been manually marked as complete.</p>
                     <p>Thank you,</p>
                     <p>Global Academy of Technology</p>
                 `;
@@ -326,13 +330,17 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
         }
 
         if (status === 'COMPLETED' && updated.companyEmail) {
+            const safeContactPerson = escapeHtml(updated.contactPerson);
+            const safeStudentName = escapeHtml(updated.studentName);
+            const safeUsn = escapeHtml(updated.usn);
+            const safeRequestId = escapeHtml(updated.requestId);
             const emailHtml = `
                 <h2>Verification Completed</h2>
-                <p>Hello ${updated.contactPerson},</p>
+                <p>Hello ${safeContactPerson},</p>
                 <p>Your verification request has been completed.</p>
-                <p><strong>Student Name:</strong> ${updated.studentName}</p>
-                <p><strong>USN:</strong> ${updated.usn}</p>
-                <p><strong>Request ID:</strong> ${updated.requestId}</p>
+                <p><strong>Student Name:</strong> ${safeStudentName}</p>
+                <p><strong>USN:</strong> ${safeUsn}</p>
+                <p><strong>Request ID:</strong> ${safeRequestId}</p>
                 <p>Thank you,</p>
                 <p>Global Academy of Technology</p>
             `;
@@ -354,14 +362,19 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
 
         if (status === 'REJECTED' && existing.status !== 'REJECTED' && updated.companyEmail) {
             const safeReason = String(rejectionReason || updated.rejectionReason || '').trim();
+            const safeContactPerson = escapeHtml(updated.contactPerson);
+            const safeStudentName = escapeHtml(updated.studentName);
+            const safeUsn = escapeHtml(updated.usn);
+            const safeRequestId = escapeHtml(updated.requestId);
+            const safeReasonHtml = escapeHtml(safeReason || 'No reason was provided.');
             const emailHtml = `
                 <h2>Verification Request Rejected</h2>
-                <p>Hello ${updated.contactPerson},</p>
+                <p>Hello ${safeContactPerson},</p>
                 <p>Your verification request was rejected by the admin team.</p>
-                <p><strong>Student Name:</strong> ${updated.studentName}</p>
-                <p><strong>USN:</strong> ${updated.usn}</p>
-                <p><strong>Request ID:</strong> ${updated.requestId}</p>
-                <p><strong>Reason:</strong> ${safeReason || 'No reason was provided.'}</p>
+                <p><strong>Student Name:</strong> ${safeStudentName}</p>
+                <p><strong>USN:</strong> ${safeUsn}</p>
+                <p><strong>Request ID:</strong> ${safeRequestId}</p>
+                <p><strong>Reason:</strong> ${safeReasonHtml}</p>
                 ${refundMarkedInitiated ? '<p><strong>Refund:</strong> Refund has been initiated. It may take 5-7 working days. You will be updated once completed.</p>' : ''}
                 <p>Please correct the details and resubmit if required.</p>
                 <p>Thank you,</p>

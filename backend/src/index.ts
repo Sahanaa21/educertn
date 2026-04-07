@@ -18,6 +18,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 const defaultAllowedOrigins = [
     'http://localhost:3000',
@@ -59,7 +60,8 @@ app.use((_req, res, next) => {
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
 });
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 

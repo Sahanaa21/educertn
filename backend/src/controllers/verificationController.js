@@ -16,6 +16,7 @@ exports.cancelCompanyVerificationRequest = exports.completeVerificationRequest =
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
+const email_1 = require("../utils/email");
 const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const VERIFICATION_FEE = 5000;
@@ -305,7 +306,25 @@ const completeVerificationRequest = (req, res) => __awaiter(void 0, void 0, void
             where: { id },
             data: { status: 'COMPLETED' }
         });
-        // TODO: Send completion email here
+        if (updated.companyEmail) {
+            const emailHtml = `
+                <h2>Verification Request Completed</h2>
+                <p>Hello ${updated.contactPerson || 'there'},</p>
+                <p>Your verification request <strong>${updated.requestId}</strong> has been marked as complete.</p>
+                <p>You can now download the completed response from the portal if it is available.</p>
+                <p>Thank you,</p>
+                <p>Global Academy of Technology</p>
+            `;
+            const attachments = updated.completedFile
+                ? [{
+                        filename: `${updated.requestId}-completed-file${path_1.default.extname(updated.completedFile || '') || ''}`,
+                        path: updated.completedFile
+                    }]
+                : undefined;
+            void (0, email_1.sendEmail)(updated.companyEmail, 'Verification Completed – Global Academy of Technology', emailHtml, attachments).catch((emailErr) => {
+                console.error('Failed to send verification completion email:', emailErr);
+            });
+        }
         res.json(updated);
     }
     catch (error) {

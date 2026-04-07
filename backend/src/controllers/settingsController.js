@@ -13,7 +13,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeAdminEmail = exports.registerAdminEmail = exports.updatePortalSettings = exports.getPortalSettings = void 0;
 const prisma_1 = require("../config/prisma");
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DEFAULT_ADMIN_ALLOWLIST = ['sahanaa2060@gmail.com'];
+const DEFAULT_ADMIN_ALLOWLIST = String(process.env.ADMIN_BOOTSTRAP_EMAILS || '')
+    .split(/[\n,;]/)
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => EMAIL_REGEX.test(item));
 const parseAdminAllowlist = (raw) => {
     const parsed = String(raw || '')
         .split(/[\n,;]/)

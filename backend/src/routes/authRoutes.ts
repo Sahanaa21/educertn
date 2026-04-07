@@ -12,7 +12,7 @@ import { simpleRateLimit } from '../middleware/rateLimit';
 import { authenticate } from '../middleware/authMiddleware';
 
 const router = Router();
-const authLimiter = simpleRateLimit({ windowMs: 60 * 1000, max: 12, keyPrefix: 'auth' });
+const authLimiter = simpleRateLimit({ windowMs: 60 * 1000, max: 8, keyPrefix: 'auth' });
 
 // Student routes
 router.post('/login', authLimiter, studentLogin);
