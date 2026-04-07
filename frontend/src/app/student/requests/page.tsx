@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
 import { openZwitchCheckout } from '@/lib/zwitch';
+import { verifyStudentCertificatePaymentWithRetry } from '@/lib/payment';
 
 export default function StudentRequests() {
     const router = useRouter();
@@ -125,33 +126,28 @@ export default function StudentRequests() {
                 return;
             }
 
-            await openZwitchCheckout({
+            void openZwitchCheckout({
                 paymentToken: order.id,
                 accessKey: order.accessKey,
                 fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
+            }).catch((checkoutErr: any) => {
+                toast.error(checkoutErr?.message || 'Unable to open payment checkout');
             });
 
-            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
-            if (!shouldVerify) {
-                toast.message('Payment verification skipped for now. You can retry later.');
-                return;
-            }
+            toast.message('Payment window opened. Verifying payment automatically...');
 
-            const verifyRes = await fetch(`${API_BASE}/api/student/certificates/${req.id}/verify-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    zwitchOrderId: order.id
-                })
+            const verification = await verifyStudentCertificatePaymentWithRetry({
+                requestId: req.id,
+                zwitchOrderId: order.id,
+                token,
+                attempts: 6,
+                intervalMs: 4000,
             });
 
-            const verifyData = await verifyRes.json().catch(() => null);
-            if (!verifyRes.ok) {
-                toast.error(verifyData?.message || 'Payment verification failed');
+            if (!verification.verified) {
+                toast.error(verification.message || 'Payment is still processing. Refresh My Requests shortly.');
+                await fetchRequests();
                 return;
             }
 

@@ -12,6 +12,7 @@ import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { openZwitchCheckout } from '@/lib/zwitch';
+import { verifyStudentCertificatePaymentWithRetry } from '@/lib/payment';
 import Link from 'next/link';
 
 const CERTIFICATE_OPTIONS = [
@@ -194,41 +195,36 @@ export default function ApplyCertificate() {
                 }
 
                 try {
-                    await openZwitchCheckout({
+                    void openZwitchCheckout({
                         paymentToken: order.id,
                         accessKey: order.accessKey,
                         fallbackAccessKey: order.fallbackAccessKey,
                         environment: order.environment
+                    }).catch((checkoutErr: any) => {
+                        toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     });
                 } catch (checkoutErr: any) {
                     toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     return;
                 }
 
-                const shouldVerify = window.confirm('After completing payment in the opened page, click OK to confirm and verify your payment.');
-                if (!shouldVerify) {
-                    toast.message('Payment verification skipped for now. You can retry from your requests page.');
-                    return;
-                }
+                toast.message('Payment window opened. Verifying payment automatically...');
 
-                const verifyRes = await apiFetch(`/api/student/certificates/${createdRequest.id}/verify-payment`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        zwitchOrderId: order.id
-                    })
+                const verification = await verifyStudentCertificatePaymentWithRetry({
+                    requestId: createdRequest.id,
+                    zwitchOrderId: order.id,
+                    token,
+                    attempts: 6,
+                    intervalMs: 4000,
                 });
 
-                if (!verifyRes.ok) {
-                    const verifyData = await verifyRes.json().catch(() => null);
-                    toast.error(verifyData?.message || 'Payment verification failed. Contact support.');
+                if (!verification.verified) {
+                    toast.error(verification.message || 'Payment is still processing. Check My Requests in a minute.');
+                    router.push('/student/requests');
                     return;
                 }
 
-                toast.success('Payment successful. Request submitted.');
+                toast.success('Payment successful. Redirecting to your requests.');
                 router.push('/student/requests');
             } else {
                 if (res.status === 401 || res.status === 403) {
