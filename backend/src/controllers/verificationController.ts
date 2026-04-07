@@ -138,7 +138,8 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
                 currency: order.currency,
                 name: 'Global Academy of Technology',
                 description: `Verification Request ${requestId}`,
-                checkoutUrl: order.checkoutUrl
+                checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey
             }
         });
     } catch (error) {
@@ -265,7 +266,8 @@ export const createVerificationPaymentOrder = async (req: AuthRequest, res: Resp
                 currency: order.currency,
                 name: 'Global Academy of Technology',
                 description: `Verification Request ${request.requestId}`,
-                checkoutUrl: order.checkoutUrl
+                checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey
             }
         });
     } catch (error) {

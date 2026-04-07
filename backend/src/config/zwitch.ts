@@ -11,8 +11,8 @@ type PaymentOrderOptions = {
 };
 
 const apiBaseUrl = (process.env.ZWITCH_API_BASE_URL || 'https://api.zwitch.io').replace(/\/$/, '');
-const createOrderPath = process.env.ZWITCH_CREATE_ORDER_PATH || '/v1/payments/orders';
-const fetchOrderPathTemplate = process.env.ZWITCH_FETCH_ORDER_PATH_TEMPLATE || '/v1/payments/orders/{orderId}';
+const createOrderPath = process.env.ZWITCH_CREATE_ORDER_PATH || '/v1/pg/sandbox/payment_token';
+const fetchOrderPathTemplate = process.env.ZWITCH_FETCH_ORDER_PATH_TEMPLATE || '/v1/pg/sandbox/payment_token/{orderId}/payment';
 
 const apiKey = process.env.ZWITCH_API_KEY || '';
 const apiSecret = process.env.ZWITCH_API_SECRET || '';
@@ -46,7 +46,9 @@ const normalizeCheckoutUrl = (order: any): string => {
 };
 
 const normalizeOrderAmount = (order: any): number => {
-    return Number(order?.amount || order?.amount_in_paise || order?.data?.amount || 0);
+    const value = Number(order?.amount || order?.amount_in_paise || order?.data?.amount || 0);
+    // PG token APIs return amount in rupees as a decimal string; normalize to paise for consistency.
+    return Number.isFinite(value) ? Math.round(value * 100) : 0;
 };
 
 const normalizeOrderCurrency = (order: any): string => {
@@ -57,8 +59,7 @@ const getAuthHeader = (): string => {
     if (explicitAuthHeader) return explicitAuthHeader;
 
     if (apiKey && apiSecret) {
-        const token = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-        return `Basic ${token}`;
+        return `Bearer ${apiKey}:${apiSecret}`;
     }
 
     return '';
@@ -108,17 +109,19 @@ const requestZwitch = async (path: string, init: RequestInit): Promise<any> => {
 export const hasZwitchConfig = (): boolean => Boolean(getAuthHeader());
 
 export const createZwitchOrder = async ({ amountPaise, receipt, notes, description, customer }: PaymentOrderOptions) => {
+    const fallbackContact = String(process.env.ZWITCH_DEFAULT_CONTACT || '9999999999');
+    const fallbackEmail = String(process.env.ZWITCH_DEFAULT_EMAIL || 'noreply@example.com');
+
     const payload: Record<string, unknown> = {
-        amount: Math.round(amountPaise),
+        amount: Number((amountPaise / 100).toFixed(2)),
         currency: 'INR',
-        receipt,
-        notes: notes || {}
+        mtx: receipt,
+        udf: notes || {}
     };
 
     if (description) payload.description = description;
-    if (customer && (customer.name || customer.email || customer.contact)) {
-        payload.customer = customer;
-    }
+    payload.contact_number = String(customer?.contact || fallbackContact).replace(/\D/g, '').slice(-10);
+    payload.email_id = String(customer?.email || fallbackEmail);
 
     const response = await requestZwitch(createOrderPath, {
         method: 'POST',
@@ -131,6 +134,7 @@ export const createZwitchOrder = async ({ amountPaise, receipt, notes, descripti
         amount: normalizeOrderAmount(order),
         currency: normalizeOrderCurrency(order),
         checkoutUrl: normalizeCheckoutUrl(order),
+        accessKey: apiKey,
         raw: order
     };
 };

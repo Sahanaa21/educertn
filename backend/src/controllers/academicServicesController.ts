@@ -203,6 +203,7 @@ export const createAcademicServiceRequest = async (req: Request, res: Response):
                 name: 'Global Academy of Technology',
                 description: `${serviceType} Request ${requestId}`,
                 checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey,
             }
         });
     } catch (error) {
@@ -324,7 +325,8 @@ export const createAcademicServicePaymentOrder = async (req: Request, res: Respo
                 currency: order.currency,
                 name: 'Global Academy of Technology',
                 description: `${request.serviceType} Request ${request.requestId}`,
-                checkoutUrl: order.checkoutUrl
+                checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey
             }
         });
     } catch (error) {
