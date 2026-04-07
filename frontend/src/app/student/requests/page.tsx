@@ -126,23 +126,21 @@ export default function StudentRequests() {
                 return;
             }
 
-            void openZwitchCheckout({
+            await openZwitchCheckout({
                 paymentToken: order.id,
                 accessKey: order.accessKey,
                 fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
-            }).catch((checkoutErr: any) => {
-                toast.error(checkoutErr?.message || 'Unable to open payment checkout');
             });
 
-            toast.message('Payment window opened. Verifying payment automatically...');
+            toast.message('Payment completed. Verifying automatically...');
 
             const verification = await verifyStudentCertificatePaymentWithRetry({
                 requestId: req.id,
                 zwitchOrderId: order.id,
                 token,
-                attempts: 6,
-                intervalMs: 4000,
+                attempts: 12,
+                intervalMs: 3000,
             });
 
             if (!verification.verified) {

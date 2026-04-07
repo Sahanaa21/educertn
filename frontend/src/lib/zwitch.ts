@@ -72,17 +72,12 @@ export const openZwitchCheckout = async ({ paymentToken, accessKey, fallbackAcce
                         resolve();
                         return;
                     }
-                    if (status === 'created' || status === 'pending') {
-                        clearTimeout(timeoutId);
-                        resolve();
-                        return;
-                    }
                     if (status === 'failed' || status === 'cancelled') {
                         clearTimeout(timeoutId);
                         reject(new Error(`Payment ${status}`));
                         return;
                     }
-                    // Ignore transitional statuses like created/pending.
+                    // Ignore transitional statuses like created/pending and keep waiting for capture.
                 },
                 (err: any) => {
                     clearTimeout(timeoutId);
