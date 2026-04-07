@@ -194,7 +194,12 @@ export default function ApplyCertificate() {
                 }
 
                 try {
-                    await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey, environment: order.environment });
+                    await openZwitchCheckout({
+                        paymentToken: order.id,
+                        accessKey: order.accessKey,
+                        fallbackAccessKey: order.fallbackAccessKey,
+                        environment: order.environment
+                    });
                 } catch (checkoutErr: any) {
                     toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     return;

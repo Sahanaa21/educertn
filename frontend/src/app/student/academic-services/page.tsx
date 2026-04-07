@@ -192,7 +192,12 @@ export default function StudentAcademicServicesPage() {
                 return;
             }
 
-            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey, environment: order.environment });
+            await openZwitchCheckout({
+                paymentToken: order.id,
+                accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
+                environment: order.environment
+            });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {
@@ -252,7 +257,12 @@ export default function StudentAcademicServicesPage() {
                 return;
             }
 
-            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey, environment: order.environment });
+            await openZwitchCheckout({
+                paymentToken: order.id,
+                accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
+                environment: order.environment
+            });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {

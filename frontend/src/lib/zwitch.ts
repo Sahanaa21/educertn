@@ -1,6 +1,7 @@
 type ZwitchCheckoutInput = {
     paymentToken: string;
     accessKey: string;
+    fallbackAccessKey?: string;
     environment?: 'sandbox' | 'live';
 };
 
@@ -24,7 +25,7 @@ const loadLayerScript = async (src: string): Promise<void> => {
     });
 };
 
-export const openZwitchCheckout = async ({ paymentToken, accessKey, environment }: ZwitchCheckoutInput): Promise<void> => {
+export const openZwitchCheckout = async ({ paymentToken, accessKey, fallbackAccessKey, environment }: ZwitchCheckoutInput): Promise<void> => {
     if (typeof window === 'undefined') {
         throw new Error('Checkout is available only in browser');
     }
@@ -38,13 +39,6 @@ export const openZwitchCheckout = async ({ paymentToken, accessKey, environment 
     const isSandboxByToken = token.startsWith('sb_pt_');
     const isSandbox = environment ? environment === 'sandbox' : isSandboxByToken;
 
-    if (isSandbox && !key.startsWith('ak_test_')) {
-        throw new Error('Invalid sandbox checkout key. Set ZWITCH_LAYER_ACCESS_KEY to an ak_test_* key from Developers -> API Keys.');
-    }
-    if (!isSandbox && !key.startsWith('ak_live_')) {
-        throw new Error('Invalid live checkout key. Set ZWITCH_LAYER_ACCESS_KEY to an ak_live_* key from Developers -> API Keys.');
-    }
-
     const layerScript = isSandbox
         ? 'https://sandbox-payments.open.money/layer'
         : 'https://payments.open.money/layer';
@@ -56,25 +50,32 @@ export const openZwitchCheckout = async ({ paymentToken, accessKey, environment 
         throw new Error('Zwitch checkout is unavailable right now');
     }
 
-    await new Promise<void>((resolve, reject) => {
-        Layer.checkout(
-            {
-                token,
-                accesskey: key,
-                theme: {
-                    color: '#1f2937',
-                    error_color: '#b91c1c'
-                }
-            },
-            (response: any) => {
-                const status = String(response?.status || '').toLowerCase();
-                if (['captured', 'pending', 'created', 'failed', 'cancelled'].includes(status)) {
-                    resolve();
-                    return;
-                }
-                resolve();
-            },
-            (err: any) => reject(new Error(err?.message || 'Unable to open payment checkout'))
-        );
-    });
+    const triggerCheckout = async (candidateKey: string): Promise<void> => {
+        await new Promise<void>((resolve, reject) => {
+            Layer.checkout(
+                {
+                    token,
+                    accesskey: candidateKey,
+                    theme: {
+                        color: '#1f2937',
+                        error_color: '#b91c1c'
+                    }
+                },
+                () => resolve(),
+                (err: any) => reject(new Error(err?.message || 'Unable to open payment checkout'))
+            );
+        });
+    };
+
+    try {
+        await triggerCheckout(key);
+    } catch (primaryErr: any) {
+        const errMessage = String(primaryErr?.message || '').toLowerCase();
+        const fallbackKey = String(fallbackAccessKey || '').trim();
+        if (fallbackKey && errMessage.includes('accesskey')) {
+            await triggerCheckout(fallbackKey);
+            return;
+        }
+        throw primaryErr;
+    }
 };
