@@ -195,7 +195,7 @@ export default function ApplyCertificate() {
                 }
 
                 try {
-                    await openZwitchCheckout({
+                    void openZwitchCheckout({
                         paymentToken: order.id,
                         accessKey: order.accessKey,
                         fallbackAccessKey: order.fallbackAccessKey,
@@ -206,7 +206,7 @@ export default function ApplyCertificate() {
                     return;
                 }
 
-                toast.message('Payment completed. Verifying automatically...');
+                toast.message('Payment window opened. Verifying automatically...');
 
                 const verification = await verifyStudentCertificatePaymentWithRetry({
                     requestId: createdRequest.id,

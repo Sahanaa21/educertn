@@ -126,7 +126,7 @@ export default function StudentRequests() {
                 return;
             }
 
-            await openZwitchCheckout({
+            void openZwitchCheckout({
                 paymentToken: order.id,
                 accessKey: order.accessKey,
                 fallbackAccessKey: order.fallbackAccessKey,
