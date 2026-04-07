@@ -52,6 +52,10 @@ export const openZwitchCheckout = async ({ paymentToken, accessKey, fallbackAcce
 
     const triggerCheckout = async (candidateKey: string): Promise<void> => {
         await new Promise<void>((resolve, reject) => {
+            const timeoutId = window.setTimeout(() => {
+                resolve();
+            }, 120000);
+
             Layer.checkout(
                 {
                     token,
@@ -64,16 +68,26 @@ export const openZwitchCheckout = async ({ paymentToken, accessKey, fallbackAcce
                 (response: any) => {
                     const status = String(response?.status || '').toLowerCase();
                     if (status === 'captured') {
+                        clearTimeout(timeoutId);
+                        resolve();
+                        return;
+                    }
+                    if (status === 'created' || status === 'pending') {
+                        clearTimeout(timeoutId);
                         resolve();
                         return;
                     }
                     if (status === 'failed' || status === 'cancelled') {
+                        clearTimeout(timeoutId);
                         reject(new Error(`Payment ${status}`));
                         return;
                     }
                     // Ignore transitional statuses like created/pending.
                 },
-                (err: any) => reject(new Error(err?.message || 'Unable to open payment checkout'))
+                (err: any) => {
+                    clearTimeout(timeoutId);
+                    reject(new Error(err?.message || 'Unable to open payment checkout'));
+                }
             );
         });
     };
