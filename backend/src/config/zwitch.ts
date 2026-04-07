@@ -139,6 +139,7 @@ export const createZwitchOrder = async ({ amountPaise, receipt, notes, descripti
         currency: normalizeOrderCurrency(order),
         checkoutUrl: normalizeCheckoutUrl(order),
         accessKey: checkoutAccessKey || apiKey,
+        fallbackAccessKey: checkoutAccessKey && checkoutAccessKey !== apiKey ? apiKey : '',
         environment: checkoutEnvironment,
         raw: order
     };

@@ -168,6 +168,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
                 description: `Certificate Request ${id}`,
                 checkoutUrl: order.checkoutUrl,
                 accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
             }
         });
@@ -295,6 +296,7 @@ export const createCertificatePaymentOrder = async (req: Request, res: Response)
                 description: `Certificate Request ${id}`,
                 checkoutUrl: order.checkoutUrl,
                 accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
             }
         });

@@ -140,6 +140,7 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
                 description: `Verification Request ${requestId}`,
                 checkoutUrl: order.checkoutUrl,
                 accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
             }
         });
@@ -269,6 +270,7 @@ export const createVerificationPaymentOrder = async (req: AuthRequest, res: Resp
                 description: `Verification Request ${request.requestId}`,
                 checkoutUrl: order.checkoutUrl,
                 accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
             }
         });

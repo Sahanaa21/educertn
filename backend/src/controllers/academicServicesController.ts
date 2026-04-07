@@ -204,6 +204,7 @@ export const createAcademicServiceRequest = async (req: Request, res: Response):
                 description: `${serviceType} Request ${requestId}`,
                 checkoutUrl: order.checkoutUrl,
                 accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment,
             }
         });
@@ -328,6 +329,7 @@ export const createAcademicServicePaymentOrder = async (req: Request, res: Respo
                 description: `${request.serviceType} Request ${request.requestId}`,
                 checkoutUrl: order.checkoutUrl,
                 accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
             }
         });
