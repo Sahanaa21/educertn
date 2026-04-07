@@ -13,6 +13,7 @@ import { Loader2, UploadCloud, Building2, CreditCard, FileText, CheckCircle, Clo
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
 import { openZwitchCheckout } from '@/lib/zwitch';
+import { verifyCompanyVerificationPaymentWithRetry } from '@/lib/payment';
 
 type VerificationRequest = {
     id: string;
@@ -88,6 +89,10 @@ export default function CompanyVerification() {
     };
 
     useEffect(() => {
+        const loadingGuard = window.setTimeout(() => {
+            setMainLoading(false);
+        }, 15000);
+
         if (typeof window !== 'undefined' && window.innerWidth >= 768) {
             setIsSidebarOpen(true);
         }
@@ -126,6 +131,8 @@ export default function CompanyVerification() {
             setMainLoading(false);
             router.replace('/auth');
         }
+
+        return () => window.clearTimeout(loadingGuard);
     }, []);
 
     useEffect(() => {
@@ -194,6 +201,11 @@ export default function CompanyVerification() {
             const effectiveEmail = companyEmail || sessionStorage.getItem('companyEmail') || '';
             const templateFile = verificationTemplate;
 
+            if (!token) {
+                handleUnauthorized();
+                return;
+            }
+
             if (!effectiveEmail) {
                 setLoading(false);
                 toast.error('Unable to resolve company email. Please login again.');
@@ -234,37 +246,33 @@ export default function CompanyVerification() {
                 }
 
                 try {
-                    await openZwitchCheckout({
+                    void openZwitchCheckout({
                         paymentToken: order.id,
                         accessKey: order.accessKey,
                         fallbackAccessKey: order.fallbackAccessKey,
                         environment: order.environment
+                    }).catch((checkoutErr: any) => {
+                        toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     });
                 } catch (checkoutErr: any) {
                     toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     return;
                 }
 
-                const shouldVerify = window.confirm('After completing payment in the opened page, click OK to confirm and verify your payment.');
-                if (!shouldVerify) {
-                    toast.message('Payment verification skipped for now. You can retry from the requests list.');
-                    return;
-                }
+                toast.message('Payment window opened. Verifying automatically...');
 
-                const verifyRes = await apiFetch(`/api/company/verifications/${createdRequest.id}/verify-payment`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        zwitchOrderId: order.id
-                    })
+                const verification = await verifyCompanyVerificationPaymentWithRetry({
+                    requestId: createdRequest.id,
+                    zwitchOrderId: order.id,
+                    token,
+                    attempts: 12,
+                    intervalMs: 3000,
                 });
 
-                if (!verifyRes.ok) {
-                    const verifyData = await verifyRes.json().catch(() => null);
-                    toast.error(verifyData?.message || 'Payment verification failed. Contact support.');
+                if (!verification.verified) {
+                    toast.error(verification.message || 'Payment is still processing. Check requests page shortly.');
+                    setPanelView('requests');
+                    router.replace('/company/requests');
                     return;
                 }
 
@@ -360,33 +368,28 @@ export default function CompanyVerification() {
                 return;
             }
 
-            await openZwitchCheckout({
+            void openZwitchCheckout({
                 paymentToken: order.id,
                 accessKey: order.accessKey,
                 fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
+            }).catch((checkoutErr: any) => {
+                toast.error(checkoutErr?.message || 'Unable to open payment checkout');
             });
 
-            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
-            if (!shouldVerify) {
-                toast.message('Payment verification skipped for now. You can retry later.');
-                return;
-            }
+            toast.message('Payment window opened. Verifying automatically...');
 
-            const verifyRes = await fetch(`${API_BASE}/api/company/verifications/${request.id}/verify-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    zwitchOrderId: order.id
-                })
+            const verification = await verifyCompanyVerificationPaymentWithRetry({
+                requestId: request.id,
+                zwitchOrderId: order.id,
+                token,
+                attempts: 12,
+                intervalMs: 3000,
             });
 
-            const verifyData = await verifyRes.json().catch(() => null);
-            if (!verifyRes.ok) {
-                toast.error(verifyData?.message || 'Payment verification failed');
+            if (!verification.verified) {
+                toast.error(verification.message || 'Payment is still processing. Refresh requests shortly.');
+                await fetchRequests(token);
                 return;
             }
 
