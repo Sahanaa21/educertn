@@ -352,7 +352,7 @@ export default function StudentAcademicServicesPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Service Type</Label>
+                            <Label>Service Type <span className="text-red-500">*</span></Label>
                             <Select value={serviceType} onValueChange={(value) => setServiceType(value || 'PHOTOCOPY')}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select service" />
@@ -367,7 +367,7 @@ export default function StudentAcademicServicesPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Semester</Label>
+                            <Label>Semester <span className="text-red-500">*</span></Label>
                             <Select value={semester} onValueChange={(value) => setSemester(value || '')}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select semester" />
@@ -380,7 +380,7 @@ export default function StudentAcademicServicesPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Number of Courses</Label>
+                            <Label>Number of Courses <span className="text-red-500">*</span></Label>
                             <Select value={courseCount} onValueChange={(value) => setCourseCount(value || '1')}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select number of courses" />
@@ -395,7 +395,7 @@ export default function StudentAcademicServicesPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <Label>Course Names</Label>
+                        <Label>Course Names <span className="text-red-500">*</span></Label>
                         {courseNames.map((courseName, index) => (
                             <Input
                                 key={`course-${index + 1}`}

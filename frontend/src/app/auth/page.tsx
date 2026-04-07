@@ -286,7 +286,7 @@ export default function AuthPage() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -310,7 +310,7 @@ export default function AuthPage() {
                         <CardContent className="space-y-4 pt-4">
                             <p className="text-sm text-slate-600 text-center">OTP sent to <span className="font-semibold">{email}</span></p>
                             <div className="space-y-2">
-                                <Label htmlFor="otp">OTP</Label>
+                                <Label htmlFor="otp">OTP <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="otp"
                                     type="text"
@@ -338,7 +338,7 @@ export default function AuthPage() {
                     <form onSubmit={completeProfile}>
                         <CardContent className="space-y-4 pt-4">
                             <div className="space-y-2">
-                                <Label htmlFor="role">Role</Label>
+                                <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
                                 <Select value={role} onValueChange={(value) => setRole((value || 'STUDENT') as RegistrationRole)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select role" />
@@ -351,12 +351,12 @@ export default function AuthPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
+                                <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
                                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="phoneNumber">Phone Number</Label>
+                                <Label htmlFor="phoneNumber">Phone Number <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="phoneNumber"
                                     value={phoneNumber}
@@ -369,11 +369,11 @@ export default function AuthPage() {
                             {role === 'STUDENT' && (
                                 <>
                                     <div className="space-y-2">
-                                        <Label htmlFor="usn">USN</Label>
+                                        <Label htmlFor="usn">USN <span className="text-red-500">*</span></Label>
                                         <Input id="usn" value={usn} onChange={(e) => setUsn(e.target.value)} required />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="branch">Branch</Label>
+                                        <Label htmlFor="branch">Branch <span className="text-red-500">*</span></Label>
                                         <Select value={branch} onValueChange={(value) => setBranch(value || '')}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select branch" />
@@ -386,7 +386,7 @@ export default function AuthPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="yearOfPassing">Year of Passing</Label>
+                                        <Label htmlFor="yearOfPassing">Year of Passing <span className="text-red-500">*</span></Label>
                                         <Input
                                             id="yearOfPassing"
                                             value={yearOfPassing}

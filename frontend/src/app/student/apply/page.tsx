@@ -280,15 +280,15 @@ export default function ApplyCertificate() {
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="usn">USN</Label>
+                                <Label htmlFor="usn">USN <span className="text-red-500">*</span></Label>
                                 <Input id="usn" placeholder="1GA..." value={usn} onChange={e => setUsn(e.target.value)} required />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
+                                <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
                                 <Input id="name" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} required />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="branch">Branch</Label>
+                                <Label htmlFor="branch">Branch <span className="text-red-500">*</span></Label>
                                 <Select value={branch} onValueChange={(val: any) => setBranch(val)} required>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Branch" />
@@ -308,7 +308,7 @@ export default function ApplyCertificate() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="year">Year of Passing</Label>
+                                <Label htmlFor="year">Year of Passing <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="year"
                                     type="number"
@@ -339,7 +339,7 @@ export default function ApplyCertificate() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="phoneNumber">Phone Number</Label>
+                                <Label htmlFor="phoneNumber">Phone Number <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="phoneNumber"
                                     type="tel"
@@ -363,7 +363,7 @@ export default function ApplyCertificate() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="type">Certificate Type</Label>
+                            <Label htmlFor="type">Certificate Type <span className="text-red-500">*</span></Label>
                             <Select onValueChange={(val) => setType(String(val ?? ''))} required>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select Certificate" />
@@ -399,7 +399,7 @@ export default function ApplyCertificate() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="mode">Delivery Mode</Label>
+                                <Label htmlFor="mode">Delivery Mode <span className="text-red-500">*</span></Label>
                                 <Select onValueChange={(val) => setMode(String(val ?? ''))} required>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Mode" />
@@ -421,7 +421,7 @@ export default function ApplyCertificate() {
                         )}
 
                         <div className="space-y-2 pt-2">
-                            <Label htmlFor="reason">Reason for Request</Label>
+                            <Label htmlFor="reason">Reason for Request <span className="text-red-500">*</span></Label>
                             <Textarea id="reason" placeholder="Briefly explain why you need this document..." value={reason} onChange={e => setReason(e.target.value)} required />
                         </div>
                     </CardContent>

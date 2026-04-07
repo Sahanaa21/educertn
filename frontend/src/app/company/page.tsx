@@ -874,7 +874,7 @@ export default function CompanyVerification() {
                                         <Input id="contactPerson" placeholder="Jane Doe" value={contactPerson} onChange={e => setContactPerson(e.target.value)} required />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Phone Number</Label>
+                                        <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
                                         <Input
                                             id="phone"
                                             type="tel"

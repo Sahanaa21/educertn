@@ -219,15 +219,15 @@ export default function AdminSettingsPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="supportEmail">Support Email</Label>
+                            <Label htmlFor="supportEmail">Support Email <span className="text-red-500">*</span></Label>
                             <Input id="supportEmail" value={settings.supportEmail} onChange={(e) => setSettings((s) => ({ ...s, supportEmail: e.target.value }))} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="frontendUrl">Frontend URL</Label>
+                            <Label htmlFor="frontendUrl">Frontend URL <span className="text-red-500">*</span></Label>
                             <Input id="frontendUrl" value={settings.frontendUrl} onChange={(e) => setSettings((s) => ({ ...s, frontendUrl: e.target.value }))} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="smtpFromName">Email Sender Name</Label>
+                            <Label htmlFor="smtpFromName">Email Sender Name <span className="text-red-500">*</span></Label>
                             <Input id="smtpFromName" value={settings.smtpFromName} onChange={(e) => setSettings((s) => ({ ...s, smtpFromName: e.target.value }))} />
                         </div>
                     </CardContent>
@@ -271,7 +271,7 @@ export default function AdminSettingsPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="newAdminEmail">Register New Admin Email</Label>
+                            <Label htmlFor="newAdminEmail">Register New Admin Email <span className="text-red-500">*</span></Label>
                             <div className="flex gap-2">
                                 <Input
                                     id="newAdminEmail"

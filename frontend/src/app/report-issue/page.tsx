@@ -131,7 +131,7 @@ export default function ReportIssuePage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="issueTitle">Title</Label>
+                                <Label htmlFor="issueTitle">Title <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="issueTitle"
                                     placeholder="Example: Payment page keeps loading after submit"
@@ -143,7 +143,7 @@ export default function ReportIssuePage() {
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label>Category</Label>
+                                    <Label>Category <span className="text-red-500">*</span></Label>
                                     <Select value={category} onValueChange={(value) => setCategory(String(value ?? ''))}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select category" />
@@ -167,7 +167,7 @@ export default function ReportIssuePage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="issueDescription">What happened?</Label>
+                                <Label htmlFor="issueDescription">What happened? <span className="text-red-500">*</span></Label>
                                 <Textarea
                                     id="issueDescription"
                                     className="min-h-32"
