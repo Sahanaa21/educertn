@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, UploadCloud, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
-import { openRazorpayCheckout } from '@/lib/razorpay';
+import { openZwitchCheckout } from '@/lib/zwitch';
 import Link from 'next/link';
 
 const CERTIFICATE_OPTIONS = [
@@ -186,29 +186,23 @@ export default function ApplyCertificate() {
             if (res.ok) {
                 const data = await res.json();
                 const createdRequest = data?.request;
-                const order = data?.razorpayOrder;
+                const order = data?.zwitchOrder;
 
-                if (!createdRequest?.id || !order?.id || !order?.keyId) {
+                if (!createdRequest?.id || !order?.id || !order?.checkoutUrl) {
                     toast.error('Failed to initialize payment order.');
                     return;
                 }
 
-                let paymentResponse;
                 try {
-                    paymentResponse = await openRazorpayCheckout({
-                        keyId: order.keyId,
-                        orderId: order.id,
-                        amount: order.amount,
-                        currency: order.currency || 'INR',
-                        name: order.name || 'Global Academy of Technology',
-                        description: order.description || `Certificate Request ${createdRequest.id}`,
-                        prefill: {
-                            name,
-                            contact: phoneNumber,
-                        }
-                    });
+                    await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
                 } catch (checkoutErr: any) {
-                    toast.error(checkoutErr?.message || 'Payment cancelled. You can retry from support if needed.');
+                    toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
+                    return;
+                }
+
+                const shouldVerify = window.confirm('After completing payment in the opened page, click OK to confirm and verify your payment.');
+                if (!shouldVerify) {
+                    toast.message('Payment verification skipped for now. You can retry from your requests page.');
                     return;
                 }
 
@@ -219,9 +213,7 @@ export default function ApplyCertificate() {
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        razorpayOrderId: paymentResponse.razorpay_order_id,
-                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
-                        razorpaySignature: paymentResponse.razorpay_signature
+                        zwitchOrderId: order.id
                     })
                 });
 

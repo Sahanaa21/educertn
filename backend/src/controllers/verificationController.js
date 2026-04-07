@@ -16,7 +16,7 @@ exports.cancelCompanyVerificationRequest = exports.completeVerificationRequest =
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
-const razorpay_1 = require("../config/razorpay");
+const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const VERIFICATION_FEE = 5000;
 const resolveStoredFilePath = (storedPath) => {
@@ -107,18 +107,22 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
                 status: 'PENDING'
             }
         });
-        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+        if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
-        const order = yield (0, razorpay_1.createRazorpayOrder)({
+        const order = yield (0, zwitch_1.createZwitchOrder)({
             amountPaise: VERIFICATION_FEE * 100,
             receipt: `ver-${requestId}-${Date.now()}`.slice(0, 40),
+            description: `Verification Request ${requestId}`,
             notes: {
                 requestType: 'VERIFICATION',
                 requestId: created.id,
                 companyEmail: authEmail
             }
         });
+        if (!order.id) {
+            return res.status(502).json({ message: 'Payment provider did not return an order id' });
+        }
         yield prisma_1.prisma.verificationRequest.update({
             where: { id: created.id },
             data: { paymentOrderId: order.id }
@@ -126,13 +130,13 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
         res.status(201).json({
             request: created,
             amount: VERIFICATION_FEE,
-            razorpayOrder: {
+            zwitchOrder: {
                 id: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                keyId: (0, razorpay_1.getRazorpayKeyId)(),
                 name: 'Global Academy of Technology',
-                description: `Verification Request ${requestId}`
+                description: `Verification Request ${requestId}`,
+                checkoutUrl: order.checkoutUrl
             }
         });
     }
@@ -143,20 +147,19 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
 });
 exports.createVerificationRequest = createVerificationRequest;
 const verifyVerificationPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     try {
         const companyEmail = yield getAuthenticatedCompanyEmail(req);
         if (!companyEmail) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
         const id = String(req.params.id || '');
-        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-        if (!id || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        const { zwitchOrderId } = req.body;
+        if (!id) {
             return res.status(400).json({ message: 'Payment verification details are required' });
         }
         const request = yield prisma_1.prisma.verificationRequest.findUnique({
             where: { id },
-            select: { id: true, requestId: true, companyEmail: true, paymentStatus: true, status: true }
+            select: { id: true, requestId: true, companyEmail: true, paymentStatus: true, status: true, paymentOrderId: true }
         });
         if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
             return res.status(404).json({ message: 'Request not found' });
@@ -164,25 +167,22 @@ const verifyVerificationPayment = (req, res) => __awaiter(void 0, void 0, void 0
         if (request.paymentStatus === 'PAID') {
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
         }
-        const valid = (0, razorpay_1.verifyRazorpaySignature)({
-            orderId: razorpayOrderId,
-            paymentId: razorpayPaymentId,
-            signature: razorpaySignature
-        });
-        if (!valid) {
-            return res.status(400).json({ message: 'Invalid payment signature' });
+        const orderId = String(zwitchOrderId || request.paymentOrderId || '').trim();
+        if (!orderId) {
+            return res.status(400).json({ message: 'Payment order id is required for verification' });
         }
-        const order = yield (0, razorpay_1.fetchRazorpayOrder)(razorpayOrderId);
-        const orderRequestId = String(((_a = order.notes) === null || _a === void 0 ? void 0 : _a.requestId) || '');
-        const orderReceipt = String(order.receipt || '');
-        if (orderRequestId !== id && !orderReceipt.startsWith(`ver-${request.requestId}`)) {
-            return res.status(400).json({ message: 'Payment order does not match this request' });
+        if (request.paymentOrderId && request.paymentOrderId !== orderId) {
+            return res.status(400).json({ message: 'Order ID mismatch for this request' });
+        }
+        const order = yield (0, zwitch_1.fetchZwitchOrder)(orderId);
+        if (!(0, zwitch_1.isZwitchOrderPaid)(order)) {
+            return res.status(400).json({ message: 'Payment is not completed yet' });
         }
         const updated = yield prisma_1.prisma.verificationRequest.update({
             where: { id },
             data: {
                 paymentStatus: 'PAID',
-                paymentOrderId: razorpayOrderId
+                paymentOrderId: orderId
             }
         });
         return res.json({ message: 'Payment verified successfully', request: updated });
@@ -216,30 +216,34 @@ const createVerificationPaymentOrder = (req, res) => __awaiter(void 0, void 0, v
         if (request.status === 'REJECTED') {
             return res.status(400).json({ message: 'Payment is not allowed for rejected requests' });
         }
-        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+        if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
-        const order = yield (0, razorpay_1.createRazorpayOrder)({
+        const order = yield (0, zwitch_1.createZwitchOrder)({
             amountPaise: VERIFICATION_FEE * 100,
             receipt: `ver-${request.requestId}-${Date.now()}`.slice(0, 40),
+            description: `Verification Request ${request.requestId}`,
             notes: {
                 requestType: 'VERIFICATION',
                 requestId: request.id,
                 companyEmail
             }
         });
+        if (!order.id) {
+            return res.status(502).json({ message: 'Payment provider did not return an order id' });
+        }
         yield prisma_1.prisma.verificationRequest.update({
             where: { id: request.id },
             data: { paymentOrderId: order.id }
         });
         return res.json({
-            razorpayOrder: {
+            zwitchOrder: {
                 id: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                keyId: (0, razorpay_1.getRazorpayKeyId)(),
                 name: 'Global Academy of Technology',
-                description: `Verification Request ${request.requestId}`
+                description: `Verification Request ${request.requestId}`,
+                checkoutUrl: order.checkoutUrl
             }
         });
     }

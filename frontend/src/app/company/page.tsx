@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, UploadCloud, Building2, CreditCard, FileText, CheckCircle, Clock, Menu, ChevronLeft, ChevronRight, ClipboardList, FilePlus, LogOut, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch, API_BASE } from '@/lib/api';
-import { openRazorpayCheckout } from '@/lib/razorpay';
+import { openZwitchCheckout } from '@/lib/zwitch';
 
 type VerificationRequest = {
     id: string;
@@ -226,30 +226,23 @@ export default function CompanyVerification() {
             if (res.ok) {
                 const data = await res.json();
                 const createdRequest = data?.request;
-                const order = data?.razorpayOrder;
+                const order = data?.zwitchOrder;
 
-                if (!createdRequest?.id || !order?.id || !order?.keyId) {
+                if (!createdRequest?.id || !order?.id || !order?.checkoutUrl) {
                     toast.error('Failed to initialize payment order.');
                     return;
                 }
 
-                let paymentResponse;
                 try {
-                    paymentResponse = await openRazorpayCheckout({
-                        keyId: order.keyId,
-                        orderId: order.id,
-                        amount: order.amount,
-                        currency: order.currency || 'INR',
-                        name: order.name || 'Global Academy of Technology',
-                        description: order.description || `Verification Request ${createdRequest.requestId || createdRequest.id}`,
-                        prefill: {
-                            name: contactPerson,
-                            email: effectiveEmail,
-                            contact: phoneNumber,
-                        }
-                    });
+                    await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
                 } catch (checkoutErr: any) {
-                    toast.error(checkoutErr?.message || 'Payment cancelled. You can retry from support if needed.');
+                    toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
+                    return;
+                }
+
+                const shouldVerify = window.confirm('After completing payment in the opened page, click OK to confirm and verify your payment.');
+                if (!shouldVerify) {
+                    toast.message('Payment verification skipped for now. You can retry from the requests list.');
                     return;
                 }
 
@@ -260,9 +253,7 @@ export default function CompanyVerification() {
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        razorpayOrderId: paymentResponse.razorpay_order_id,
-                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
-                        razorpaySignature: paymentResponse.razorpay_signature
+                        zwitchOrderId: order.id
                     })
                 });
 
@@ -358,24 +349,19 @@ export default function CompanyVerification() {
                 return;
             }
 
-            const order = orderData?.razorpayOrder;
-            if (!order?.id || !order?.keyId) {
+            const order = orderData?.zwitchOrder;
+            if (!order?.id || !order?.checkoutUrl) {
                 toast.error('Invalid payment order response');
                 return;
             }
 
-            const paymentResponse = await openRazorpayCheckout({
-                keyId: order.keyId,
-                orderId: order.id,
-                amount: order.amount,
-                currency: order.currency || 'INR',
-                name: order.name || 'Global Academy of Technology',
-                description: order.description || `Verification Request ${request.requestId}`,
-                prefill: {
-                    name: request.companyName,
-                    email: companyEmail || sessionStorage.getItem('companyEmail') || undefined,
-                }
-            });
+            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+
+            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
+            if (!shouldVerify) {
+                toast.message('Payment verification skipped for now. You can retry later.');
+                return;
+            }
 
             const verifyRes = await fetch(`${API_BASE}/api/company/verifications/${request.id}/verify-payment`, {
                 method: 'POST',
@@ -384,9 +370,7 @@ export default function CompanyVerification() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    razorpayOrderId: paymentResponse.razorpay_order_id,
-                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
-                    razorpaySignature: paymentResponse.razorpay_signature
+                    zwitchOrderId: order.id
                 })
             });
 

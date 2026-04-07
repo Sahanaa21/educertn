@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateAcademicServiceSettingsAdmin = exports.getAcademicServiceSettingsAdmin = exports.uploadAcademicServiceAttachments = exports.updateAcademicServiceRequest = exports.getAllAcademicServiceRequests = exports.getStudentAcademicServiceRequests = exports.createAcademicServicePaymentOrder = exports.verifyAcademicServicePayment = exports.createAcademicServiceRequest = exports.getAcademicServicesAvailabilityStudent = exports.getAcademicServicesAvailabilityPublic = void 0;
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
-const razorpay_1 = require("../config/razorpay");
+const zwitch_1 = require("../config/zwitch");
 const PHOTOCOPY_FEE = 500;
 const REEVALUATION_FEE = 3000;
 const DEFAULT_ADMIN_ALLOWLIST = 'sahanaa2060@gmail.com';
@@ -160,12 +160,13 @@ const createAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
                 status: 'PENDING',
             }
         });
-        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+        if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
-        const order = yield (0, razorpay_1.createRazorpayOrder)({
+        const order = yield (0, zwitch_1.createZwitchOrder)({
             amountPaise: Math.round(amount * 100),
             receipt: `svc-${requestId}-${Date.now()}`.slice(0, 40),
+            description: `${serviceType} Request ${requestId}`,
             notes: {
                 requestType: 'ACADEMIC_SERVICE',
                 requestId: created.id,
@@ -173,19 +174,22 @@ const createAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
                 userId,
             }
         });
+        if (!order.id) {
+            return res.status(502).json({ message: 'Payment provider did not return an order id' });
+        }
         const updated = yield prisma_1.prisma.academicServiceRequest.update({
             where: { id: created.id },
             data: { paymentOrderId: order.id }
         });
         return res.status(201).json({
             request: updated,
-            razorpayOrder: {
+            zwitchOrder: {
                 id: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                keyId: (0, razorpay_1.getRazorpayKeyId)(),
                 name: 'Global Academy of Technology',
                 description: `${serviceType} Request ${requestId}`,
+                checkoutUrl: order.checkoutUrl,
             }
         });
     }
@@ -196,12 +200,12 @@ const createAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
 });
 exports.createAcademicServiceRequest = createAcademicServiceRequest;
 const verifyAcademicServicePayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a;
     try {
         const userId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || '');
         const id = String(req.params.id || '');
-        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-        if (!userId || !id || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        const { zwitchOrderId } = req.body;
+        if (!userId || !id) {
             return res.status(400).json({ message: 'Invalid request payload' });
         }
         const request = yield prisma_1.prisma.academicServiceRequest.findUnique({
@@ -214,28 +218,22 @@ const verifyAcademicServicePayment = (req, res) => __awaiter(void 0, void 0, voi
         if (request.paymentStatus === 'PAID') {
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
         }
-        if (request.paymentOrderId && request.paymentOrderId !== razorpayOrderId) {
+        const orderId = String(zwitchOrderId || request.paymentOrderId || '').trim();
+        if (!orderId) {
+            return res.status(400).json({ message: 'Payment order id is required for verification' });
+        }
+        if (request.paymentOrderId && request.paymentOrderId !== orderId) {
             return res.status(400).json({ message: 'Order mismatch for this request' });
         }
-        const valid = (0, razorpay_1.verifyRazorpaySignature)({
-            orderId: razorpayOrderId,
-            paymentId: razorpayPaymentId,
-            signature: razorpaySignature,
-        });
-        if (!valid) {
-            return res.status(400).json({ message: 'Invalid payment signature' });
-        }
-        const order = yield (0, razorpay_1.fetchRazorpayOrder)(razorpayOrderId);
-        const noteId = String(((_b = order.notes) === null || _b === void 0 ? void 0 : _b.requestId) || '');
-        const receipt = String(order.receipt || '');
-        if (noteId !== id && !receipt.includes(request.requestId)) {
-            return res.status(400).json({ message: 'Payment order does not match this request' });
+        const order = yield (0, zwitch_1.fetchZwitchOrder)(orderId);
+        if (!(0, zwitch_1.isZwitchOrderPaid)(order)) {
+            return res.status(400).json({ message: 'Payment is not completed yet' });
         }
         const updated = yield prisma_1.prisma.academicServiceRequest.update({
             where: { id },
             data: {
                 paymentStatus: 'PAID',
-                paymentOrderId: razorpayOrderId,
+                paymentOrderId: orderId,
             }
         });
         return res.json({ message: 'Payment verified successfully', request: updated });
@@ -264,16 +262,17 @@ const createAcademicServicePaymentOrder = (req, res) => __awaiter(void 0, void 0
         if (request.paymentStatus === 'PAID') {
             return res.status(400).json({ message: 'Payment already completed for this request' });
         }
-        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+        if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
         const amountPaise = Math.round(Number(request.amount || 0) * 100);
         if (amountPaise <= 0) {
             return res.status(400).json({ message: 'Invalid payment amount' });
         }
-        const order = yield (0, razorpay_1.createRazorpayOrder)({
+        const order = yield (0, zwitch_1.createZwitchOrder)({
             amountPaise,
             receipt: `svc-${request.requestId}-${Date.now()}`.slice(0, 40),
+            description: `${request.serviceType} Request ${request.requestId}`,
             notes: {
                 requestType: 'ACADEMIC_SERVICE',
                 requestId: request.id,
@@ -281,18 +280,21 @@ const createAcademicServicePaymentOrder = (req, res) => __awaiter(void 0, void 0
                 userId,
             }
         });
+        if (!order.id) {
+            return res.status(502).json({ message: 'Payment provider did not return an order id' });
+        }
         yield prisma_1.prisma.academicServiceRequest.update({
             where: { id: request.id },
             data: { paymentOrderId: order.id }
         });
         return res.json({
-            razorpayOrder: {
+            zwitchOrder: {
                 id: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                keyId: (0, razorpay_1.getRazorpayKeyId)(),
                 name: 'Global Academy of Technology',
-                description: `${request.serviceType} Request ${request.requestId}`
+                description: `${request.serviceType} Request ${request.requestId}`,
+                checkoutUrl: order.checkoutUrl
             }
         });
     }

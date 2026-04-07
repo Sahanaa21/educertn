@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
-import { openRazorpayCheckout } from '@/lib/razorpay';
+import { openZwitchCheckout } from '@/lib/zwitch';
 
 export default function StudentRequests() {
     const router = useRouter();
@@ -119,24 +119,19 @@ export default function StudentRequests() {
                 return;
             }
 
-            const order = orderData?.razorpayOrder;
-            if (!order?.id || !order?.keyId) {
+            const order = orderData?.zwitchOrder;
+            if (!order?.id || !order?.checkoutUrl) {
                 toast.error('Invalid payment order response');
                 return;
             }
 
-            const paymentResponse = await openRazorpayCheckout({
-                keyId: order.keyId,
-                orderId: order.id,
-                amount: order.amount,
-                currency: order.currency || 'INR',
-                name: order.name || 'Global Academy of Technology',
-                description: order.description || `Certificate Request ${req.id}`,
-                prefill: {
-                    name: req.studentName,
-                    contact: req.phoneNumber || undefined,
-                }
-            });
+            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+
+            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
+            if (!shouldVerify) {
+                toast.message('Payment verification skipped for now. You can retry later.');
+                return;
+            }
 
             const verifyRes = await fetch(`${API_BASE}/api/student/certificates/${req.id}/verify-payment`, {
                 method: 'POST',
@@ -145,9 +140,7 @@ export default function StudentRequests() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    razorpayOrderId: paymentResponse.razorpay_order_id,
-                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
-                    razorpaySignature: paymentResponse.razorpay_signature
+                    zwitchOrderId: order.id
                 })
             });
 

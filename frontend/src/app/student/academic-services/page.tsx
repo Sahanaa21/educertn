@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
-import { openRazorpayCheckout } from '@/lib/razorpay';
+import { openZwitchCheckout } from '@/lib/zwitch';
 
 type Availability = {
     active: boolean;
@@ -186,20 +186,19 @@ export default function StudentAcademicServicesPage() {
             }
 
             const request = createJson?.request;
-            const order = createJson?.razorpayOrder;
-            if (!request?.id || !order?.id || !order?.keyId) {
+            const order = createJson?.zwitchOrder;
+            if (!request?.id || !order?.id || !order?.checkoutUrl) {
                 toast.error('Payment initialization failed');
                 return;
             }
 
-            const payment = await openRazorpayCheckout({
-                keyId: order.keyId,
-                orderId: order.id,
-                amount: order.amount,
-                currency: order.currency || 'INR',
-                name: order.name || 'Global Academy of Technology',
-                description: order.description || `${serviceType} Request`,
-            });
+            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+
+            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
+            if (!shouldVerify) {
+                toast.message('Payment verification skipped for now. You can retry from your request list.');
+                return;
+            }
 
             const verifyRes = await apiFetch(`/api/student/academic-services/${request.id}/verify-payment`, {
                 method: 'POST',
@@ -208,9 +207,7 @@ export default function StudentAcademicServicesPage() {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    razorpayOrderId: payment.razorpay_order_id,
-                    razorpayPaymentId: payment.razorpay_payment_id,
-                    razorpaySignature: payment.razorpay_signature,
+                    zwitchOrderId: order.id,
                 })
             });
 
@@ -249,15 +246,19 @@ export default function StudentAcademicServicesPage() {
                 return;
             }
 
-            const order = orderJson?.razorpayOrder;
-            const payment = await openRazorpayCheckout({
-                keyId: order.keyId,
-                orderId: order.id,
-                amount: order.amount,
-                currency: order.currency || 'INR',
-                name: order.name || 'Global Academy of Technology',
-                description: order.description || `${request.serviceType} Request`,
-            });
+            const order = orderJson?.zwitchOrder;
+            if (!order?.id || !order?.checkoutUrl) {
+                toast.error('Payment initialization failed');
+                return;
+            }
+
+            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+
+            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
+            if (!shouldVerify) {
+                toast.message('Payment verification skipped for now. You can retry later.');
+                return;
+            }
 
             const verifyRes = await apiFetch(`/api/student/academic-services/${request.id}/verify-payment`, {
                 method: 'POST',
@@ -266,9 +267,7 @@ export default function StudentAcademicServicesPage() {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    razorpayOrderId: payment.razorpay_order_id,
-                    razorpayPaymentId: payment.razorpay_payment_id,
-                    razorpaySignature: payment.razorpay_signature,
+                    zwitchOrderId: order.id,
                 })
             });
 

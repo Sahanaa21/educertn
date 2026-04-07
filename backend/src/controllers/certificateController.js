@@ -16,7 +16,7 @@ exports.cancelStudentCertificateRequest = exports.downloadStudentIssuedCertifica
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
-const razorpay_1 = require("../config/razorpay");
+const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const resolveStoredFilePath = (storedPath) => {
     if (!storedPath)
@@ -128,31 +128,35 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
                 status: 'PENDING'
             }
         });
-        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+        if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
-        const order = yield (0, razorpay_1.createRazorpayOrder)({
+        const order = yield (0, zwitch_1.createZwitchOrder)({
             amountPaise: Math.round(amount * 100),
             receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
+            description: `Certificate Request ${id}`,
             notes: {
                 requestType: 'CERTIFICATE',
                 requestId: id,
                 userId: String(userId)
             }
         });
+        if (!order.id) {
+            return res.status(502).json({ message: 'Payment provider did not return an order id' });
+        }
         yield prisma_1.prisma.certificateRequest.update({
             where: { id: certificateRequest.id },
             data: { paymentOrderId: order.id }
         });
         res.status(201).json({
             request: certificateRequest,
-            razorpayOrder: {
+            zwitchOrder: {
                 id: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                keyId: (0, razorpay_1.getRazorpayKeyId)(),
                 name: 'Global Academy of Technology',
-                description: `Certificate Request ${id}`
+                description: `Certificate Request ${id}`,
+                checkoutUrl: order.checkoutUrl
             }
         });
     }
@@ -163,16 +167,13 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
 });
 exports.createCertificateRequest = createCertificateRequest;
 const verifyCertificatePayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a;
     try {
         const userId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || '');
         const id = String(req.params.id || '');
-        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+        const { zwitchOrderId } = req.body;
         if (!userId || !id) {
             return res.status(400).json({ message: 'Invalid request' });
-        }
-        if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-            return res.status(400).json({ message: 'Payment verification details are required' });
         }
         const request = yield prisma_1.prisma.certificateRequest.findUnique({
             where: { id },
@@ -184,28 +185,22 @@ const verifyCertificatePayment = (req, res) => __awaiter(void 0, void 0, void 0,
         if (request.paymentStatus === 'PAID') {
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
         }
-        if (request.paymentOrderId && request.paymentOrderId !== razorpayOrderId) {
+        const orderId = String(zwitchOrderId || request.paymentOrderId || '').trim();
+        if (!orderId) {
+            return res.status(400).json({ message: 'Payment order id is required for verification' });
+        }
+        if (request.paymentOrderId && request.paymentOrderId !== orderId) {
             return res.status(400).json({ message: 'Order ID mismatch for this request' });
         }
-        const valid = (0, razorpay_1.verifyRazorpaySignature)({
-            orderId: razorpayOrderId,
-            paymentId: razorpayPaymentId,
-            signature: razorpaySignature
-        });
-        if (!valid) {
-            return res.status(400).json({ message: 'Invalid payment signature' });
-        }
-        const order = yield (0, razorpay_1.fetchRazorpayOrder)(razorpayOrderId);
-        const orderRequestId = String(((_b = order.notes) === null || _b === void 0 ? void 0 : _b.requestId) || '');
-        const orderReceipt = String(order.receipt || '');
-        if (orderRequestId !== id && !orderReceipt.startsWith(`cert-${id}`)) {
-            return res.status(400).json({ message: 'Payment order does not match this request' });
+        const order = yield (0, zwitch_1.fetchZwitchOrder)(orderId);
+        if (!(0, zwitch_1.isZwitchOrderPaid)(order)) {
+            return res.status(400).json({ message: 'Payment is not completed yet' });
         }
         const updated = yield prisma_1.prisma.certificateRequest.update({
             where: { id },
             data: {
                 paymentStatus: 'PAID',
-                paymentOrderId: razorpayOrderId
+                paymentOrderId: orderId
             }
         });
         return res.json({ message: 'Payment verified successfully', request: updated });
@@ -237,34 +232,38 @@ const createCertificatePaymentOrder = (req, res) => __awaiter(void 0, void 0, vo
         if (request.status === 'REJECTED') {
             return res.status(400).json({ message: 'Payment is not allowed for rejected requests' });
         }
-        if (!(0, razorpay_1.hasRazorpayConfig)()) {
+        if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
         const amountPaise = Math.round(Number(request.amount || 0) * 100);
         if (amountPaise <= 0) {
             return res.status(400).json({ message: 'Invalid payment amount for this request' });
         }
-        const order = yield (0, razorpay_1.createRazorpayOrder)({
+        const order = yield (0, zwitch_1.createZwitchOrder)({
             amountPaise,
             receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
+            description: `Certificate Request ${id}`,
             notes: {
                 requestType: 'CERTIFICATE',
                 requestId: id,
                 userId
             }
         });
+        if (!order.id) {
+            return res.status(502).json({ message: 'Payment provider did not return an order id' });
+        }
         yield prisma_1.prisma.certificateRequest.update({
             where: { id },
             data: { paymentOrderId: order.id }
         });
         return res.json({
-            razorpayOrder: {
+            zwitchOrder: {
                 id: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                keyId: (0, razorpay_1.getRazorpayKeyId)(),
                 name: 'Global Academy of Technology',
-                description: `Certificate Request ${id}`
+                description: `Certificate Request ${id}`,
+                checkoutUrl: order.checkoutUrl
             }
         });
     }
