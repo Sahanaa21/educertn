@@ -18,9 +18,11 @@ const apiKey = process.env.ZWITCH_API_KEY || '';
 const apiSecret = process.env.ZWITCH_API_SECRET || '';
 const explicitAuthHeader = process.env.ZWITCH_AUTH_HEADER || '';
 const checkoutAccessKey = process.env.ZWITCH_LAYER_ACCESS_KEY || process.env.ZWITCH_ACCESS_KEY || '';
+const checkoutKeyPreference = String(process.env.ZWITCH_CHECKOUT_KEY_PREFERENCE || 'pg').toLowerCase();
 const checkoutEnvironment = String(
     process.env.ZWITCH_CHECKOUT_ENV || (createOrderPath.includes('/sandbox/') ? 'sandbox' : 'live')
 ).toLowerCase();
+const requestTimeoutMs = Number(process.env.ZWITCH_API_TIMEOUT_MS || 6000);
 
 const normalizeOrderId = (order: any): string => {
     return String(
@@ -79,14 +81,18 @@ const requestZwitch = async (path: string, init: RequestInit): Promise<any> => {
         throw new Error('Zwitch credentials are not configured');
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
+
     const response = await fetch(buildUrl(path), {
         ...init,
+        signal: controller.signal,
         headers: {
             'Content-Type': 'application/json',
             Authorization: auth,
             ...(init.headers || {})
         }
-    });
+    }).finally(() => clearTimeout(timeoutId));
 
     const rawText = await response.text();
     let json: any = null;
@@ -132,14 +138,18 @@ export const createZwitchOrder = async ({ amountPaise, receipt, notes, descripti
         body: JSON.stringify(payload)
     });
 
+    const preferLayerKey = checkoutKeyPreference === 'layer';
+    const primaryCheckoutKey = preferLayerKey ? (checkoutAccessKey || apiKey) : (apiKey || checkoutAccessKey);
+    const secondaryCheckoutKey = preferLayerKey ? apiKey : checkoutAccessKey;
+
     const order = response?.data || response;
     return {
         id: normalizeOrderId(order),
         amount: normalizeOrderAmount(order),
         currency: normalizeOrderCurrency(order),
         checkoutUrl: normalizeCheckoutUrl(order),
-        accessKey: checkoutAccessKey || apiKey,
-        fallbackAccessKey: checkoutAccessKey && checkoutAccessKey !== apiKey ? apiKey : '',
+        accessKey: primaryCheckoutKey,
+        fallbackAccessKey: secondaryCheckoutKey && secondaryCheckoutKey !== primaryCheckoutKey ? secondaryCheckoutKey : '',
         environment: checkoutEnvironment,
         raw: order
     };
@@ -156,4 +166,28 @@ export const isZwitchOrderPaid = (order: any): boolean => {
     const paidFlag = Boolean(order?.paid || order?.captured || order?.is_paid || order?.amount_paid > 0);
 
     return paidFlag || ['paid', 'captured', 'success', 'completed', 'processed'].includes(status);
+};
+
+export const verifyZwitchOrderPaid = async (
+    orderId: string,
+    options?: { maxAttempts?: number; intervalMs?: number }
+) => {
+    const maxAttempts = Math.max(1, Number(options?.maxAttempts || 8));
+    const intervalMs = Math.max(0, Number(options?.intervalMs || 1500));
+
+    let lastOrder: any = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const order = await fetchZwitchOrder(orderId);
+        lastOrder = order;
+
+        if (isZwitchOrderPaid(order)) {
+            return { paid: true, order };
+        }
+
+        if (attempt < maxAttempts && intervalMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        }
+    }
+
+    return { paid: false, order: lastOrder };
 };

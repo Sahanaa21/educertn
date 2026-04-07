@@ -4,9 +4,8 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import {
     createZwitchOrder,
-    fetchZwitchOrder,
     hasZwitchConfig,
-    isZwitchOrderPaid
+    verifyZwitchOrderPaid
 } from '../config/zwitch';
 import { generateRequestId } from '../utils/generateId';
 
@@ -212,8 +211,8 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
             return res.status(400).json({ message: 'Order ID mismatch for this request' });
         }
 
-        const order = await fetchZwitchOrder(orderId);
-        if (!isZwitchOrderPaid(order)) {
+        const verification = await verifyZwitchOrderPaid(orderId, { maxAttempts: 10, intervalMs: 1500 });
+        if (!verification.paid) {
             return res.status(400).json({ message: 'Payment is not completed yet' });
         }
 

@@ -3,9 +3,8 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import {
     createZwitchOrder,
-    fetchZwitchOrder,
     hasZwitchConfig,
-    isZwitchOrderPaid,
+    verifyZwitchOrderPaid,
 } from '../config/zwitch';
 
 const PHOTOCOPY_FEE = 500;
@@ -248,8 +247,8 @@ export const verifyAcademicServicePayment = async (req: Request, res: Response):
             return res.status(400).json({ message: 'Order mismatch for this request' });
         }
 
-        const order = await fetchZwitchOrder(orderId);
-        if (!isZwitchOrderPaid(order)) {
+        const verification = await verifyZwitchOrderPaid(orderId, { maxAttempts: 10, intervalMs: 1500 });
+        if (!verification.paid) {
             return res.status(400).json({ message: 'Payment is not completed yet' });
         }
 
