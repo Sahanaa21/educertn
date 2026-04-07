@@ -167,7 +167,8 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
                 name: 'Global Academy of Technology',
                 description: `Certificate Request ${id}`,
                 checkoutUrl: order.checkoutUrl,
-                accessKey: order.accessKey
+                accessKey: order.accessKey,
+                environment: order.environment
             }
         });
     } catch (error: any) {
@@ -293,7 +294,8 @@ export const createCertificatePaymentOrder = async (req: Request, res: Response)
                 name: 'Global Academy of Technology',
                 description: `Certificate Request ${id}`,
                 checkoutUrl: order.checkoutUrl,
-                accessKey: order.accessKey
+                accessKey: order.accessKey,
+                environment: order.environment
             }
         });
     } catch (error) {

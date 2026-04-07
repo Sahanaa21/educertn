@@ -17,6 +17,10 @@ const fetchOrderPathTemplate = process.env.ZWITCH_FETCH_ORDER_PATH_TEMPLATE || '
 const apiKey = process.env.ZWITCH_API_KEY || '';
 const apiSecret = process.env.ZWITCH_API_SECRET || '';
 const explicitAuthHeader = process.env.ZWITCH_AUTH_HEADER || '';
+const checkoutAccessKey = process.env.ZWITCH_LAYER_ACCESS_KEY || process.env.ZWITCH_ACCESS_KEY || '';
+const checkoutEnvironment = String(
+    process.env.ZWITCH_CHECKOUT_ENV || (createOrderPath.includes('/sandbox/') ? 'sandbox' : 'live')
+).toLowerCase();
 
 const normalizeOrderId = (order: any): string => {
     return String(
@@ -134,7 +138,8 @@ export const createZwitchOrder = async ({ amountPaise, receipt, notes, descripti
         amount: normalizeOrderAmount(order),
         currency: normalizeOrderCurrency(order),
         checkoutUrl: normalizeCheckoutUrl(order),
-        accessKey: apiKey,
+        accessKey: checkoutAccessKey || apiKey,
+        environment: checkoutEnvironment,
         raw: order
     };
 };

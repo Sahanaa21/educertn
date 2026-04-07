@@ -139,7 +139,8 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
                 name: 'Global Academy of Technology',
                 description: `Verification Request ${requestId}`,
                 checkoutUrl: order.checkoutUrl,
-                accessKey: order.accessKey
+                accessKey: order.accessKey,
+                environment: order.environment
             }
         });
     } catch (error) {
@@ -267,7 +268,8 @@ export const createVerificationPaymentOrder = async (req: AuthRequest, res: Resp
                 name: 'Global Academy of Technology',
                 description: `Verification Request ${request.requestId}`,
                 checkoutUrl: order.checkoutUrl,
-                accessKey: order.accessKey
+                accessKey: order.accessKey,
+                environment: order.environment
             }
         });
     } catch (error) {
