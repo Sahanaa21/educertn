@@ -1,6 +1,7 @@
 type ZwitchCheckoutInput = {
     paymentToken: string;
     accessKey: string;
+    environment?: 'sandbox' | 'live';
 };
 
 const loadLayerScript = async (src: string): Promise<void> => {
@@ -23,7 +24,7 @@ const loadLayerScript = async (src: string): Promise<void> => {
     });
 };
 
-export const openZwitchCheckout = async ({ paymentToken, accessKey }: ZwitchCheckoutInput): Promise<void> => {
+export const openZwitchCheckout = async ({ paymentToken, accessKey, environment }: ZwitchCheckoutInput): Promise<void> => {
     if (typeof window === 'undefined') {
         throw new Error('Checkout is available only in browser');
     }
@@ -34,7 +35,16 @@ export const openZwitchCheckout = async ({ paymentToken, accessKey }: ZwitchChec
         throw new Error('Payment token or access key missing from payment provider response');
     }
 
-    const isSandbox = key.startsWith('ak_test_') || key.startsWith('sb_') || key.includes('test');
+    const isSandboxByToken = token.startsWith('sb_pt_');
+    const isSandbox = environment ? environment === 'sandbox' : isSandboxByToken;
+
+    if (isSandbox && !key.startsWith('ak_test_')) {
+        throw new Error('Invalid sandbox checkout key. Set ZWITCH_LAYER_ACCESS_KEY to an ak_test_* key from Developers -> API Keys.');
+    }
+    if (!isSandbox && !key.startsWith('ak_live_')) {
+        throw new Error('Invalid live checkout key. Set ZWITCH_LAYER_ACCESS_KEY to an ak_live_* key from Developers -> API Keys.');
+    }
+
     const layerScript = isSandbox
         ? 'https://sandbox-payments.open.money/layer'
         : 'https://payments.open.money/layer';

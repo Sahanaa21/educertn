@@ -125,7 +125,7 @@ export default function StudentRequests() {
                 return;
             }
 
-            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey });
+            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey, environment: order.environment });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {
