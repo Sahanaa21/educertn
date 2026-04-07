@@ -215,32 +215,23 @@ export default function AuthPage() {
             }
         }
 
-        if (role === 'COMPANY') {
-            if (companyName.trim().length < 2) {
-                toast.error('Enter a valid company name.');
-                return;
-            }
-            if (contactPerson.trim().length < 2) {
-                toast.error('Enter a valid contact person name.');
-                return;
-            }
-        }
-
         setLoading(true);
         try {
+            const normalizedName = name.trim();
             const res = await apiFetch('/api/auth/complete-profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     registrationToken,
                     role,
-                    name: name.trim(),
+                    name: normalizedName,
                     phoneNumber: phoneNumber.trim(),
                     usn: usn.trim().toUpperCase(),
                     branch,
                     yearOfPassing: yearOfPassing.trim(),
-                    companyName: companyName.trim(),
-                    contactPerson: contactPerson.trim(),
+                    // Company flow keeps only Name + Phone in UI; backend-required fields mirror Name.
+                    companyName: role === 'COMPANY' ? normalizedName : companyName.trim(),
+                    contactPerson: role === 'COMPANY' ? normalizedName : contactPerson.trim(),
                 })
             });
 
@@ -407,18 +398,6 @@ export default function AuthPage() {
                                 </>
                             )}
 
-                            {role === 'COMPANY' && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="companyName">Company Name</Label>
-                                        <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="contactPerson">Contact Person</Label>
-                                        <Input id="contactPerson" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required />
-                                    </div>
-                                </>
-                            )}
                         </CardContent>
                         <CardFooter className="pb-8">
                             <Button type="submit" className="w-full" disabled={loading}>
