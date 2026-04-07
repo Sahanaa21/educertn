@@ -187,12 +187,12 @@ export default function StudentAcademicServicesPage() {
 
             const request = createJson?.request;
             const order = createJson?.zwitchOrder;
-            if (!request?.id || !order?.id || !order?.checkoutUrl) {
+            if (!request?.id || !order?.id || !order?.accessKey) {
                 toast.error('Payment initialization failed');
                 return;
             }
 
-            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {
@@ -247,12 +247,12 @@ export default function StudentAcademicServicesPage() {
             }
 
             const order = orderJson?.zwitchOrder;
-            if (!order?.id || !order?.checkoutUrl) {
+            if (!order?.id || !order?.accessKey) {
                 toast.error('Payment initialization failed');
                 return;
             }
 
-            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {

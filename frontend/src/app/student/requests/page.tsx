@@ -120,12 +120,12 @@ export default function StudentRequests() {
             }
 
             const order = orderData?.zwitchOrder;
-            if (!order?.id || !order?.checkoutUrl) {
+            if (!order?.id || !order?.accessKey) {
                 toast.error('Invalid payment order response');
                 return;
             }
 
-            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {

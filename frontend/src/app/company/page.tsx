@@ -228,13 +228,13 @@ export default function CompanyVerification() {
                 const createdRequest = data?.request;
                 const order = data?.zwitchOrder;
 
-                if (!createdRequest?.id || !order?.id || !order?.checkoutUrl) {
+                if (!createdRequest?.id || !order?.id || !order?.accessKey) {
                     toast.error('Failed to initialize payment order.');
                     return;
                 }
 
                 try {
-                    await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+                    await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey });
                 } catch (checkoutErr: any) {
                     toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     return;
@@ -350,12 +350,12 @@ export default function CompanyVerification() {
             }
 
             const order = orderData?.zwitchOrder;
-            if (!order?.id || !order?.checkoutUrl) {
+            if (!order?.id || !order?.accessKey) {
                 toast.error('Invalid payment order response');
                 return;
             }
 
-            await openZwitchCheckout({ checkoutUrl: order.checkoutUrl });
+            await openZwitchCheckout({ paymentToken: order.id, accessKey: order.accessKey });
 
             const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
             if (!shouldVerify) {
