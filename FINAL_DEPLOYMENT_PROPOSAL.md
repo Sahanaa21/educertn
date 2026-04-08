@@ -1,107 +1,78 @@
-# Final Deployment Proposal
+# College Portal Deployment Proposal
 
-## Project Footprint
-- Tracked source code size: about 10.03 MB across 132 tracked files.
-- Current workspace size is much larger because of local dependencies and caches; that is not deployment size.
-- The real growth drivers in production will be database records and uploaded documents, not the application code.
+## Overview
+The system is a web-based college portal to manage student records, examination processes, certificate services (TC, migration, correction, re-evaluation), and verification requests from external organizations.
 
-## Why the current free-tier stack should not be the final production plan
-- Render/Vercel free tiers are fine for demos, but they are not the best long-term fit for a college portal with daily usage.
-- Free tiers can sleep, rate-limit, or change limits.
-- The database, uploads, and email delivery are the parts that will grow first.
-- A college portal should be owned by the college, with college-controlled domain, email, storage, and database.
+The application source code is approximately 10 MB. In production, growth will primarily come from database records and uploaded documents.
 
-## Option 1: Low-Cost Production Setup
-Best if the college wants the cheapest stable launch with minimal code changes.
+## Current Limitation
+The system is currently deployed on Render, Vercel, and Supabase. This setup is suitable for development and testing, but not ideal for official college operations because of:
 
-### Recommended stack
-- Frontend: Vercel or Cloudflare Pages.
-- Backend: Render paid starter service or a small always-on VPS.
-- Database: Managed PostgreSQL on Supabase/Neon paid tier or equivalent.
-- File storage: S3 or Cloudinary.
-- Email: College SMTP relay if available, otherwise SES.
-- DNS: College domain with a subdomain like `verify.gat.ac.in`.
+- No strict uptime commitment on free tiers
+- Limited scalability during peak periods (for example, examination cycles)
+- Dependency on multiple third-party providers
+- Reduced long-term control and operational reliability
 
-### Pros
-- Lowest monthly cost.
-- Smallest migration effort from the current setup.
-- Fast to launch.
+## Option 1: Cost-Optimized Setup
 
-### Cons
-- Still split across multiple vendors.
-- Less ideal for very long-term ownership.
-- More manual maintenance than a fully managed AWS stack.
+### Services
+- Frontend: Vercel or Cloudflare Pages
+- Backend: Render paid service or managed VPS
+- Database: Supabase or Neon (PostgreSQL)
+- Storage: Cloudinary or Amazon S3
+- Email: College SMTP relay or Amazon SES
 
-### Who should choose this
-- If the college wants the lowest immediate spend.
-- If they are okay managing a few services separately.
+### Estimated Monthly Cost
+INR 4,000 to INR 8,000
 
-## Option 2: Best Long-Term Setup for 5-10 Years
-This is the option I recommend for a college system that must survive growth and regular use.
+### Summary
+- Quick deployment with minimal architectural change
+- Lower monthly cost
+- Uses multiple service providers
+- Good as an interim production launch
 
-### Recommended stack
-- Frontend: AWS Amplify Hosting or S3 + CloudFront.
-- Backend: AWS App Runner or ECS Fargate for the Node/Express API.
-- Database: AWS RDS PostgreSQL.
-- File storage: AWS S3.
-- Email: AWS SES or the college's own SMTP relay.
-- Secrets: AWS Systems Manager Parameter Store or Secrets Manager.
-- DNS and SSL: Route 53 + ACM.
-- Monitoring: CloudWatch logs and alarms.
+## Option 2: AWS-Based Setup (Recommended)
 
-### Pros
-- Single cloud provider ownership.
-- Better long-term maintainability.
-- Scales cleanly for students, companies, and staff.
-- No server patching if App Runner/Fargate is used.
-- Good fit for a college that may hand this to another team later.
+### Services (Amazon Web Services)
+- Frontend: AWS Amplify Hosting or S3 plus CloudFront
+- Backend: AWS App Runner
+- Database: AWS RDS (PostgreSQL)
+- Storage: AWS S3
+- Email: AWS SES or college SMTP relay
+- Secrets and configuration: AWS Systems Manager Parameter Store or Secrets Manager
+- DNS and SSL: Route 53 plus ACM
+- Monitoring: CloudWatch logs and alerts
 
-### Cons
-- Higher setup effort.
-- Slightly higher cost than the bare-minimum option.
-- Needs one careful migration phase.
+### Estimated Monthly Cost
+INR 5,000 to INR 10,000
 
-### Who should choose this
-- If the college wants the most durable and supportable production setup.
-- If they expect regular daily usage and future growth.
-- If they want fewer moving parts and better ownership.
+### Summary
+- Single platform with stronger control and governance
+- Better scalability for academic peak workloads
+- Easier long-term maintenance for institutional use
+- Better auditability, monitoring, and ownership alignment
 
-## Email Answer: Can College Email Send Website Emails For Free?
-Short answer: only if the college already has SMTP/email infrastructure.
+## Deployment and Maintenance Model
+- Source code remains in the official GitHub repository with controlled access.
+- Deployment can be automated through CI/CD for faster and safer releases.
+- The developer manages updates and incident response.
+- The college retains ownership of hosting infrastructure, domain, and production credentials.
 
-### What is possible
-- If `example@gat.ac.in` is backed by a real SMTP relay or mail server, the website can send email through it.
-- The site does not need Brevo specifically.
-- Nodemailer can send through the college's own SMTP server.
+## Storage Estimate
+- Per student: 2 MB to 5 MB
+- 1,000 students: approximately 2 GB to 5 GB
+- Long-term projection: 20 GB to 100 GB
 
-### What is still required
-- SMTP host, port, username, password, or relay access.
-- DNS records for SPF, DKIM, and DMARC.
-- A sender address such as `no-reply@gat.ac.in` or `verify@gat.ac.in`.
+## Email Note
+College email can be used for portal notifications only if the college provides a working SMTP relay (host, port, authentication, and allowed sender identity), plus SPF, DKIM, and DMARC DNS setup.
 
-### What is not enough
-- Just having a mailbox by itself is not enough.
-- A website cannot magically send mail "for free" without a mail transport service.
+## Final Website Name
+GAT Academic Portal
 
-### Recommendation
-- For the final production setup, use `no-reply@gat.ac.in` or `verify@gat.ac.in` with the college's SMTP relay if they already have one.
-- If they do not, use AWS SES in the best long-term setup.
+## Conclusion
+The system is deployment-ready.
 
-## Final Website Name Recommendation
-Use:
-- `GAT Verify`
+- Choose Option 1 for a lower-cost, fast launch.
+- Choose Option 2 for long-term reliability, scalability, and institutional ownership.
 
-Why this name:
-- Short.
-- Clear.
-- Easy for students, faculty, and companies to remember.
-- Works well for a subdomain and email branding.
-
-Suggested email identity:
-- `no-reply@gat.ac.in`
-- or `verify@gat.ac.in`
-
-## Final Recommendation
-- If the college wants the best long-term answer, choose Option 2.
-- If they want the cheapest launch, choose Option 1 only as an interim step.
-- For a real college production portal with daily usage, I recommend Option 2.
+For official college production use over the next 5 to 10 years, Option 2 is recommended.
