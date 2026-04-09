@@ -18,6 +18,7 @@ const academicServicesRoutes_1 = __importDefault(require("./routes/academicServi
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
 const requestContext_1 = require("./middleware/requestContext");
 const logger_1 = require("./utils/logger");
+const prisma_1 = require("./config/prisma");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
@@ -58,8 +59,54 @@ app.use((_req, res, next) => {
 app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
 app.use('/uploads', express_1.default.static(path_1.default.resolve(process.cwd(), 'uploads')));
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Backend is running' });
+app.get('/api/health/live', (_req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        service: 'backend',
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+    });
+});
+app.get('/api/health/ready', (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield prisma_1.prisma.$queryRaw `SELECT 1`;
+        return res.status(200).json({
+            status: 'ready',
+            dependencies: { db: 'up' },
+            timestamp: new Date().toISOString(),
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('health_readiness_failed', {
+            message: error instanceof Error ? error.message : 'unknown_error',
+        });
+        return res.status(503).json({
+            status: 'not_ready',
+            dependencies: { db: 'down' },
+            timestamp: new Date().toISOString(),
+        });
+    }
+}));
+app.get('/api/health', (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield prisma_1.prisma.$queryRaw `SELECT 1`;
+        return res.status(200).json({
+            status: 'ok',
+            message: 'Backend is running',
+            readiness: 'ready',
+            uptimeSeconds: Math.floor(process.uptime()),
+            timestamp: new Date().toISOString(),
+        });
+    }
+    catch (_a) {
+        return res.status(503).json({
+            status: 'degraded',
+            message: 'Backend running but database unavailable',
+            readiness: 'not_ready',
+            uptimeSeconds: Math.floor(process.uptime()),
+            timestamp: new Date().toISOString(),
+        });
+    }
 });
 app.get('/', (_req, res) => {
     res.status(200).json({

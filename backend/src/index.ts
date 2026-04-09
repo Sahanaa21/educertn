@@ -13,6 +13,7 @@ import academicServicesRoutes from './routes/academicServicesRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
 import { requestContext } from './middleware/requestContext';
 import { logger } from './utils/logger';
+import { prisma } from './config/prisma';
 
 dotenv.config();
 
@@ -68,8 +69,54 @@ app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Backend is running' });
+app.get('/api/health/live', (_req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        service: 'backend',
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+    });
+});
+
+app.get('/api/health/ready', async (_req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        return res.status(200).json({
+            status: 'ready',
+            dependencies: { db: 'up' },
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        logger.error('health_readiness_failed', {
+            message: error instanceof Error ? error.message : 'unknown_error',
+        });
+        return res.status(503).json({
+            status: 'not_ready',
+            dependencies: { db: 'down' },
+            timestamp: new Date().toISOString(),
+        });
+    }
+});
+
+app.get('/api/health', async (_req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        return res.status(200).json({
+            status: 'ok',
+            message: 'Backend is running',
+            readiness: 'ready',
+            uptimeSeconds: Math.floor(process.uptime()),
+            timestamp: new Date().toISOString(),
+        });
+    } catch {
+        return res.status(503).json({
+            status: 'degraded',
+            message: 'Backend running but database unavailable',
+            readiness: 'not_ready',
+            uptimeSeconds: Math.floor(process.uptime()),
+            timestamp: new Date().toISOString(),
+        });
+    }
 });
 
 app.get('/', (_req, res) => {
