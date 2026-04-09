@@ -73,12 +73,6 @@ const CRITICAL_ESCALATION_EMAILS = Array.from(new Set([
             return false;
         }
     };
-    const buildIssueMailActionFrontendUrl = (params) => {
-        const frontendBase = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
-        if (!frontendBase)
-            return null;
-        return `${frontendBase}/issue-mail-action?${new URLSearchParams(params).toString()}`;
-    };
 const analyzeIssue = (input) => {
     const text = `${input.title} ${input.description} ${input.category} ${(input.pageUrl || '')}`.toLowerCase();
     let score = 0;
@@ -317,29 +311,22 @@ const updateIssueReportFromEmail = (req, res) => __awaiter(void 0, void 0, void 
         const issueId = String(req.params.id || '').trim();
         const action = String(req.query.action || '').trim().toUpperCase();
         const token = String(req.query.token || '').trim();
-        const respond = (statusCode, params, fallbackHtml) => {
-            const redirectUrl = buildIssueMailActionFrontendUrl(params);
-            if (redirectUrl) {
-                return res.redirect(302, redirectUrl);
-            }
-            return res.status(statusCode).send(fallbackHtml);
-        };
         if (!ISSUE_MAIL_ACTION_SECRET) {
-            return respond(503, { ok: '0', issueId, status: action || 'UNKNOWN', message: 'Mail actions are not configured' }, '<h2>Mail actions are not configured</h2><p>Please set ISSUE_MAIL_ACTION_SECRET and retry.</p>');
+            return res.status(503).send('<h2>Mail actions are not configured</h2><p>Please set ISSUE_MAIL_ACTION_SECRET and retry.</p>');
         }
         if (!issueId || !action || !token) {
-            return respond(400, { ok: '0', issueId, status: action || 'UNKNOWN', message: 'Invalid mail action link' }, '<h2>Invalid mail action link</h2><p>Required parameters are missing.</p>');
+            return res.status(400).send('<h2>Invalid mail action link</h2><p>Required parameters are missing.</p>');
         }
         if (!EMAIL_ACTION_STATUSES.includes(action)) {
-            return respond(400, { ok: '0', issueId, status: action, message: 'Invalid mail action' }, '<h2>Invalid mail action</h2><p>Only IN_PROGRESS, RESOLVED, and CLOSED are allowed via mail.</p>');
+            return res.status(400).send('<h2>Invalid mail action</h2><p>Only IN_PROGRESS, RESOLVED, and CLOSED are allowed via mail.</p>');
         }
         const valid = validateMailActionToken(token, issueId, action);
         if (!valid) {
-            return respond(401, { ok: '0', issueId, status: action, message: 'Mail action link expired or invalid' }, '<h2>Mail action link expired or invalid</h2><p>Please use the latest email link.</p>');
+            return res.status(401).send('<h2>Mail action link expired or invalid</h2><p>Please use the latest email link.</p>');
         }
         const existing = yield prisma_1.prisma.issueReport.findUnique({ where: { id: issueId } });
         if (!existing) {
-            return respond(404, { ok: '0', issueId, status: action, message: 'Issue not found' }, '<h2>Issue not found</h2><p>This issue may have been deleted.</p>');
+            return res.status(404).send('<h2>Issue not found</h2><p>This issue may have been deleted.</p>');
         }
         if (existing.status !== action) {
             yield prisma_1.prisma.issueReport.update({
@@ -350,7 +337,7 @@ const updateIssueReportFromEmail = (req, res) => __awaiter(void 0, void 0, void 
                 }
             });
         }
-        return respond(200, { ok: '1', issueId, status: action, message: 'Issue status updated' }, `
+        return res.status(200).send(`
             <h2>Issue status updated</h2>
             <p><strong>Issue ID:</strong> ${(0, html_1.escapeHtml)(issueId)}</p>
             <p><strong>New Status:</strong> ${(0, html_1.escapeHtml)(action)}</p>
@@ -359,17 +346,6 @@ const updateIssueReportFromEmail = (req, res) => __awaiter(void 0, void 0, void 
     }
     catch (error) {
         console.error('Error updating issue from mail action:', error);
-        const issueId = String(req.params.id || '').trim();
-        const action = String(req.query.action || '').trim().toUpperCase() || 'UNKNOWN';
-        const redirectUrl = buildIssueMailActionFrontendUrl({
-            ok: '0',
-            issueId,
-            status: action,
-            message: 'Failed to update issue status'
-        });
-        if (redirectUrl) {
-            return res.redirect(302, redirectUrl);
-        }
         return res.status(500).send('<h2>Failed to update issue status</h2><p>Please try again from a fresh email link.</p>');
     }
 });
