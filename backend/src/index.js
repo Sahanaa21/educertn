@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19,6 +28,7 @@ const academicServicesRoutes_1 = __importDefault(require("./routes/academicServi
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
 const requestContext_1 = require("./middleware/requestContext");
 const logger_1 = require("./utils/logger");
+const errorReporter_1 = require("./utils/errorReporter");
 const prisma_1 = require("./config/prisma");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -62,7 +72,8 @@ app.use((_req, res, next) => {
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
 });
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: '100kb' }));
+app.use(express_1.default.urlencoded({ extended: false, limit: '100kb' }));
 app.use((0, cookie_parser_1.default)());
 app.use('/uploads', express_1.default.static(path_1.default.resolve(process.cwd(), 'uploads')));
 app.get('/api/health/live', (_req, res) => {
@@ -129,7 +140,7 @@ app.use('/api', supportRoutes_1.default);
 app.use('/api', academicServicesRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use((err, _req, res, _next) => {
-    const requestId = String(((_req === null || _req === void 0 ? void 0 : _req.requestId) || 'unknown'));
+    const requestId = String((_req === null || _req === void 0 ? void 0 : _req.requestId) || 'unknown');
     if (err instanceof multer_1.default.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             logger_1.logger.warn('multer_limit_file_size', { requestId, message: err.message });
@@ -141,14 +152,17 @@ app.use((err, _req, res, _next) => {
     if (err) {
         const message = typeof err.message === 'string' ? err.message : 'Internal server error';
         const status = message.toLowerCase().includes('invalid file type') ? 400 : 500;
-        logger_1.logger.error('unhandled_error', {
+        (0, errorReporter_1.reportServerError)(err, {
             requestId,
+            category: 'express_unhandled_error',
             message,
-            stack: typeof (err === null || err === void 0 ? void 0 : err.stack) === 'string' ? err.stack : undefined,
         });
         return res.status(status).json({ message, requestId });
     }
-    logger_1.logger.error('unhandled_error_unknown', { requestId });
+    (0, errorReporter_1.reportServerError)(new Error('Unknown express error'), {
+        requestId,
+        category: 'express_unknown_error',
+    });
     return res.status(500).json({ message: 'Internal server error', requestId });
 });
 const startServer = () => {
@@ -199,14 +213,13 @@ process.on('SIGINT', () => {
     void shutdown('SIGINT');
 });
 process.on('uncaughtException', (error) => {
-    logger_1.logger.error('uncaught_exception', {
-        message: error.message,
-        stack: error.stack,
+    (0, errorReporter_1.reportServerError)(error, {
+        category: 'uncaught_exception',
     });
 });
 process.on('unhandledRejection', (reason) => {
-    logger_1.logger.error('unhandled_promise_rejection', {
-        reason: reason instanceof Error ? reason.message : String(reason),
+    (0, errorReporter_1.reportServerError)(reason, {
+        category: 'unhandled_promise_rejection',
     });
 });
 if (require.main === module) {

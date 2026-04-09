@@ -13,6 +13,7 @@ import academicServicesRoutes from './routes/academicServicesRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
 import { requestContext } from './middleware/requestContext';
 import { logger } from './utils/logger';
+import { reportServerError } from './utils/errorReporter';
 import { prisma } from './config/prisma';
 
 dotenv.config();
@@ -155,15 +156,18 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     if (err) {
         const message = typeof err.message === 'string' ? err.message : 'Internal server error';
         const status = message.toLowerCase().includes('invalid file type') ? 400 : 500;
-        logger.error('unhandled_error', {
+        reportServerError(err, {
             requestId,
+            category: 'express_unhandled_error',
             message,
-            stack: typeof err?.stack === 'string' ? err.stack : undefined,
         });
         return res.status(status).json({ message, requestId });
     }
 
-    logger.error('unhandled_error_unknown', { requestId });
+    reportServerError(new Error('Unknown express error'), {
+        requestId,
+        category: 'express_unknown_error',
+    });
     return res.status(500).json({ message: 'Internal server error', requestId });
 });
 
@@ -216,15 +220,14 @@ process.on('SIGINT', () => {
 });
 
 process.on('uncaughtException', (error) => {
-    logger.error('uncaught_exception', {
-        message: error.message,
-        stack: error.stack,
+    reportServerError(error, {
+        category: 'uncaught_exception',
     });
 });
 
 process.on('unhandledRejection', (reason) => {
-    logger.error('unhandled_promise_rejection', {
-        reason: reason instanceof Error ? reason.message : String(reason),
+    reportServerError(reason, {
+        category: 'unhandled_promise_rejection',
     });
 });
 

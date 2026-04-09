@@ -1,14 +1,25 @@
 "use client";
 
+import { useEffect } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { reportClientError } from '@/lib/errorReporter';
 
 export default function GlobalErrorPage({
+    error,
     reset,
 }: {
     error: Error & { digest?: string };
     reset: () => void;
 }) {
+    useEffect(() => {
+        reportClientError(error, {
+            category: 'global_error_page',
+            digest: error.digest || null,
+            path: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+        });
+    }, [error]);
+
     return (
         <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 sm:px-8">
             <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-md">
