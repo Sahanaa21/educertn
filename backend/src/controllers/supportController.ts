@@ -4,6 +4,7 @@ import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
 
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
+const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
 
 export const createIssueReport = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -43,8 +44,7 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
         // Fire-and-forget email alert so SMTP errors don't fail the request
         void (async () => {
             try {
-                const settings = await (prisma as any).portalSettings.findUnique({ where: { id: 1 } });
-                const notifyEmail = settings?.supportEmail || process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER;
+                const notifyEmail = DEVELOPER_ISSUE_EMAIL;
                 if (notifyEmail) {
                     const safeTitle = escapeHtml(issue.title);
                     const safeCategory = escapeHtml(issue.category);

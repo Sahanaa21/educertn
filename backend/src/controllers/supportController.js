@@ -13,6 +13,7 @@ exports.updateIssueReport = exports.getAllIssueReports = exports.createIssueRepo
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
 const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { title, description, category, pageUrl, reportedByName, reportedByEmail, role, deviceInfo } = req.body;
@@ -38,8 +39,7 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // Fire-and-forget email alert so SMTP errors don't fail the request
         void (() => __awaiter(void 0, void 0, void 0, function* () {
             try {
-                const settings = yield prisma_1.prisma.portalSettings.findUnique({ where: { id: 1 } });
-                const notifyEmail = (settings === null || settings === void 0 ? void 0 : settings.supportEmail) || process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER;
+                const notifyEmail = DEVELOPER_ISSUE_EMAIL;
                 if (notifyEmail) {
                     const html = `
                         <h2>New Issue Report Submitted</h2>
