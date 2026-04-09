@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.startServer = exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -21,7 +22,9 @@ const logger_1 = require("./utils/logger");
 const prisma_1 = require("./config/prisma");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+exports.app = app;
 const port = process.env.PORT || 5000;
+let server = null;
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 const defaultAllowedOrigins = [
@@ -110,7 +113,7 @@ app.get('/api/health', (_req, res) => __awaiter(void 0, void 0, void 0, function
             timestamp: new Date().toISOString(),
         });
     }
-});
+}));
 app.get('/', (_req, res) => {
     res.status(200).json({
         service: 'Global Academy of Technology Verification Backend',
@@ -148,11 +151,32 @@ app.use((err, _req, res, _next) => {
     logger_1.logger.error('unhandled_error_unknown', { requestId });
     return res.status(500).json({ message: 'Internal server error', requestId });
 });
-const server = app.listen(port, () => {
-    logger_1.logger.info('server_started', { port: Number(port) });
-});
+const startServer = () => {
+    if (server)
+        return server;
+    server = app.listen(port, () => {
+        logger_1.logger.info('server_started', { port: Number(port) });
+    });
+    return server;
+};
+exports.startServer = startServer;
 const shutdown = (signal) => __awaiter(void 0, void 0, void 0, function* () {
     logger_1.logger.warn('server_shutdown_signal', { signal });
+    if (!server) {
+        try {
+            yield prisma_1.prisma.$disconnect();
+            logger_1.logger.info('server_shutdown_complete_without_listener', { signal });
+            process.exit(0);
+        }
+        catch (error) {
+            logger_1.logger.error('server_shutdown_failed', {
+                signal,
+                message: error instanceof Error ? error.message : 'unknown_error',
+            });
+            process.exit(1);
+        }
+        return;
+    }
     server.close(() => __awaiter(void 0, void 0, void 0, function* () {
         try {
             yield prisma_1.prisma.$disconnect();
@@ -185,3 +209,6 @@ process.on('unhandledRejection', (reason) => {
         reason: reason instanceof Error ? reason.message : String(reason),
     });
 });
+if (require.main === module) {
+    startServer();
+}

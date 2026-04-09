@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
+    "test:api": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "prisma generate && tsc -p tsconfig.json",
     "db:ping": "node scripts/db_ping.js",
@@ -45,6 +46,7 @@
     "@types/node": "^25.3.5",
     "@types/nodemailer": "^7.0.11",
     "prisma": "^6.19.2",
+    "supertest": "^7.2.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
