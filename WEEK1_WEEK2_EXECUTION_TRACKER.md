@@ -8,6 +8,7 @@
 
 ## Week 2
 - [x] CI pipeline (backend + frontend checks)
+- [x] Frontend Playwright smoke tests in CI
 - [x] Backup scripts (DB + uploads) and restore script
 - [x] Operations backup guide
 - [x] Operations runbook
