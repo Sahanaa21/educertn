@@ -42,6 +42,58 @@ const analyzeIssue = (input: { title: string; description: string; category: str
     };
 };
 
+const toTokens = (value: string) => {
+    return new Set(
+        value
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .map((token) => token.trim())
+            .filter((token) => token.length > 2)
+    );
+};
+
+const jaccardSimilarity = (a: string, b: string) => {
+    const aTokens = toTokens(a);
+    const bTokens = toTokens(b);
+    if (aTokens.size === 0 && bTokens.size === 0) return 1;
+    if (aTokens.size === 0 || bTokens.size === 0) return 0;
+
+    let intersection = 0;
+    for (const token of aTokens) {
+        if (bTokens.has(token)) intersection += 1;
+    }
+    const union = new Set([...aTokens, ...bTokens]).size;
+    return union === 0 ? 0 : intersection / union;
+};
+
+const detectDuplicateIssue = async (input: { id?: string; title: string; description: string; category: string; pageUrl?: string | null; }) => {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const candidates = await (prisma as any).issueReport.findMany({
+        where: {
+            category: input.category,
+            status: { in: ['OPEN', 'IN_PROGRESS'] },
+            createdAt: { gte: thirtyDaysAgo },
+            ...(input.id ? { id: { not: input.id } } : {})
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 75
+    });
+
+    for (const candidate of candidates) {
+        const titleScore = jaccardSimilarity(input.title, candidate.title);
+        const descriptionScore = jaccardSimilarity(input.description, candidate.description);
+        const samePage = Boolean(input.pageUrl && candidate.pageUrl && input.pageUrl === candidate.pageUrl);
+        const probableDuplicate = titleScore >= 0.7 && (descriptionScore >= 0.45 || samePage);
+
+        if (probableDuplicate) {
+            return candidate.id as string;
+        }
+    }
+
+    return null;
+};
+
 export const createIssueReport = async (req: Request, res: Response): Promise<any> => {
     try {
         const {
@@ -62,6 +114,13 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
         if (title.trim().length < 5 || description.trim().length < 15) {
             return res.status(400).json({ message: 'Please provide a more detailed issue report' });
         }
+
+        const duplicateOfId = await detectDuplicateIssue({
+            title: title.trim(),
+            description: description.trim(),
+            category: category.trim(),
+            pageUrl: pageUrl?.trim() || null,
+        });
 
         const issue = await (prisma as any).issueReport.create({
             data: {
@@ -98,11 +157,13 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                     const safeDescription = escapeHtml(issue.description);
                     const safePriority = escapeHtml(classification.priority);
                     const safeTags = escapeHtml(classification.tags.join(', ') || 'none');
+                    const safeDuplicate = escapeHtml(duplicateOfId || 'No likely duplicate found');
                     const html = `
                         <h2>New Issue Report Submitted</h2>
                         <p><strong>Title:</strong> ${safeTitle}</p>
                         <p><strong>Priority:</strong> ${safePriority}</p>
                         <p><strong>Auto Tags:</strong> ${safeTags}</p>
+                        <p><strong>Possible Duplicate Of:</strong> ${safeDuplicate}</p>
                         <p><strong>Category:</strong> ${safeCategory}</p>
                         <p><strong>Status:</strong> ${safeStatus}</p>
                         <p><strong>Reported By:</strong> ${safeReportedByName} (${safeReportedByEmail})</p>
@@ -122,6 +183,7 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
             ...issue,
             priority: classification.priority,
             tags: classification.tags,
+            duplicateOfId,
         });
     } catch (error) {
         console.error('Error creating issue report:', error);
@@ -134,19 +196,27 @@ export const getAllIssueReports = async (_req: Request, res: Response): Promise<
         const issues = await (prisma as any).issueReport.findMany({
             orderBy: { createdAt: 'desc' }
         });
-        return res.json(issues.map((issue: any) => {
+        return res.json(await Promise.all(issues.map(async (issue: any) => {
             const classification = analyzeIssue({
                 title: issue.title,
                 description: issue.description,
                 category: issue.category,
                 pageUrl: issue.pageUrl
             });
+            const duplicateOfId = await detectDuplicateIssue({
+                id: issue.id,
+                title: issue.title,
+                description: issue.description,
+                category: issue.category,
+                pageUrl: issue.pageUrl,
+            });
             return {
                 ...issue,
                 priority: classification.priority,
                 tags: classification.tags,
+                duplicateOfId,
             };
-        }));
+        })));
     } catch (error) {
         console.error('Error fetching issue reports:', error);
         return res.status(500).json({ message: 'Internal server error' });

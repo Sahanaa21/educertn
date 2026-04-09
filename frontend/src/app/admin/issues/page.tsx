@@ -19,6 +19,7 @@ type IssueReport = {
     category: string;
     priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     tags?: string[];
+    duplicateOfId?: string | null;
     pageUrl: string | null;
     reportedByName: string | null;
     reportedByEmail: string | null;
@@ -195,6 +196,11 @@ export default function AdminIssuesPage() {
                                                 <span className="text-xs text-slate-400">No tags</span>
                                             )}
                                         </div>
+                                        {issue.duplicateOfId ? (
+                                            <div className="mt-2 text-xs text-rose-700">
+                                                Possible duplicate of: <span className="font-semibold">{issue.duplicateOfId}</span>
+                                            </div>
+                                        ) : null}
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         <div className="text-sm text-slate-900">{issue.reportedByName || 'Anonymous'}</div>

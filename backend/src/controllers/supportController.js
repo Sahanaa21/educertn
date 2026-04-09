@@ -48,6 +48,47 @@ const analyzeIssue = (input) => {
         tags: Array.from(tags),
     };
 };
+const toTokens = (value) => {
+    return new Set(value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 2));
+};
+const jaccardSimilarity = (a, b) => {
+    const aTokens = toTokens(a);
+    const bTokens = toTokens(b);
+    if (aTokens.size === 0 && bTokens.size === 0)
+        return 1;
+    if (aTokens.size === 0 || bTokens.size === 0)
+        return 0;
+    let intersection = 0;
+    for (const token of aTokens) {
+        if (bTokens.has(token))
+            intersection += 1;
+    }
+    const union = new Set([...aTokens, ...bTokens]).size;
+    return union === 0 ? 0 : intersection / union;
+};
+const detectDuplicateIssue = (input) => __awaiter(void 0, void 0, void 0, function* () {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const candidates = yield prisma_1.prisma.issueReport.findMany({
+        where: Object.assign({ category: input.category, status: { in: ['OPEN', 'IN_PROGRESS'] }, createdAt: { gte: thirtyDaysAgo } }, (input.id ? { id: { not: input.id } } : {})),
+        orderBy: { createdAt: 'desc' },
+        take: 75
+    });
+    for (const candidate of candidates) {
+        const titleScore = jaccardSimilarity(input.title, candidate.title);
+        const descriptionScore = jaccardSimilarity(input.description, candidate.description);
+        const samePage = Boolean(input.pageUrl && candidate.pageUrl && input.pageUrl === candidate.pageUrl);
+        const probableDuplicate = titleScore >= 0.7 && (descriptionScore >= 0.45 || samePage);
+        if (probableDuplicate) {
+            return candidate.id;
+        }
+    }
+    return null;
+});
 const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { title, description, category, pageUrl, reportedByName, reportedByEmail, role, deviceInfo } = req.body;
@@ -57,6 +98,12 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (title.trim().length < 5 || description.trim().length < 15) {
             return res.status(400).json({ message: 'Please provide a more detailed issue report' });
         }
+        const duplicateOfId = yield detectDuplicateIssue({
+            title: title.trim(),
+            description: description.trim(),
+            category: category.trim(),
+            pageUrl: (pageUrl === null || pageUrl === void 0 ? void 0 : pageUrl.trim()) || null,
+        });
         const issue = yield prisma_1.prisma.issueReport.create({
             data: {
                 title: title.trim(),
@@ -83,10 +130,12 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 if (notifyEmail) {
                     const safePriority = classification.priority;
                     const safeTags = classification.tags.join(', ') || 'none';
+                    const safeDuplicate = duplicateOfId || 'No likely duplicate found';
                     const html = `
                         <h2>New Issue Report Submitted</h2>
                         <p><strong>Priority:</strong> ${safePriority}</p>
                         <p><strong>Auto Tags:</strong> ${safeTags}</p>
+                        <p><strong>Possible Duplicate Of:</strong> ${safeDuplicate}</p>
                         <p><strong>Title:</strong> ${issue.title}</p>
                         <p><strong>Category:</strong> ${issue.category}</p>
                         <p><strong>Status:</strong> ${issue.status}</p>
@@ -103,7 +152,7 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 console.error('Failed to send issue report notification email:', emailErr);
             }
         }))();
-        return res.status(201).json(Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags }));
+        return res.status(201).json(Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags, duplicateOfId }));
     }
     catch (error) {
         console.error('Error creating issue report:', error);
@@ -116,15 +165,22 @@ const getAllIssueReports = (_req, res) => __awaiter(void 0, void 0, void 0, func
         const issues = yield prisma_1.prisma.issueReport.findMany({
             orderBy: { createdAt: 'desc' }
         });
-        return res.json(issues.map((issue) => {
+        return res.json(yield Promise.all(issues.map((issue) => __awaiter(void 0, void 0, void 0, function* () {
             const classification = analyzeIssue({
                 title: issue.title,
                 description: issue.description,
                 category: issue.category,
                 pageUrl: issue.pageUrl
             });
-            return Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags });
-        }));
+            const duplicateOfId = yield detectDuplicateIssue({
+                id: issue.id,
+                title: issue.title,
+                description: issue.description,
+                category: issue.category,
+                pageUrl: issue.pageUrl,
+            });
+            return Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags, duplicateOfId });
+        }))));
     }
     catch (error) {
         console.error('Error fetching issue reports:', error);
