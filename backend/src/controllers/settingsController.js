@@ -12,6 +12,7 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeAdminEmail = exports.registerAdminEmail = exports.updatePortalSettings = exports.getPortalSettings = void 0;
 const prisma_1 = require("../config/prisma");
+const logger_1 = require("../utils/logger");
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_ADMIN_ALLOWLIST = String(process.env.ADMIN_BOOTSTRAP_EMAILS || '')
     .split(/[\n,;]/)
@@ -62,6 +63,8 @@ const updatePortalSettings = (req, res) => __awaiter(void 0, void 0, void 0, fun
             return res.status(400).json({ message: 'supportEmail, frontendUrl and smtpFromName are required' });
         }
         const mergedAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(adminAllowedEmails));
+        const actorId = String((req.user === null || req.user === void 0 ? void 0 : req.user.id) || 'unknown');
+        const actorEmail = String((req.user === null || req.user === void 0 ? void 0 : req.user.email) || 'unknown');
         const updated = yield prisma_1.prisma.portalSettings.upsert({
             where: { id: 1 },
             update: {
@@ -82,6 +85,15 @@ const updatePortalSettings = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 adminAllowedEmails: mergedAllowlist.join('\n')
             }
         });
+        logger_1.logger.info('audit_portal_settings_updated', {
+            actorId,
+            actorEmail,
+            supportEmail: supportEmail.trim(),
+            frontendUrl: frontendUrl.trim(),
+            maintenanceMode: Boolean(maintenanceMode),
+            allowCompanySignup: Boolean(allowCompanySignup),
+            adminAllowlistCount: mergedAllowlist.length,
+        });
         return res.json(Object.assign(Object.assign({}, updated), { adminAllowedEmails: mergedAllowlist.join('\n') }));
     }
     catch (error) {
@@ -94,6 +106,8 @@ const registerAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
     var _a;
     try {
         const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
+        const actorId = String((req.user === null || req.user === void 0 ? void 0 : req.user.id) || 'unknown');
+        const actorEmail = String((req.user === null || req.user === void 0 ? void 0 : req.user.email) || 'unknown');
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
         }
@@ -129,6 +143,12 @@ const registerAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 data: { role: 'ADMIN' }
             });
         }
+        logger_1.logger.info('audit_admin_allowlist_email_registered', {
+            actorId,
+            actorEmail,
+            addedEmail: email,
+            allowlistCount: currentAllowlist.length,
+        });
         return res.json({
             message: 'Admin email registered successfully',
             adminAllowedEmails: currentAllowlist.join('\n')
@@ -144,6 +164,8 @@ const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, functio
     var _a, _b, _c;
     try {
         const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
+        const actorId = String((req.user === null || req.user === void 0 ? void 0 : req.user.id) || 'unknown');
+        const actorEmail = String((req.user === null || req.user === void 0 ? void 0 : req.user.email) || 'unknown');
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
         }
@@ -181,6 +203,12 @@ const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 data: { role: 'STUDENT' }
             });
         }
+        logger_1.logger.info('audit_admin_allowlist_email_removed', {
+            actorId,
+            actorEmail,
+            removedEmail: email,
+            remainingAllowlistCount: nextAllowlist.length,
+        });
         return res.json({
             message: 'Admin email removed successfully',
             adminAllowedEmails: nextAllowlist.join('\n')

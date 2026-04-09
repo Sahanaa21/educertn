@@ -14,6 +14,7 @@ const crypto_1 = require("crypto");
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const html_1 = require("../utils/html");
+const logger_1 = require("../utils/logger");
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
 const EMAIL_ACTION_STATUSES = ['IN_PROGRESS', 'RESOLVED', 'CLOSED'];
@@ -195,6 +196,12 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
             category: issue.category,
             pageUrl: issue.pageUrl
         });
+        logger_1.logger.info('audit_issue_report_created', {
+            issueId: issue.id,
+            status: issue.status,
+            category: issue.category,
+            priority: classification.priority,
+        });
         // Fire-and-forget email alert so SMTP errors don't fail the request
         void (() => __awaiter(void 0, void 0, void 0, function* () {
             try {
@@ -348,6 +355,11 @@ const updateIssueReportFromEmail = (req, res) => __awaiter(void 0, void 0, void 
                     status: action,
                     adminNotes: `${existing.adminNotes ? `${existing.adminNotes}\n` : ''}[Mail Action] Status set to ${action} at ${new Date().toISOString()}`
                 }
+            });
+            logger_1.logger.info('audit_issue_status_updated_from_mail', {
+                issueId,
+                previousStatus: existing.status,
+                nextStatus: action,
             });
         }
         return res.status(200).send(`

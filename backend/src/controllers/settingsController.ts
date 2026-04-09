@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
+import { logger } from '../utils/logger';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_ADMIN_ALLOWLIST = String(process.env.ADMIN_BOOTSTRAP_EMAILS || '')
@@ -79,6 +80,8 @@ export const updatePortalSettings = async (req: Request, res: Response): Promise
         }
 
         const mergedAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(adminAllowedEmails));
+        const actorId = String((req as any).user?.id || 'unknown');
+        const actorEmail = String((req as any).user?.email || 'unknown');
 
         const updated = await (prisma as any).portalSettings.upsert({
             where: { id: 1 },
@@ -101,6 +104,16 @@ export const updatePortalSettings = async (req: Request, res: Response): Promise
             }
         });
 
+        logger.info('audit_portal_settings_updated', {
+            actorId,
+            actorEmail,
+            supportEmail: supportEmail.trim(),
+            frontendUrl: frontendUrl.trim(),
+            maintenanceMode: Boolean(maintenanceMode),
+            allowCompanySignup: Boolean(allowCompanySignup),
+            adminAllowlistCount: mergedAllowlist.length,
+        });
+
         return res.json({
             ...updated,
             adminAllowedEmails: mergedAllowlist.join('\n')
@@ -114,6 +127,8 @@ export const updatePortalSettings = async (req: Request, res: Response): Promise
 export const registerAdminEmail = async (req: Request, res: Response): Promise<any> => {
     try {
         const email = String(req.body?.email || '').trim().toLowerCase();
+        const actorId = String((req as any).user?.id || 'unknown');
+        const actorEmail = String((req as any).user?.email || 'unknown');
 
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
@@ -155,6 +170,13 @@ export const registerAdminEmail = async (req: Request, res: Response): Promise<a
             });
         }
 
+        logger.info('audit_admin_allowlist_email_registered', {
+            actorId,
+            actorEmail,
+            addedEmail: email,
+            allowlistCount: currentAllowlist.length,
+        });
+
         return res.json({
             message: 'Admin email registered successfully',
             adminAllowedEmails: currentAllowlist.join('\n')
@@ -168,6 +190,8 @@ export const registerAdminEmail = async (req: Request, res: Response): Promise<a
 export const removeAdminEmail = async (req: Request, res: Response): Promise<any> => {
     try {
         const email = String(req.body?.email || '').trim().toLowerCase();
+        const actorId = String((req as any).user?.id || 'unknown');
+        const actorEmail = String((req as any).user?.email || 'unknown');
 
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
@@ -214,6 +238,13 @@ export const removeAdminEmail = async (req: Request, res: Response): Promise<any
                 data: { role: 'STUDENT' }
             });
         }
+
+        logger.info('audit_admin_allowlist_email_removed', {
+            actorId,
+            actorEmail,
+            removedEmail: email,
+            remainingAllowlistCount: nextAllowlist.length,
+        });
 
         return res.json({
             message: 'Admin email removed successfully',

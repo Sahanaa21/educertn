@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
+import { logger } from '../utils/logger';
 
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
 const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
@@ -67,12 +68,6 @@ const validateMailActionToken = (token: string, issueId: string, status: string)
     } catch {
         return false;
     }
-};
-
-const buildIssueMailActionFrontendUrl = (params: Record<string, string>) => {
-    const frontendBase = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
-    if (!frontendBase) return null;
-    return `${frontendBase}/issue-mail-action?${new URLSearchParams(params).toString()}`;
 };
 
 const analyzeIssue = (input: { title: string; description: string; category: string; pageUrl?: string | null; }) => {
@@ -223,6 +218,12 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
             description: issue.description,
             category: issue.category,
             pageUrl: issue.pageUrl
+        });
+        logger.info('audit_issue_report_created', {
+            issueId: issue.id,
+            status: issue.status,
+            category: issue.category,
+            priority: classification.priority,
         });
 
         // Fire-and-forget email alert so SMTP errors don't fail the request
@@ -400,6 +401,11 @@ export const updateIssueReportFromEmail = async (req: Request, res: Response): P
                     status: action,
                     adminNotes: `${existing.adminNotes ? `${existing.adminNotes}\n` : ''}[Mail Action] Status set to ${action} at ${new Date().toISOString()}`
                 }
+            });
+            logger.info('audit_issue_status_updated_from_mail', {
+                issueId,
+                previousStatus: existing.status,
+                nextStatus: action,
             });
         }
 
