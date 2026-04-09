@@ -36,7 +36,6 @@ router.put('/verifications/:id/status', authMiddleware_1.authenticate, (0, authM
 router.get('/verifications/:id/template', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminController_1.downloadVerificationTemplate);
 router.put('/verifications/:id/completed-file', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, verificationResponseUpload.single('file'), adminController_1.uploadVerificationCompletedFile);
 router.get('/issues', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), supportController_1.getAllIssueReports);
-router.put('/issues/:id', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, supportController_1.updateIssueReport);
 router.get('/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), settingsController_1.getPortalSettings);
 router.put('/settings', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, settingsController_1.updatePortalSettings);
 router.post('/settings/admin-emails', authMiddleware_1.authenticate, (0, authMiddleware_1.requireRole)('ADMIN'), adminMutationLimiter, settingsController_1.registerAdminEmail);

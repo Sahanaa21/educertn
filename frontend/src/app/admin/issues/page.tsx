@@ -37,7 +37,6 @@ export default function AdminIssuesPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
-    const [processingId, setProcessingId] = useState<string | null>(null);
 
     const fetchIssues = useCallback(async () => {
         const token = sessionStorage.getItem('adminToken');
@@ -68,35 +67,6 @@ export default function AdminIssuesPage() {
     useEffect(() => {
         fetchIssues();
     }, [fetchIssues]);
-
-    const updateIssueStatus = async (id: string, status: IssueReport['status']) => {
-        const token = sessionStorage.getItem('adminToken');
-        if (!token) return;
-
-        setProcessingId(id);
-        try {
-            const res = await fetch(`${API_BASE}/api/admin/issues/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ status })
-            });
-
-            if (res.ok) {
-                toast.success(`Issue marked as ${status}`);
-                fetchIssues();
-            } else {
-                const data = await res.json();
-                toast.error(data.message || 'Failed to update issue status');
-            }
-        } catch {
-            toast.error('Network error while updating issue');
-        } finally {
-            setProcessingId(null);
-        }
-    };
 
     const filteredIssues = issues.filter((issue) => {
         const key = search.toLowerCase();
@@ -169,7 +139,7 @@ export default function AdminIssuesPage() {
                                 <TableHead className="min-w-40 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
                                 <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Page</TableHead>
                                 <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
-                                <TableHead className="min-w-72 whitespace-nowrap text-slate-200 font-semibold">Action</TableHead>
+                                <TableHead className="min-w-72 whitespace-nowrap text-slate-200 font-semibold">Developer Workflow</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -221,21 +191,8 @@ export default function AdminIssuesPage() {
                                     <TableCell className="align-top py-3 text-xs text-slate-600">{issue.pageUrl || 'N/A'}</TableCell>
                                     <TableCell className="align-top py-3 text-xs text-slate-600">{new Date(issue.createdAt).toLocaleString()}</TableCell>
                                     <TableCell className="p-2 align-top min-w-72">
-                                        <div className="flex w-68 flex-col gap-2">
-                                            <Select
-                                                value={issue.status}
-                                                onValueChange={(value) => updateIssueStatus(issue.id, value as IssueReport['status'])}
-                                                disabled={processingId === issue.id}
-                                            >
-                                                <SelectTrigger className="h-8">
-                                                    <SelectValue placeholder="Update status" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {STATUS_OPTIONS.map((status) => (
-                                                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+                                            Status updates are handled by developer email action links.
                                         </div>
                                     </TableCell>
                                 </TableRow>

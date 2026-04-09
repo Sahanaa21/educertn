@@ -9,7 +9,7 @@ import {
 	downloadVerificationTemplate,
 	uploadVerificationCompletedFile
 } from '../controllers/adminController';
-import { getAllIssueReports, updateIssueReport } from '../controllers/supportController';
+import { getAllIssueReports } from '../controllers/supportController';
 import { getPortalSettings, registerAdminEmail, removeAdminEmail, updatePortalSettings } from '../controllers/settingsController';
 import { requireRole, authenticate } from '../middleware/authMiddleware';
 import multer from 'multer';
@@ -47,7 +47,6 @@ router.get('/verifications/:id/template', authenticate, requireRole('ADMIN'), do
 router.put('/verifications/:id/completed-file', authenticate, requireRole('ADMIN'), adminMutationLimiter, verificationResponseUpload.single('file'), uploadVerificationCompletedFile);
 
 router.get('/issues', authenticate, requireRole('ADMIN'), getAllIssueReports);
-router.put('/issues/:id', authenticate, requireRole('ADMIN'), adminMutationLimiter, updateIssueReport);
 
 router.get('/settings', authenticate, requireRole('ADMIN'), getPortalSettings);
 router.put('/settings', authenticate, requireRole('ADMIN'), adminMutationLimiter, updatePortalSettings);
