@@ -6,4 +6,5 @@ const rateLimit_1 = require("../middleware/rateLimit");
 const router = (0, express_1.Router)();
 const supportLimiter = (0, rateLimit_1.simpleRateLimit)({ windowMs: 60 * 1000, max: 8, keyPrefix: 'support' });
 router.post('/support/issues', supportLimiter, supportController_1.createIssueReport);
+router.get('/support/issues/:id/mail-action', supportLimiter, supportController_1.updateIssueReportFromEmail);
 exports.default = router;
