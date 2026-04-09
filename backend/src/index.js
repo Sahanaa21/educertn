@@ -53,6 +53,9 @@ app.use((_req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-DNS-Prefetch-Control', 'off');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
 });
@@ -145,6 +148,40 @@ app.use((err, _req, res, _next) => {
     logger_1.logger.error('unhandled_error_unknown', { requestId });
     return res.status(500).json({ message: 'Internal server error', requestId });
 });
-app.listen(port, () => {
+const server = app.listen(port, () => {
     logger_1.logger.info('server_started', { port: Number(port) });
+});
+const shutdown = (signal) => __awaiter(void 0, void 0, void 0, function* () {
+    logger_1.logger.warn('server_shutdown_signal', { signal });
+    server.close(() => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            yield prisma_1.prisma.$disconnect();
+            logger_1.logger.info('server_shutdown_complete', { signal });
+            process.exit(0);
+        }
+        catch (error) {
+            logger_1.logger.error('server_shutdown_failed', {
+                signal,
+                message: error instanceof Error ? error.message : 'unknown_error',
+            });
+            process.exit(1);
+        }
+    }));
+});
+process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+});
+process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+});
+process.on('uncaughtException', (error) => {
+    logger_1.logger.error('uncaught_exception', {
+        message: error.message,
+        stack: error.stack,
+    });
+});
+process.on('unhandledRejection', (reason) => {
+    logger_1.logger.error('unhandled_promise_rejection', {
+        reason: reason instanceof Error ? reason.message : String(reason),
+    });
 });
