@@ -162,6 +162,21 @@ const detectDuplicateIssue = async (input: { id?: string; title: string; descrip
     return null;
 };
 
+const extractLastMailActionUpdatedAt = (adminNotes: string | null | undefined) => {
+    const notes = String(adminNotes || '');
+    const regex = /\[Mail Action\]\s+Status set to\s+[A-Z_]+\s+at\s+([^\n\r]+)/g;
+    let match: RegExpExecArray | null = null;
+    let lastTimestamp: string | null = null;
+
+    while ((match = regex.exec(notes)) !== null) {
+        lastTimestamp = String(match[1] || '').trim();
+    }
+
+    if (!lastTimestamp) return null;
+    const parsed = new Date(lastTimestamp);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+};
+
 export const createIssueReport = async (req: Request, res: Response): Promise<any> => {
     try {
         const {
@@ -284,6 +299,7 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
             priority: classification.priority,
             tags: classification.tags,
             duplicateOfId,
+            mailActionUpdatedAt: extractLastMailActionUpdatedAt(issue.adminNotes),
         });
     } catch (error) {
         console.error('Error creating issue report:', error);
@@ -315,6 +331,7 @@ export const getAllIssueReports = async (_req: Request, res: Response): Promise<
                 priority: classification.priority,
                 tags: classification.tags,
                 duplicateOfId,
+                mailActionUpdatedAt: extractLastMailActionUpdatedAt(issue.adminNotes),
             };
         })));
     } catch (error) {

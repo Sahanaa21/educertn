@@ -148,6 +148,19 @@ const detectDuplicateIssue = (input) => __awaiter(void 0, void 0, void 0, functi
     }
     return null;
 });
+const extractLastMailActionUpdatedAt = (adminNotes) => {
+    const notes = String(adminNotes || '');
+    const regex = /\[Mail Action\]\s+Status set to\s+[A-Z_]+\s+at\s+([^\n\r]+)/g;
+    let match = null;
+    let lastTimestamp = null;
+    while ((match = regex.exec(notes)) !== null) {
+        lastTimestamp = String(match[1] || '').trim();
+    }
+    if (!lastTimestamp)
+        return null;
+    const parsed = new Date(lastTimestamp);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+};
 const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { title, description, category, pageUrl, reportedByName, reportedByEmail, role, deviceInfo } = req.body;
@@ -248,7 +261,7 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 console.error('Failed to send issue report notification email:', emailErr);
             }
         }))();
-        return res.status(201).json(Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags, duplicateOfId }));
+        return res.status(201).json(Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags, duplicateOfId, mailActionUpdatedAt: extractLastMailActionUpdatedAt(issue.adminNotes) }));
     }
     catch (error) {
         console.error('Error creating issue report:', error);
@@ -275,7 +288,7 @@ const getAllIssueReports = (_req, res) => __awaiter(void 0, void 0, void 0, func
                 category: issue.category,
                 pageUrl: issue.pageUrl,
             });
-            return Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags, duplicateOfId });
+            return Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags, duplicateOfId, mailActionUpdatedAt: extractLastMailActionUpdatedAt(issue.adminNotes) });
         }))));
     }
     catch (error) {

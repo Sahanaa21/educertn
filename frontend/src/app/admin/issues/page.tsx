@@ -20,6 +20,7 @@ type IssueReport = {
     priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     tags?: string[];
     duplicateOfId?: string | null;
+    mailActionUpdatedAt?: string | null;
     pageUrl: string | null;
     reportedByName: string | null;
     reportedByEmail: string | null;
@@ -139,13 +140,14 @@ export default function AdminIssuesPage() {
                                 <TableHead className="min-w-40 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
                                 <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Page</TableHead>
                                 <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Last Mail Update</TableHead>
                                 <TableHead className="min-w-72 whitespace-nowrap text-slate-200 font-semibold">Developer Workflow</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="py-8 text-center text-slate-500">Loading reports...</TableCell>
+                                    <TableCell colSpan={9} className="py-8 text-center text-slate-500">Loading reports...</TableCell>
                                 </TableRow>
                             ) : filteredIssues.map((issue) => (
                                 <TableRow key={issue.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 align-top">
@@ -190,6 +192,9 @@ export default function AdminIssuesPage() {
                                     </TableCell>
                                     <TableCell className="align-top py-3 text-xs text-slate-600">{issue.pageUrl || 'N/A'}</TableCell>
                                     <TableCell className="align-top py-3 text-xs text-slate-600">{new Date(issue.createdAt).toLocaleString()}</TableCell>
+                                    <TableCell className="align-top py-3 text-xs text-slate-600">
+                                        {issue.mailActionUpdatedAt ? new Date(issue.mailActionUpdatedAt).toLocaleString() : 'Not yet updated'}
+                                    </TableCell>
                                     <TableCell className="p-2 align-top min-w-72">
                                         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
                                             Status updates are handled by developer email action links.
@@ -199,7 +204,7 @@ export default function AdminIssuesPage() {
                             ))}
                             {!loading && filteredIssues.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="py-8 text-center text-slate-500">No issue reports found.</TableCell>
+                                    <TableCell colSpan={9} className="py-8 text-center text-slate-500">No issue reports found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
