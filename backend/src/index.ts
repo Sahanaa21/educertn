@@ -13,6 +13,7 @@ import academicServicesRoutes from './routes/academicServicesRoutes';
 import opsRoutes from './routes/opsRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
 import { requestContext } from './middleware/requestContext';
+import { performanceMonitoring } from './middleware/performanceMonitoring';
 import { logger } from './utils/logger';
 import { reportServerError, initSentryServer } from './utils/errorReporter';
 import { startDatabaseHealthMonitoring } from './utils/databaseHealth';
@@ -65,6 +66,7 @@ app.use(cors({
     },
     credentials: true
 }));
+app.use(performanceMonitoring);
 app.use(requestContext);
 app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

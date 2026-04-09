@@ -28,12 +28,16 @@ const academicServicesRoutes_1 = __importDefault(require("./routes/academicServi
 const opsRoutes_1 = __importDefault(require("./routes/opsRoutes"));
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
 const requestContext_1 = require("./middleware/requestContext");
+const performanceMonitoring_1 = require("./middleware/performanceMonitoring");
 const logger_1 = require("./utils/logger");
 const errorReporter_1 = require("./utils/errorReporter");
+const databaseHealth_1 = require("./utils/databaseHealth");
 const prisma_1 = require("./config/prisma");
 dotenv_1.default.config();
 // Initialize Sentry early if configured
 (0, errorReporter_1.initSentryServer)();
+// Start database health monitoring (logs warnings for slow queries)
+(0, databaseHealth_1.startDatabaseHealthMonitoring)();
 const app = (0, express_1.default)();
 exports.app = app;
 const port = process.env.PORT || 5000;
@@ -63,6 +67,7 @@ app.use((0, cors_1.default)({
     },
     credentials: true
 }));
+app.use(performanceMonitoring_1.performanceMonitoring);
 app.use(requestContext_1.requestContext);
 app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
