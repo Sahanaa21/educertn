@@ -1,3 +1,10 @@
+# Operations References (New)
+
+- `OPERATIONS_RUNBOOK.md`
+- `INCIDENT_ROLLBACK_PLAYBOOK.md`
+- `WEEK1_WEEK2_EXECUTION_TRACKER.md`
+- `backend/scripts/OPERATIONS_BACKUP_GUIDE.md`
+
 # College Portal Deployment Proposal
 
 ## Overview
