@@ -13,10 +13,13 @@ import academicServicesRoutes from './routes/academicServicesRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
 import { requestContext } from './middleware/requestContext';
 import { logger } from './utils/logger';
-import { reportServerError } from './utils/errorReporter';
+import { reportServerError, initSentryServer } from './utils/errorReporter';
 import { prisma } from './config/prisma';
 
 dotenv.config();
+
+// Initialize Sentry early if configured
+initSentryServer();
 
 const app = express();
 const port = process.env.PORT || 5000;
