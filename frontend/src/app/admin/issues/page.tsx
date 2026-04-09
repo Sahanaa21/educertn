@@ -89,6 +89,22 @@ export default function AdminIssuesPage() {
         return 'border-slate-400 text-slate-700 bg-slate-100';
     };
 
+    const getRelativeTime = (isoDate: string | null | undefined) => {
+        if (!isoDate) return null;
+        const parsed = new Date(isoDate);
+        const diffMs = Date.now() - parsed.getTime();
+        if (Number.isNaN(parsed.getTime()) || diffMs < 0) return null;
+
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+
+        if (diffMs < minute) return 'Updated just now';
+        if (diffMs < hour) return `Updated ${Math.floor(diffMs / minute)} min ago`;
+        if (diffMs < day) return `Updated ${Math.floor(diffMs / hour)} hr ago`;
+        return `Updated ${Math.floor(diffMs / day)} day ago`;
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg bg-slate-900 p-4 text-white">
@@ -189,6 +205,11 @@ export default function AdminIssuesPage() {
                                         }>
                                             {issue.status}
                                         </Badge>
+                                        {issue.mailActionUpdatedAt ? (
+                                            <div className="mt-1 text-[11px] font-medium text-indigo-700">
+                                                {getRelativeTime(issue.mailActionUpdatedAt)}
+                                            </div>
+                                        ) : null}
                                     </TableCell>
                                     <TableCell className="align-top py-3 text-xs text-slate-600">{issue.pageUrl || 'N/A'}</TableCell>
                                     <TableCell className="align-top py-3 text-xs text-slate-600">{new Date(issue.createdAt).toLocaleString()}</TableCell>
