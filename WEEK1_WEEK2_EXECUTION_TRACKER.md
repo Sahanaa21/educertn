@@ -20,3 +20,6 @@
 - [ ] Configure scheduled backups in cloud cron/event scheduler
 - [ ] Set up centralized log storage and retention
 - [ ] Set up staging environment and deployment workflow
+
+## Security Automation
+- [x] Scheduled dependency audit workflow (`.github/workflows/security-audit.yml`)
