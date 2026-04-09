@@ -11,6 +11,8 @@ import adminRoutes from './routes/adminRoutes';
 import supportRoutes from './routes/supportRoutes';
 import academicServicesRoutes from './routes/academicServicesRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
+import { requestContext } from './middleware/requestContext';
+import { logger } from './utils/logger';
 
 dotenv.config();
 
@@ -52,6 +54,7 @@ app.use(cors({
     },
     credentials: true
 }));
+app.use(requestContext);
 app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -87,22 +90,32 @@ app.use('/api', academicServicesRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const requestId = String(((_req as any)?.requestId) || 'unknown');
+
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ message: 'File too large. Maximum allowed size is 10MB.' });
+            logger.warn('multer_limit_file_size', { requestId, message: err.message });
+            return res.status(400).json({ message: 'File too large. Maximum allowed size is 10MB.', requestId });
         }
-        return res.status(400).json({ message: err.message });
+        logger.warn('multer_error', { requestId, code: err.code, message: err.message });
+        return res.status(400).json({ message: err.message, requestId });
     }
 
     if (err) {
         const message = typeof err.message === 'string' ? err.message : 'Internal server error';
         const status = message.toLowerCase().includes('invalid file type') ? 400 : 500;
-        return res.status(status).json({ message });
+        logger.error('unhandled_error', {
+            requestId,
+            message,
+            stack: typeof err?.stack === 'string' ? err.stack : undefined,
+        });
+        return res.status(status).json({ message, requestId });
     }
 
-    return res.status(500).json({ message: 'Internal server error' });
+    logger.error('unhandled_error_unknown', { requestId });
+    return res.status(500).json({ message: 'Internal server error', requestId });
 });
 
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    logger.info('server_started', { port: Number(port) });
 });

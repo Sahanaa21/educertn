@@ -16,10 +16,13 @@ const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const supportRoutes_1 = __importDefault(require("./routes/supportRoutes"));
 const academicServicesRoutes_1 = __importDefault(require("./routes/academicServicesRoutes"));
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
+const requestContext_1 = require("./middleware/requestContext");
+const logger_1 = require("./utils/logger");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 const defaultAllowedOrigins = [
     'http://localhost:3000',
     'https://gat-verification-portal.vercel.app'
@@ -43,6 +46,7 @@ app.use((0, cors_1.default)({
     },
     credentials: true
 }));
+app.use(requestContext_1.requestContext);
 app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -72,19 +76,28 @@ app.use('/api', supportRoutes_1.default);
 app.use('/api', academicServicesRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use((err, _req, res, _next) => {
+    const requestId = String(((_req === null || _req === void 0 ? void 0 : _req.requestId) || 'unknown'));
     if (err instanceof multer_1.default.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ message: 'File too large. Maximum allowed size is 10MB.' });
+            logger_1.logger.warn('multer_limit_file_size', { requestId, message: err.message });
+            return res.status(400).json({ message: 'File too large. Maximum allowed size is 10MB.', requestId });
         }
-        return res.status(400).json({ message: err.message });
+        logger_1.logger.warn('multer_error', { requestId, code: err.code, message: err.message });
+        return res.status(400).json({ message: err.message, requestId });
     }
     if (err) {
         const message = typeof err.message === 'string' ? err.message : 'Internal server error';
         const status = message.toLowerCase().includes('invalid file type') ? 400 : 500;
-        return res.status(status).json({ message });
+        logger_1.logger.error('unhandled_error', {
+            requestId,
+            message,
+            stack: typeof (err === null || err === void 0 ? void 0 : err.stack) === 'string' ? err.stack : undefined,
+        });
+        return res.status(status).json({ message, requestId });
     }
-    return res.status(500).json({ message: 'Internal server error' });
+    logger_1.logger.error('unhandled_error_unknown', { requestId });
+    return res.status(500).json({ message: 'Internal server error', requestId });
 });
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    logger_1.logger.info('server_started', { port: Number(port) });
 });
