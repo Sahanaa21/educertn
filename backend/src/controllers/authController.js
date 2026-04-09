@@ -13,6 +13,16 @@ exports.getCurrentProfile = exports.completeUnifiedProfile = exports.verifyUnifi
 const prisma_1 = require("../config/prisma");
 const auth_1 = require("../utils/auth");
 const email_1 = require("../utils/email");
+const getAuthCookieOptions = () => ({
+    httpOnly: true,
+    secure: String(process.env.NODE_ENV || '').toLowerCase() === 'production',
+    sameSite: String(process.env.NODE_ENV || '').toLowerCase() === 'production' ? 'none' : 'lax',
+    path: '/',
+    maxAge: 24 * 60 * 60 * 1000
+});
+const setAuthCookie = (res, token) => {
+    res.cookie('token', token, getAuthCookieOptions());
+};
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BRANCH_OPTIONS = new Set([
     'CSE',
@@ -207,6 +217,7 @@ const verifyOtp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const token = (0, auth_1.generateToken)({ id: user.id, role: user.role });
         yield prisma_1.prisma.oTP.deleteMany({ where: { email } });
+        setAuthCookie(res, token);
         res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     }
     catch (error) {
@@ -312,6 +323,7 @@ const verifyUnifiedOtp = (req, res) => __awaiter(void 0, void 0, void 0, functio
             });
         }
         const token = (0, auth_1.generateToken)({ id: user.id, role: user.role });
+        setAuthCookie(res, token);
         return res.json({
             token,
             user: { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -399,6 +411,7 @@ const completeUnifiedProfile = (req, res) => __awaiter(void 0, void 0, void 0, f
         }
         const updatedUser = yield prisma_1.prisma.user.findUnique({ where: { id: user.id } });
         const token = (0, auth_1.generateToken)({ id: user.id, role: (updatedUser === null || updatedUser === void 0 ? void 0 : updatedUser.role) || role });
+        setAuthCookie(res, token);
         return res.json({
             token,
             user: {

@@ -15,24 +15,12 @@ const write = (payload) => {
 };
 exports.logger = {
     info: (message, details) => {
-        write(Object.assign({
-            level: 'INFO',
-            time: new Date().toISOString(),
-            message,
-        }, (details || {})));
+        write(Object.assign({ level: 'INFO', time: new Date().toISOString(), message }, (details || {})));
     },
     warn: (message, details) => {
-        write(Object.assign({
-            level: 'WARN',
-            time: new Date().toISOString(),
-            message,
-        }, (details || {})));
+        write(Object.assign({ level: 'WARN', time: new Date().toISOString(), message }, (details || {})));
     },
     error: (message, details) => {
-        write(Object.assign({
-            level: 'ERROR',
-            time: new Date().toISOString(),
-            message,
-        }, (details || {})));
+        write(Object.assign({ level: 'ERROR', time: new Date().toISOString(), message }, (details || {})));
     },
 };

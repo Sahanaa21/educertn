@@ -190,6 +190,9 @@ const createAcademicServiceRequest = (req, res) => __awaiter(void 0, void 0, voi
                 name: 'Global Academy of Technology',
                 description: `${serviceType} Request ${requestId}`,
                 checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
+                environment: order.environment,
             }
         });
     }
@@ -225,8 +228,8 @@ const verifyAcademicServicePayment = (req, res) => __awaiter(void 0, void 0, voi
         if (request.paymentOrderId && request.paymentOrderId !== orderId) {
             return res.status(400).json({ message: 'Order mismatch for this request' });
         }
-        const order = yield (0, zwitch_1.fetchZwitchOrder)(orderId);
-        if (!(0, zwitch_1.isZwitchOrderPaid)(order)) {
+        const verification = yield (0, zwitch_1.verifyZwitchOrderPaid)(orderId, { maxAttempts: 10, intervalMs: 1500 });
+        if (!verification.paid) {
             return res.status(400).json({ message: 'Payment is not completed yet' });
         }
         const updated = yield prisma_1.prisma.academicServiceRequest.update({
@@ -294,7 +297,10 @@ const createAcademicServicePaymentOrder = (req, res) => __awaiter(void 0, void 0
                 currency: order.currency,
                 name: 'Global Academy of Technology',
                 description: `${request.serviceType} Request ${request.requestId}`,
-                checkoutUrl: order.checkoutUrl
+                checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
+                environment: order.environment
             }
         });
     }

@@ -10,6 +10,7 @@ import verificationRoutes from './routes/verificationRoutes';
 import adminRoutes from './routes/adminRoutes';
 import supportRoutes from './routes/supportRoutes';
 import academicServicesRoutes from './routes/academicServicesRoutes';
+import opsRoutes from './routes/opsRoutes';
 import { maintenanceModeGuard } from './middleware/maintenanceMode';
 import { requestContext } from './middleware/requestContext';
 import { logger } from './utils/logger';
@@ -143,6 +144,7 @@ app.use('/api', verificationRoutes);
 app.use('/api', supportRoutes);
 app.use('/api', academicServicesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ops', opsRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const requestId = String(((_req as any)?.requestId) || 'unknown');

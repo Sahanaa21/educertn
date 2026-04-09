@@ -57,14 +57,15 @@ const getPortalSettings = (_req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.getPortalSettings = getPortalSettings;
 const updatePortalSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     try {
         const { supportEmail, frontendUrl, maintenanceMode, allowCompanySignup, smtpFromName, adminAllowedEmails } = req.body;
         if (!supportEmail || !frontendUrl || !smtpFromName) {
             return res.status(400).json({ message: 'supportEmail, frontendUrl and smtpFromName are required' });
         }
         const mergedAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(adminAllowedEmails));
-        const actorId = String((req.user === null || req.user === void 0 ? void 0 : req.user.id) || 'unknown');
-        const actorEmail = String((req.user === null || req.user === void 0 ? void 0 : req.user.email) || 'unknown');
+        const actorId = String(((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || 'unknown');
+        const actorEmail = String(((_b = req.user) === null || _b === void 0 ? void 0 : _b.email) || 'unknown');
         const updated = yield prisma_1.prisma.portalSettings.upsert({
             where: { id: 1 },
             update: {
@@ -103,11 +104,11 @@ const updatePortalSettings = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updatePortalSettings = updatePortalSettings;
 const registerAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c;
     try {
         const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
-        const actorId = String((req.user === null || req.user === void 0 ? void 0 : req.user.id) || 'unknown');
-        const actorEmail = String((req.user === null || req.user === void 0 ? void 0 : req.user.email) || 'unknown');
+        const actorId = String(((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || 'unknown');
+        const actorEmail = String(((_c = req.user) === null || _c === void 0 ? void 0 : _c.email) || 'unknown');
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
         }
@@ -161,11 +162,11 @@ const registerAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.registerAdminEmail = registerAdminEmail;
 const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a, _b, _c, _d, _e;
     try {
         const email = String(((_a = req.body) === null || _a === void 0 ? void 0 : _a.email) || '').trim().toLowerCase();
-        const actorId = String((req.user === null || req.user === void 0 ? void 0 : req.user.id) || 'unknown');
-        const actorEmail = String((req.user === null || req.user === void 0 ? void 0 : req.user.email) || 'unknown');
+        const actorId = String(((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || 'unknown');
+        const actorEmail = String(((_c = req.user) === null || _c === void 0 ? void 0 : _c.email) || 'unknown');
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
         }
@@ -184,10 +185,10 @@ const removeAdminEmail = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (currentAllowlist.length <= 1) {
             return res.status(400).json({ message: 'Cannot remove the last admin email' });
         }
-        const authUserId = String(((_b = req.user) === null || _b === void 0 ? void 0 : _b.id) || '').trim();
+        const authUserId = String(((_d = req.user) === null || _d === void 0 ? void 0 : _d.id) || '').trim();
         if (authUserId) {
             const currentAdmin = yield prisma_1.prisma.user.findUnique({ where: { id: authUserId }, select: { email: true } });
-            if (((_c = currentAdmin === null || currentAdmin === void 0 ? void 0 : currentAdmin.email) === null || _c === void 0 ? void 0 : _c.toLowerCase()) === email) {
+            if (((_e = currentAdmin === null || currentAdmin === void 0 ? void 0 : currentAdmin.email) === null || _e === void 0 ? void 0 : _e.toLowerCase()) === email) {
                 return res.status(400).json({ message: 'You cannot remove your own admin email while signed in' });
             }
         }

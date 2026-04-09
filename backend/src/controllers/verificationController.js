@@ -17,6 +17,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
+const html_1 = require("../utils/html");
 const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const VERIFICATION_FEE = 5000;
@@ -111,39 +112,50 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
         if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
-        const order = yield (0, zwitch_1.createZwitchOrder)({
-            amountPaise: VERIFICATION_FEE * 100,
-            receipt: `ver-${requestId}-${Date.now()}`.slice(0, 40),
-            description: `Verification Request ${requestId}`,
-            notes: {
-                requestType: 'VERIFICATION',
-                requestId: created.id,
-                companyEmail: authEmail
-            }
-        });
-        if (!order.id) {
-            return res.status(502).json({ message: 'Payment provider did not return an order id' });
-        }
-        yield prisma_1.prisma.verificationRequest.update({
-            where: { id: created.id },
-            data: { paymentOrderId: order.id }
-        });
-        res.status(201).json({
-            request: created,
-            amount: VERIFICATION_FEE,
-            zwitchOrder: {
-                id: order.id,
-                amount: order.amount,
-                currency: order.currency,
-                name: 'Global Academy of Technology',
+        try {
+            const order = yield (0, zwitch_1.createZwitchOrder)({
+                amountPaise: VERIFICATION_FEE * 100,
+                receipt: `ver-${requestId}-${Date.now()}`.slice(0, 40),
                 description: `Verification Request ${requestId}`,
-                checkoutUrl: order.checkoutUrl
+                notes: {
+                    requestType: 'VERIFICATION',
+                    requestId: created.id,
+                    companyEmail: authEmail
+                }
+            });
+            if (!order.id) {
+                throw new Error('Payment provider did not return an order id');
             }
-        });
+            yield prisma_1.prisma.verificationRequest.update({
+                where: { id: created.id },
+                data: { paymentOrderId: order.id }
+            });
+            res.status(201).json({
+                request: created,
+                amount: VERIFICATION_FEE,
+                zwitchOrder: {
+                    id: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: 'Global Academy of Technology',
+                    description: `Verification Request ${requestId}`,
+                    checkoutUrl: order.checkoutUrl,
+                    accessKey: order.accessKey,
+                    fallbackAccessKey: order.fallbackAccessKey,
+                    environment: order.environment
+                }
+            });
+        }
+        catch (paymentError) {
+            yield prisma_1.prisma.verificationRequest.delete({ where: { id: created.id } }).catch(() => undefined);
+            throw paymentError;
+        }
     }
     catch (error) {
         console.error('Error creating verification request:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        const status = message.includes('Payment provider') || message.includes('Payment gateway') ? 503 : 500;
+        res.status(status).json({ message: status === 503 ? 'Payment provider is temporarily unavailable. Please try again shortly.' : 'Internal server error' });
     }
 });
 exports.createVerificationRequest = createVerificationRequest;
@@ -175,8 +187,8 @@ const verifyVerificationPayment = (req, res) => __awaiter(void 0, void 0, void 0
         if (request.paymentOrderId && request.paymentOrderId !== orderId) {
             return res.status(400).json({ message: 'Order ID mismatch for this request' });
         }
-        const order = yield (0, zwitch_1.fetchZwitchOrder)(orderId);
-        if (!(0, zwitch_1.isZwitchOrderPaid)(order)) {
+        const verification = yield (0, zwitch_1.verifyZwitchOrderPaid)(orderId, { maxAttempts: 10, intervalMs: 1500 });
+        if (!verification.paid) {
             return res.status(400).json({ message: 'Payment is not completed yet' });
         }
         const updated = yield prisma_1.prisma.verificationRequest.update({
@@ -244,7 +256,10 @@ const createVerificationPaymentOrder = (req, res) => __awaiter(void 0, void 0, v
                 currency: order.currency,
                 name: 'Global Academy of Technology',
                 description: `Verification Request ${request.requestId}`,
-                checkoutUrl: order.checkoutUrl
+                checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
+                environment: order.environment
             }
         });
     }
@@ -307,10 +322,12 @@ const completeVerificationRequest = (req, res) => __awaiter(void 0, void 0, void
             data: { status: 'COMPLETED' }
         });
         if (updated.companyEmail) {
+            const safeContactPerson = (0, html_1.escapeHtml)(updated.contactPerson || 'there');
+            const safeRequestId = (0, html_1.escapeHtml)(updated.requestId);
             const emailHtml = `
                 <h2>Verification Request Completed</h2>
-                <p>Hello ${updated.contactPerson || 'there'},</p>
-                <p>Your verification request <strong>${updated.requestId}</strong> has been marked as complete.</p>
+                <p>Hello ${safeContactPerson},</p>
+                <p>Your verification request <strong>${safeRequestId}</strong> has been marked as complete.</p>
                 <p>You can now download the completed response from the portal if it is available.</p>
                 <p>Thank you,</p>
                 <p>Global Academy of Technology</p>

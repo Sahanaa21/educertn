@@ -25,12 +25,15 @@ const verificationRoutes_1 = __importDefault(require("./routes/verificationRoute
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const supportRoutes_1 = __importDefault(require("./routes/supportRoutes"));
 const academicServicesRoutes_1 = __importDefault(require("./routes/academicServicesRoutes"));
+const opsRoutes_1 = __importDefault(require("./routes/opsRoutes"));
 const maintenanceMode_1 = require("./middleware/maintenanceMode");
 const requestContext_1 = require("./middleware/requestContext");
 const logger_1 = require("./utils/logger");
 const errorReporter_1 = require("./utils/errorReporter");
 const prisma_1 = require("./config/prisma");
 dotenv_1.default.config();
+// Initialize Sentry early if configured
+(0, errorReporter_1.initSentryServer)();
 const app = (0, express_1.default)();
 exports.app = app;
 const port = process.env.PORT || 5000;
@@ -139,6 +142,7 @@ app.use('/api', verificationRoutes_1.default);
 app.use('/api', supportRoutes_1.default);
 app.use('/api', academicServicesRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
+app.use('/api/ops', opsRoutes_1.default);
 app.use((err, _req, res, _next) => {
     const requestId = String((_req === null || _req === void 0 ? void 0 : _req.requestId) || 'unknown');
     if (err instanceof multer_1.default.MulterError) {

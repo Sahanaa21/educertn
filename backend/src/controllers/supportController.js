@@ -8,9 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateIssueReportFromEmail = exports.updateIssueReport = exports.getAllIssueReports = exports.createIssueReport = void 0;
-const crypto_1 = require("crypto");
+const crypto_1 = __importDefault(require("crypto"));
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const html_1 = require("../utils/html");
@@ -27,55 +30,55 @@ const CRITICAL_ESCALATION_EMAILS = Array.from(new Set([
         .map((email) => email.trim().toLowerCase())
         .filter(Boolean)
 ]));
-    const toBase64Url = (value) => Buffer.from(value, 'utf8').toString('base64url');
-    const fromBase64Url = (value) => Buffer.from(value, 'base64url').toString('utf8');
-    const signMailActionPayload = (payloadBase64) => {
-        if (!ISSUE_MAIL_ACTION_SECRET)
-            return '';
-        return (0, crypto_1.createHmac)('sha256', ISSUE_MAIL_ACTION_SECRET).update(payloadBase64).digest('hex');
+const toBase64Url = (value) => Buffer.from(value, 'utf8').toString('base64url');
+const fromBase64Url = (value) => Buffer.from(value, 'base64url').toString('utf8');
+const signMailActionPayload = (payloadBase64) => {
+    if (!ISSUE_MAIL_ACTION_SECRET)
+        return '';
+    return crypto_1.default.createHmac('sha256', ISSUE_MAIL_ACTION_SECRET).update(payloadBase64).digest('hex');
+};
+const buildMailActionToken = (issueId, status) => {
+    if (!ISSUE_MAIL_ACTION_SECRET)
+        return null;
+    const payload = {
+        issueId,
+        status,
+        exp: Date.now() + ISSUE_MAIL_ACTION_TTL_MS,
     };
-    const buildMailActionToken = (issueId, status) => {
-        if (!ISSUE_MAIL_ACTION_SECRET)
-            return null;
-        const payload = {
-            issueId,
-            status,
-            exp: Date.now() + ISSUE_MAIL_ACTION_TTL_MS,
-        };
-        const payloadBase64 = toBase64Url(JSON.stringify(payload));
-        const signature = signMailActionPayload(payloadBase64);
-        return `${payloadBase64}.${signature}`;
-    };
-    const validateMailActionToken = (token, issueId, status) => {
-        if (!ISSUE_MAIL_ACTION_SECRET || !token || !issueId || !status)
+    const payloadBase64 = toBase64Url(JSON.stringify(payload));
+    const signature = signMailActionPayload(payloadBase64);
+    return `${payloadBase64}.${signature}`;
+};
+const validateMailActionToken = (token, issueId, status) => {
+    if (!ISSUE_MAIL_ACTION_SECRET || !token || !issueId || !status)
+        return false;
+    const parts = token.split('.');
+    if (parts.length !== 2)
+        return false;
+    const [payloadBase64, signatureHex] = parts;
+    const expectedSignature = signMailActionPayload(payloadBase64);
+    const sigBuffer = Buffer.from(signatureHex, 'hex');
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    if (sigBuffer.length !== expectedBuffer.length)
+        return false;
+    if (!crypto_1.default.timingSafeEqual(sigBuffer, expectedBuffer))
+        return false;
+    try {
+        const payload = JSON.parse(fromBase64Url(payloadBase64));
+        if (payload.issueId !== issueId)
             return false;
-        const parts = token.split('.');
-        if (parts.length !== 2)
+        if (payload.status !== status)
             return false;
-        const [payloadBase64, signatureHex] = parts;
-        const expectedSignature = signMailActionPayload(payloadBase64);
-        const sigBuffer = Buffer.from(signatureHex, 'hex');
-        const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-        if (sigBuffer.length !== expectedBuffer.length)
+        if (Date.now() > Number(payload.exp || 0))
             return false;
-        if (!(0, crypto_1.timingSafeEqual)(sigBuffer, expectedBuffer))
-            return false;
-        try {
-            const payload = JSON.parse(fromBase64Url(payloadBase64));
-            if (payload.issueId !== issueId)
-                return false;
-            if (payload.status !== status)
-                return false;
-            if (Date.now() > Number(payload.exp || 0))
-                return false;
-            return true;
-        }
-        catch (_a) {
-            return false;
-        }
-    };
+        return true;
+    }
+    catch (_a) {
+        return false;
+    }
+};
 const analyzeIssue = (input) => {
-    const text = `${input.title} ${input.description} ${input.category} ${(input.pageUrl || '')}`.toLowerCase();
+    const text = `${input.title} ${input.description} ${input.category} ${input.pageUrl || ''}`.toLowerCase();
     let score = 0;
     const tags = new Set();
     const includeIfMatch = (regex, tag, points) => {
@@ -215,9 +218,9 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     const safeRole = (0, html_1.escapeHtml)(issue.role || 'Unknown');
                     const safePageUrl = (0, html_1.escapeHtml)(issue.pageUrl || 'N/A');
                     const safeDescription = (0, html_1.escapeHtml)(issue.description);
-                    const safePriority = classification.priority;
-                    const safeTags = classification.tags.join(', ') || 'none';
-                    const safeDuplicate = duplicateOfId || 'No likely duplicate found';
+                    const safePriority = (0, html_1.escapeHtml)(classification.priority);
+                    const safeTags = (0, html_1.escapeHtml)(classification.tags.join(', ') || 'none');
+                    const safeDuplicate = (0, html_1.escapeHtml)(duplicateOfId || 'No likely duplicate found');
                     const backendPublicUrl = String(process.env.BACKEND_PUBLIC_URL || process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
                     const actionLinks = EMAIL_ACTION_STATUSES.map((nextStatus) => {
                         const token = buildMailActionToken(issue.id, nextStatus);
@@ -234,10 +237,10 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         : '<p style="font-size:12px;color:#b45309;"><strong>Note:</strong> Set ISSUE_MAIL_ACTION_SECRET to enable secure status action links in email.</p>';
                     const html = `
                         <h2>New Issue Report Submitted</h2>
+                        <p><strong>Title:</strong> ${safeTitle}</p>
                         <p><strong>Priority:</strong> ${safePriority}</p>
                         <p><strong>Auto Tags:</strong> ${safeTags}</p>
                         <p><strong>Possible Duplicate Of:</strong> ${safeDuplicate}</p>
-                        <p><strong>Title:</strong> ${safeTitle}</p>
                         <p><strong>Category:</strong> ${safeCategory}</p>
                         <p><strong>Status:</strong> ${safeStatus}</p>
                         <p><strong>Reported By:</strong> ${safeReportedByName} (${safeReportedByEmail})</p>
@@ -252,13 +255,13 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     if (shouldEscalate) {
                         const escalationHtml = `
                             <h2>Escalation: ${safePriority} Issue</h2>
-                            <p><strong>Issue ID:</strong> ${issue.id}</p>
-                            <p><strong>Title:</strong> ${issue.title}</p>
-                            <p><strong>Category:</strong> ${issue.category}</p>
-                            <p><strong>Page:</strong> ${issue.pageUrl || 'N/A'}</p>
-                            <p><strong>Reporter:</strong> ${issue.reportedByName || 'Anonymous'} (${issue.reportedByEmail || 'Email not provided'})</p>
+                            <p><strong>Issue ID:</strong> ${(0, html_1.escapeHtml)(issue.id)}</p>
+                            <p><strong>Title:</strong> ${safeTitle}</p>
+                            <p><strong>Category:</strong> ${safeCategory}</p>
+                            <p><strong>Page:</strong> ${safePageUrl}</p>
+                            <p><strong>Reporter:</strong> ${safeReportedByName} (${safeReportedByEmail})</p>
                             <p><strong>Possible Duplicate Of:</strong> ${safeDuplicate}</p>
-                            <p><strong>Description:</strong> ${issue.description}</p>
+                            <p><strong>Description:</strong> ${safeDescription}</p>
                         `;
                         yield Promise.all(CRITICAL_ESCALATION_EMAILS.map((email) => (0, email_1.sendEmail)(email, `[GAT Portal][Escalation] ${classification.priority} issue needs attention`, escalationHtml)));
                     }

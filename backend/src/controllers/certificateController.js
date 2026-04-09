@@ -17,6 +17,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
+const html_1 = require("../utils/html");
 const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const resolveStoredFilePath = (storedPath) => {
@@ -132,38 +133,49 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
         if (!(0, zwitch_1.hasZwitchConfig)()) {
             return res.status(500).json({ message: 'Payment gateway is not configured' });
         }
-        const order = yield (0, zwitch_1.createZwitchOrder)({
-            amountPaise: Math.round(amount * 100),
-            receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
-            description: `Certificate Request ${id}`,
-            notes: {
-                requestType: 'CERTIFICATE',
-                requestId: id,
-                userId: String(userId)
-            }
-        });
-        if (!order.id) {
-            return res.status(502).json({ message: 'Payment provider did not return an order id' });
-        }
-        yield prisma_1.prisma.certificateRequest.update({
-            where: { id: certificateRequest.id },
-            data: { paymentOrderId: order.id }
-        });
-        res.status(201).json({
-            request: certificateRequest,
-            zwitchOrder: {
-                id: order.id,
-                amount: order.amount,
-                currency: order.currency,
-                name: 'Global Academy of Technology',
+        try {
+            const order = yield (0, zwitch_1.createZwitchOrder)({
+                amountPaise: Math.round(amount * 100),
+                receipt: `cert-${id}-${Date.now()}`.slice(0, 40),
                 description: `Certificate Request ${id}`,
-                checkoutUrl: order.checkoutUrl
+                notes: {
+                    requestType: 'CERTIFICATE',
+                    requestId: id,
+                    userId: String(userId)
+                }
+            });
+            if (!order.id) {
+                throw new Error('Payment provider did not return an order id');
             }
-        });
+            yield prisma_1.prisma.certificateRequest.update({
+                where: { id: certificateRequest.id },
+                data: { paymentOrderId: order.id }
+            });
+            res.status(201).json({
+                request: certificateRequest,
+                zwitchOrder: {
+                    id: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: 'Global Academy of Technology',
+                    description: `Certificate Request ${id}`,
+                    checkoutUrl: order.checkoutUrl,
+                    accessKey: order.accessKey,
+                    fallbackAccessKey: order.fallbackAccessKey,
+                    environment: order.environment
+                }
+            });
+        }
+        catch (paymentError) {
+            yield prisma_1.prisma.certificateRequest.delete({ where: { id: certificateRequest.id } }).catch(() => undefined);
+            throw paymentError;
+        }
     }
     catch (error) {
         console.error('Error creating certificate request:', error);
-        res.status(500).json({ message: error.message || 'Internal server error', details: error });
+        const message = String((error === null || error === void 0 ? void 0 : error.message) || 'Internal server error');
+        const status = message.includes('Payment provider') || message.includes('Payment gateway') ? 503 : 500;
+        res.status(status).json({ message, details: status === 500 ? error : undefined });
     }
 });
 exports.createCertificateRequest = createCertificateRequest;
@@ -193,8 +205,8 @@ const verifyCertificatePayment = (req, res) => __awaiter(void 0, void 0, void 0,
         if (request.paymentOrderId && request.paymentOrderId !== orderId) {
             return res.status(400).json({ message: 'Order ID mismatch for this request' });
         }
-        const order = yield (0, zwitch_1.fetchZwitchOrder)(orderId);
-        if (!(0, zwitch_1.isZwitchOrderPaid)(order)) {
+        const verification = yield (0, zwitch_1.verifyZwitchOrderPaid)(orderId, { maxAttempts: 10, intervalMs: 1500 });
+        if (!verification.paid) {
             return res.status(400).json({ message: 'Payment is not completed yet' });
         }
         const updated = yield prisma_1.prisma.certificateRequest.update({
@@ -264,7 +276,10 @@ const createCertificatePaymentOrder = (req, res) => __awaiter(void 0, void 0, vo
                 currency: order.currency,
                 name: 'Global Academy of Technology',
                 description: `Certificate Request ${id}`,
-                checkoutUrl: order.checkoutUrl
+                checkoutUrl: order.checkoutUrl,
+                accessKey: order.accessKey,
+                fallbackAccessKey: order.fallbackAccessKey,
+                environment: order.environment
             }
         });
     }
@@ -290,6 +305,7 @@ const getStudentRequests = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.getStudentRequests = getStudentRequests;
 const completeCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const id = req.params.id;
         const updated = yield prisma_1.prisma.certificateRequest.update({
@@ -297,11 +313,14 @@ const completeCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 
             data: { status: 'COMPLETED' },
             include: { user: true }
         });
-        if (updated.user?.email) {
+        if ((_a = updated.user) === null || _a === void 0 ? void 0 : _a.email) {
+            const safeStudentName = (0, html_1.escapeHtml)(updated.studentName);
+            const safeCertificateType = (0, html_1.escapeHtml)(String(updated.certificateType || '').replace('_', ' '));
+            const safeRequestId = (0, html_1.escapeHtml)(updated.id);
             const emailHtml = `
                 <h2>Your Certificate Request is Complete</h2>
-                <p>Hello ${updated.studentName},</p>
-                <p>Your request for <strong>${String(updated.certificateType || '').replace('_', ' ')}</strong> (Request ID: ${updated.id}) has been marked as complete.</p>
+                <p>Hello ${safeStudentName},</p>
+                <p>Your request for <strong>${safeCertificateType}</strong> (Request ID: ${safeRequestId}) has been marked as complete.</p>
                 <p>You can now download your issued certificate from the portal if it is available.</p>
                 <p>Thank you,</p>
                 <p>Global Academy of Technology</p>
