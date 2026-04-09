@@ -14,6 +14,40 @@ const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
+const analyzeIssue = (input) => {
+    const text = `${input.title} ${input.description} ${input.category} ${(input.pageUrl || '')}`.toLowerCase();
+    let score = 0;
+    const tags = new Set();
+    const includeIfMatch = (regex, tag, points) => {
+        if (regex.test(text)) {
+            tags.add(tag);
+            score += points;
+        }
+    };
+    includeIfMatch(/payment|upi|transaction|checkout|failed payment|refund|gateway/, 'payment', 3);
+    includeIfMatch(/login|otp|signin|auth|password|session/, 'auth', 3);
+    includeIfMatch(/verify|verification|certificate/, 'verification', 2);
+    includeIfMatch(/slow|lag|timeout|stuck|loading/, 'performance', 2);
+    includeIfMatch(/error|exception|crash|500|stack/i, 'backend-error', 2);
+    includeIfMatch(/ui|display|layout|alignment|mobile|responsive/, 'ui', 1);
+    includeIfMatch(/security|unauthorized|hacked|breach|exposed|token/, 'security', 5);
+    includeIfMatch(/data loss|missing data|deleted|corrupt/, 'data-loss', 5);
+    if (input.category.toLowerCase().includes('payment'))
+        score += 2;
+    if (input.category.toLowerCase().includes('login'))
+        score += 2;
+    let priority = 'LOW';
+    if (score >= 8)
+        priority = 'CRITICAL';
+    else if (score >= 5)
+        priority = 'HIGH';
+    else if (score >= 3)
+        priority = 'MEDIUM';
+    return {
+        priority,
+        tags: Array.from(tags),
+    };
+};
 const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { title, description, category, pageUrl, reportedByName, reportedByEmail, role, deviceInfo } = req.body;
@@ -36,13 +70,23 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 status: 'OPEN'
             }
         });
+        const classification = analyzeIssue({
+            title: issue.title,
+            description: issue.description,
+            category: issue.category,
+            pageUrl: issue.pageUrl
+        });
         // Fire-and-forget email alert so SMTP errors don't fail the request
         void (() => __awaiter(void 0, void 0, void 0, function* () {
             try {
                 const notifyEmail = DEVELOPER_ISSUE_EMAIL;
                 if (notifyEmail) {
+                    const safePriority = classification.priority;
+                    const safeTags = classification.tags.join(', ') || 'none';
                     const html = `
                         <h2>New Issue Report Submitted</h2>
+                        <p><strong>Priority:</strong> ${safePriority}</p>
+                        <p><strong>Auto Tags:</strong> ${safeTags}</p>
                         <p><strong>Title:</strong> ${issue.title}</p>
                         <p><strong>Category:</strong> ${issue.category}</p>
                         <p><strong>Status:</strong> ${issue.status}</p>
@@ -52,14 +96,14 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         <p><strong>Description:</strong></p>
                         <p>${issue.description}</p>
                     `;
-                    yield (0, email_1.sendEmail)(notifyEmail, '[GAT Portal] New Issue Report', html);
+                    yield (0, email_1.sendEmail)(notifyEmail, `[GAT Portal] ${classification.priority} Issue Report`, html);
                 }
             }
             catch (emailErr) {
                 console.error('Failed to send issue report notification email:', emailErr);
             }
         }))();
-        return res.status(201).json(issue);
+        return res.status(201).json(Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags }));
     }
     catch (error) {
         console.error('Error creating issue report:', error);
@@ -72,7 +116,15 @@ const getAllIssueReports = (_req, res) => __awaiter(void 0, void 0, void 0, func
         const issues = yield prisma_1.prisma.issueReport.findMany({
             orderBy: { createdAt: 'desc' }
         });
-        return res.json(issues);
+        return res.json(issues.map((issue) => {
+            const classification = analyzeIssue({
+                title: issue.title,
+                description: issue.description,
+                category: issue.category,
+                pageUrl: issue.pageUrl
+            });
+            return Object.assign(Object.assign({}, issue), { priority: classification.priority, tags: classification.tags });
+        }));
     }
     catch (error) {
         console.error('Error fetching issue reports:', error);

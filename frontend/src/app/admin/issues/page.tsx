@@ -17,6 +17,8 @@ type IssueReport = {
     title: string;
     description: string;
     category: string;
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    tags?: string[];
     pageUrl: string | null;
     reportedByName: string | null;
     reportedByEmail: string | null;
@@ -100,11 +102,20 @@ export default function AdminIssuesPage() {
         const matchesSearch =
             issue.title.toLowerCase().includes(key) ||
             issue.description.toLowerCase().includes(key) ||
+            (issue.priority || '').toLowerCase().includes(key) ||
+            (issue.tags || []).join(' ').toLowerCase().includes(key) ||
             (issue.reportedByEmail || '').toLowerCase().includes(key) ||
             (issue.reportedByName || '').toLowerCase().includes(key);
         const matchesStatus = statusFilter === 'ALL' || issue.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
+
+    const getPriorityClasses = (priority: IssueReport['priority']) => {
+        if (priority === 'CRITICAL') return 'border-red-600 text-red-700 bg-red-50';
+        if (priority === 'HIGH') return 'border-orange-500 text-orange-700 bg-orange-50';
+        if (priority === 'MEDIUM') return 'border-amber-500 text-amber-700 bg-amber-50';
+        return 'border-slate-400 text-slate-700 bg-slate-100';
+    };
 
     return (
         <div className="space-y-6">
@@ -151,6 +162,7 @@ export default function AdminIssuesPage() {
                         <TableHeader className="bg-slate-900 border-b">
                             <TableRow className="hover:bg-slate-900 border-slate-700">
                                 <TableHead className="min-w-56 whitespace-nowrap text-slate-200 font-semibold">Issue</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Priority / Tags</TableHead>
                                 <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Reporter</TableHead>
                                 <TableHead className="min-w-40 whitespace-nowrap text-slate-200 font-semibold">Category</TableHead>
                                 <TableHead className="min-w-40 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
@@ -162,13 +174,27 @@ export default function AdminIssuesPage() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="py-8 text-center text-slate-500">Loading reports...</TableCell>
+                                    <TableCell colSpan={8} className="py-8 text-center text-slate-500">Loading reports...</TableCell>
                                 </TableRow>
                             ) : filteredIssues.map((issue) => (
                                 <TableRow key={issue.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 align-top">
                                     <TableCell className="align-top py-3">
                                         <div className="font-semibold text-slate-900">{issue.title}</div>
                                         <div className="mt-1 text-xs text-slate-600 wrap-break-word">{issue.description}</div>
+                                    </TableCell>
+                                    <TableCell className="align-top py-3">
+                                        <Badge variant="outline" className={`font-semibold tracking-wide ${getPriorityClasses(issue.priority)}`}>
+                                            {issue.priority || 'LOW'}
+                                        </Badge>
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {(issue.tags || []).length > 0 ? (issue.tags || []).map((tag) => (
+                                                <Badge key={`${issue.id}-${tag}`} variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 text-[11px]">
+                                                    {tag}
+                                                </Badge>
+                                            )) : (
+                                                <span className="text-xs text-slate-400">No tags</span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="align-top py-3">
                                         <div className="text-sm text-slate-900">{issue.reportedByName || 'Anonymous'}</div>
@@ -210,7 +236,7 @@ export default function AdminIssuesPage() {
                             ))}
                             {!loading && filteredIssues.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="py-8 text-center text-slate-500">No issue reports found.</TableCell>
+                                    <TableCell colSpan={8} className="py-8 text-center text-slate-500">No issue reports found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

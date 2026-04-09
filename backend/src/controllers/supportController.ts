@@ -5,6 +5,42 @@ import { escapeHtml } from '../utils/html';
 
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
 const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
+type IssuePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+const analyzeIssue = (input: { title: string; description: string; category: string; pageUrl?: string | null; }) => {
+    const text = `${input.title} ${input.description} ${input.category} ${input.pageUrl || ''}`.toLowerCase();
+    let score = 0;
+    const tags = new Set<string>();
+
+    const includeIfMatch = (regex: RegExp, tag: string, points: number) => {
+        if (regex.test(text)) {
+            tags.add(tag);
+            score += points;
+        }
+    };
+
+    includeIfMatch(/payment|upi|transaction|checkout|failed payment|refund|gateway/, 'payment', 3);
+    includeIfMatch(/login|otp|signin|auth|password|session/, 'auth', 3);
+    includeIfMatch(/verify|verification|certificate/, 'verification', 2);
+    includeIfMatch(/slow|lag|timeout|stuck|loading/, 'performance', 2);
+    includeIfMatch(/error|exception|crash|500|stack/i, 'backend-error', 2);
+    includeIfMatch(/ui|display|layout|alignment|mobile|responsive/, 'ui', 1);
+    includeIfMatch(/security|unauthorized|hacked|breach|exposed|token/, 'security', 5);
+    includeIfMatch(/data loss|missing data|deleted|corrupt/, 'data-loss', 5);
+
+    if (input.category.toLowerCase().includes('payment')) score += 2;
+    if (input.category.toLowerCase().includes('login')) score += 2;
+
+    let priority: IssuePriority = 'LOW';
+    if (score >= 8) priority = 'CRITICAL';
+    else if (score >= 5) priority = 'HIGH';
+    else if (score >= 3) priority = 'MEDIUM';
+
+    return {
+        priority,
+        tags: Array.from(tags),
+    };
+};
 
 export const createIssueReport = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -40,6 +76,12 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                 status: 'OPEN'
             }
         });
+        const classification = analyzeIssue({
+            title: issue.title,
+            description: issue.description,
+            category: issue.category,
+            pageUrl: issue.pageUrl
+        });
 
         // Fire-and-forget email alert so SMTP errors don't fail the request
         void (async () => {
@@ -54,9 +96,13 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                     const safeRole = escapeHtml(issue.role || 'Unknown');
                     const safePageUrl = escapeHtml(issue.pageUrl || 'N/A');
                     const safeDescription = escapeHtml(issue.description);
+                    const safePriority = escapeHtml(classification.priority);
+                    const safeTags = escapeHtml(classification.tags.join(', ') || 'none');
                     const html = `
                         <h2>New Issue Report Submitted</h2>
                         <p><strong>Title:</strong> ${safeTitle}</p>
+                        <p><strong>Priority:</strong> ${safePriority}</p>
+                        <p><strong>Auto Tags:</strong> ${safeTags}</p>
                         <p><strong>Category:</strong> ${safeCategory}</p>
                         <p><strong>Status:</strong> ${safeStatus}</p>
                         <p><strong>Reported By:</strong> ${safeReportedByName} (${safeReportedByEmail})</p>
@@ -65,14 +111,18 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                         <p><strong>Description:</strong></p>
                         <p>${safeDescription}</p>
                     `;
-                    await sendEmail(notifyEmail, '[GAT Portal] New Issue Report', html);
+                    await sendEmail(notifyEmail, `[GAT Portal] ${classification.priority} Issue Report`, html);
                 }
             } catch (emailErr) {
                 console.error('Failed to send issue report notification email:', emailErr);
             }
         })();
 
-        return res.status(201).json(issue);
+        return res.status(201).json({
+            ...issue,
+            priority: classification.priority,
+            tags: classification.tags,
+        });
     } catch (error) {
         console.error('Error creating issue report:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -84,7 +134,19 @@ export const getAllIssueReports = async (_req: Request, res: Response): Promise<
         const issues = await (prisma as any).issueReport.findMany({
             orderBy: { createdAt: 'desc' }
         });
-        return res.json(issues);
+        return res.json(issues.map((issue: any) => {
+            const classification = analyzeIssue({
+                title: issue.title,
+                description: issue.description,
+                category: issue.category,
+                pageUrl: issue.pageUrl
+            });
+            return {
+                ...issue,
+                priority: classification.priority,
+                tags: classification.tags,
+            };
+        }));
     } catch (error) {
         console.error('Error fetching issue reports:', error);
         return res.status(500).json({ message: 'Internal server error' });
