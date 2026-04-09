@@ -14,6 +14,13 @@ const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
+const CRITICAL_ESCALATION_EMAILS = Array.from(new Set([
+    DEVELOPER_ISSUE_EMAIL,
+    ...String(process.env.CRITICAL_ISSUE_EMAILS || '')
+        .split(/[,;\n]/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+]));
 const analyzeIssue = (input) => {
     const text = `${input.title} ${input.description} ${input.category} ${(input.pageUrl || '')}`.toLowerCase();
     let score = 0;
@@ -146,6 +153,20 @@ const createIssueReport = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         <p>${issue.description}</p>
                     `;
                     yield (0, email_1.sendEmail)(notifyEmail, `[GAT Portal] ${classification.priority} Issue Report`, html);
+                    const shouldEscalate = classification.priority === 'HIGH' || classification.priority === 'CRITICAL';
+                    if (shouldEscalate) {
+                        const escalationHtml = `
+                            <h2>Escalation: ${safePriority} Issue</h2>
+                            <p><strong>Issue ID:</strong> ${issue.id}</p>
+                            <p><strong>Title:</strong> ${issue.title}</p>
+                            <p><strong>Category:</strong> ${issue.category}</p>
+                            <p><strong>Page:</strong> ${issue.pageUrl || 'N/A'}</p>
+                            <p><strong>Reporter:</strong> ${issue.reportedByName || 'Anonymous'} (${issue.reportedByEmail || 'Email not provided'})</p>
+                            <p><strong>Possible Duplicate Of:</strong> ${safeDuplicate}</p>
+                            <p><strong>Description:</strong> ${issue.description}</p>
+                        `;
+                        yield Promise.all(CRITICAL_ESCALATION_EMAILS.map((email) => (0, email_1.sendEmail)(email, `[GAT Portal][Escalation] ${classification.priority} issue needs attention`, escalationHtml)));
+                    }
                 }
             }
             catch (emailErr) {

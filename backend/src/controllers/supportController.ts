@@ -5,6 +5,17 @@ import { escapeHtml } from '../utils/html';
 
 const ALLOWED_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
 const DEVELOPER_ISSUE_EMAIL = 'sahanaa2060@gmail.com';
+const CRITICAL_ESCALATION_EMAILS = Array.from(
+    new Set(
+        [
+            DEVELOPER_ISSUE_EMAIL,
+            ...String(process.env.CRITICAL_ISSUE_EMAILS || '')
+                .split(/[,;\n]/)
+                .map((email) => email.trim().toLowerCase())
+                .filter(Boolean)
+        ]
+    )
+);
 type IssuePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 const analyzeIssue = (input: { title: string; description: string; category: string; pageUrl?: string | null; }) => {
@@ -173,6 +184,24 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                         <p>${safeDescription}</p>
                     `;
                     await sendEmail(notifyEmail, `[GAT Portal] ${classification.priority} Issue Report`, html);
+
+                    const shouldEscalate = classification.priority === 'HIGH' || classification.priority === 'CRITICAL';
+                    if (shouldEscalate) {
+                        const escalationHtml = `
+                            <h2>Escalation: ${safePriority} Issue</h2>
+                            <p><strong>Issue ID:</strong> ${escapeHtml(issue.id)}</p>
+                            <p><strong>Title:</strong> ${safeTitle}</p>
+                            <p><strong>Category:</strong> ${safeCategory}</p>
+                            <p><strong>Page:</strong> ${safePageUrl}</p>
+                            <p><strong>Reporter:</strong> ${safeReportedByName} (${safeReportedByEmail})</p>
+                            <p><strong>Possible Duplicate Of:</strong> ${safeDuplicate}</p>
+                            <p><strong>Description:</strong> ${safeDescription}</p>
+                        `;
+
+                        await Promise.all(CRITICAL_ESCALATION_EMAILS.map((email) =>
+                            sendEmail(email, `[GAT Portal][Escalation] ${classification.priority} issue needs attention`, escalationHtml)
+                        ));
+                    }
                 }
             } catch (emailErr) {
                 console.error('Failed to send issue report notification email:', emailErr);
