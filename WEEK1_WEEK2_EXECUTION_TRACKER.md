@@ -12,6 +12,7 @@
 - [x] Operations backup guide
 - [x] Operations runbook
 - [x] Incident + rollback playbook
+- [x] Scheduled health smoke GitHub workflow
 
 ## Next Production Tasks (requires cloud setup)
 - [ ] Configure uptime monitor and alert channels

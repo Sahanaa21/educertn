@@ -1,0 +1,38 @@
+name: Health Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+jobs:
+  smoke:
+    name: API Health Smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run health smoke
+        env:
+          HEALTH_BASE_URL: ${{ secrets.HEALTH_BASE_URL }}
+          HEALTH_TIMEOUT_MS: "8000"
+        run: |
+          if [ -z "$HEALTH_BASE_URL" ]; then
+            echo "HEALTH_BASE_URL secret is not set. Failing workflow."
+            exit 1
+          fi
+          npm run ops:health-smoke
