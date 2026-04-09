@@ -23,3 +23,5 @@
 
 ## Security Automation
 - [x] Scheduled dependency audit workflow (`.github/workflows/security-audit.yml`)
+- [x] Dependabot update automation (`.github/dependabot.yml`)
+- [x] GitHub hardening checklist (`GITHUB_HARDENING_CHECKLIST.md`)
