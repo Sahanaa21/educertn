@@ -15,12 +15,16 @@ import { maintenanceModeGuard } from './middleware/maintenanceMode';
 import { requestContext } from './middleware/requestContext';
 import { logger } from './utils/logger';
 import { reportServerError, initSentryServer } from './utils/errorReporter';
+import { startDatabaseHealthMonitoring } from './utils/databaseHealth';
 import { prisma } from './config/prisma';
 
 dotenv.config();
 
 // Initialize Sentry early if configured
 initSentryServer();
+
+// Start database health monitoring (logs warnings for slow queries)
+startDatabaseHealthMonitoring();
 
 const app = express();
 const port = process.env.PORT || 5000;
