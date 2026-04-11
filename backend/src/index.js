@@ -49,6 +49,7 @@ const defaultAllowedOrigins = [
     'https://gat-verification-portal.vercel.app'
 ];
 const vercelDeploymentOriginPattern = /^https:\/\/gat-verification-portal(?:-[a-z0-9-]+)?\.vercel\.app$/i;
+const allowHttpOrigins = (process.env.ALLOW_HTTP_ORIGINS || 'true').toLowerCase() === 'true';
 const allowedOrigins = Array.from(new Set([
     process.env.FRONTEND_URL,
     ...(process.env.FRONTEND_URLS || '').split(','),
@@ -59,7 +60,8 @@ const allowedOrigins = Array.from(new Set([
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         const isAllowedVercelDeployment = typeof origin === 'string' && vercelDeploymentOriginPattern.test(origin);
-        if (!origin || allowedOrigins.includes(origin) || isAllowedVercelDeployment) {
+        const isAllowedHttpOrigin = Boolean(origin && allowHttpOrigins && origin.startsWith('http://'));
+        if (!origin || allowedOrigins.includes(origin) || isAllowedVercelDeployment || isAllowedHttpOrigin) {
             callback(null, true);
             return;
         }
@@ -69,14 +71,17 @@ app.use((0, cors_1.default)({
 }));
 app.use(performanceMonitoring_1.performanceMonitoring);
 app.use(requestContext_1.requestContext);
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+    if (req.secure || forwardedProto === 'https') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
 });
