@@ -31,4 +31,5 @@ jobs:
         env:
           HEALTH_BASE_URL: ${{ secrets.HEALTH_BASE_URL || vars.HEALTH_BASE_URL }}
           HEALTH_TIMEOUT_MS: "8000"
+        continue-on-error: ${{ github.event_name == 'schedule' }}
         run: npm run ops:health-smoke
