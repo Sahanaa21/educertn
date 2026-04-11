@@ -1,6 +1,6 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
 	|| (process.env.NODE_ENV === 'production'
-		? 'http://3.94.193.129'
+		? 'http://98.88.173.237'
 		: 'http://localhost:5000');
 
 type ApiFetchOptions = {
