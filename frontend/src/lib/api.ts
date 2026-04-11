@@ -1,6 +1,6 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
 	|| (process.env.NODE_ENV === 'production'
-		? 'http://98.88.173.237'
+		? 'https://gat-verification-backend.onrender.com'
 		: 'http://localhost:5000');
 
 type ApiFetchOptions = {

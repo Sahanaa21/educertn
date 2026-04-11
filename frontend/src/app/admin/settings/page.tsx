@@ -20,7 +20,7 @@ type AdminSettingsState = {
 export default function AdminSettingsPage() {
     const [settings, setSettings] = useState<AdminSettingsState>({
         supportEmail: 'support@gat.ac.in',
-        frontendUrl: 'http://98.88.173.237',
+        frontendUrl: 'https://gat-verification-backend.onrender.com',
         maintenanceMode: false,
         allowCompanySignup: true,
         smtpFromName: 'Global Academy of Technology',
