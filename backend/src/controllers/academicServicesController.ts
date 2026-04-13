@@ -473,7 +473,10 @@ export const uploadAcademicServiceAttachments = async (req: Request, res: Respon
         }
 
         const prev = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
-        const newUrls = validFiles.map((file) => `/uploads/${path.basename(file.path)}`);
+        const newUrls = validFiles.map((file) => String((file as any).location || ''));
+        if (newUrls.some((url) => !url)) {
+            return res.status(500).json({ message: 'File upload failed' });
+        }
         const merged = [...prev, ...newUrls];
 
         const updated = await (prisma as any).academicServiceRequest.update({
@@ -484,7 +487,7 @@ export const uploadAcademicServiceAttachments = async (req: Request, res: Respon
             }
         });
 
-        return res.json(updated);
+        return res.json({ ...updated, fileUrls: newUrls });
     } catch (error) {
         console.error('Failed to upload academic service attachments:', error);
         return res.status(500).json({ message: 'Internal server error' });

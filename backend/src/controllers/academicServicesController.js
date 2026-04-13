@@ -8,12 +8,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateAcademicServiceSettingsAdmin = exports.getAcademicServiceSettingsAdmin = exports.uploadAcademicServiceAttachments = exports.updateAcademicServiceRequest = exports.getAllAcademicServiceRequests = exports.getStudentAcademicServiceRequests = exports.createAcademicServicePaymentOrder = exports.verifyAcademicServicePayment = exports.createAcademicServiceRequest = exports.getAcademicServicesAvailabilityStudent = exports.getAcademicServicesAvailabilityPublic = void 0;
-const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
 const zwitch_1 = require("../config/zwitch");
 const PHOTOCOPY_FEE = 500;
@@ -425,7 +421,10 @@ const uploadAcademicServiceAttachments = (req, res) => __awaiter(void 0, void 0,
             return res.status(400).json({ message: 'Attachments cannot be updated for completed or rejected requests' });
         }
         const prev = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
-        const newUrls = validFiles.map((file) => `/uploads/${path_1.default.basename(file.path)}`);
+        const newUrls = validFiles.map((file) => String(file.location || ''));
+        if (newUrls.some((url) => !url)) {
+            return res.status(500).json({ message: 'File upload failed' });
+        }
         const merged = [...prev, ...newUrls];
         const updated = yield prisma_1.prisma.academicServiceRequest.update({
             where: { id },
@@ -434,7 +433,7 @@ const uploadAcademicServiceAttachments = (req, res) => __awaiter(void 0, void 0,
                 status: existing.status === 'PENDING' ? 'UNDER_REVIEW' : existing.status,
             }
         });
-        return res.json(updated);
+        return res.json(Object.assign(Object.assign({}, updated), { fileUrls: newUrls }));
     }
     catch (error) {
         console.error('Failed to upload academic service attachments:', error);

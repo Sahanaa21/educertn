@@ -4,6 +4,7 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
+import { getStoredFileExtension, sendStoredFile } from '../utils/fileStorage';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -89,6 +90,11 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
             return res.status(400).json({ message: 'Verification template file is required' });
         }
 
+        const templateUrl = String((templateFile as any).location || '');
+        if (!templateUrl) {
+            return res.status(500).json({ message: 'File upload failed' });
+        }
+
         const requestId = await generateVerificationRequestId();
 
         const created = await prisma.verificationRequest.create({
@@ -100,7 +106,7 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
                 phone: phone || null,
                 studentName,
                 usn,
-                uploadedTemplate: templateFile.path,
+                uploadedTemplate: templateUrl,
                 paymentStatus: 'PENDING',
                 status: 'PENDING'
             }
@@ -133,6 +139,7 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
 
             res.status(201).json({
                 request: created,
+                fileUrl: templateUrl,
                 amount: VERIFICATION_FEE,
                 zwitchOrder: {
                     id: order.id,
@@ -215,7 +222,6 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
-
 export const createVerificationPaymentOrder = async (req: AuthRequest, res: Response): Promise<any> => {
     try {
         const companyEmail = await getAuthenticatedCompanyEmail(req);
@@ -306,7 +312,6 @@ export const getCompanyVerifications = async (req: AuthRequest, res: Response): 
         res.status(500).json({ message: 'Internal server error' });
     }
 };
-
 export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Response): Promise<any> => {
     try {
         const companyEmail = await getAuthenticatedCompanyEmail(req);
@@ -325,14 +330,14 @@ export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Respon
             return res.status(404).json({ message: 'Request not found' });
         }
 
-        const resolvedCompletedFilePath = resolveStoredFilePath(request.completedFile);
-
-        if (request.status !== 'COMPLETED' || !resolvedCompletedFilePath) {
+        if (request.status !== 'COMPLETED' || !request.completedFile) {
             return res.status(400).json({ message: 'Completed response file not available yet' });
         }
 
-        const extension = path.extname(resolvedCompletedFilePath || '') || inferExtensionFromFile(resolvedCompletedFilePath) || '';
-        return res.download(resolvedCompletedFilePath, `${request.requestId}-completed-file${extension}`);
+        const served = await sendStoredFile(res, request.completedFile, `${request.requestId}-completed-file`);
+        if (!served) {
+            return res.status(404).json({ message: 'Completed response file not available yet' });
+        }
     } catch (error) {
         console.error('Error downloading completed verification file:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -361,7 +366,7 @@ export const completeVerificationRequest = async (req: Request, res: Response): 
 
             const attachments = updated.completedFile
                 ? [{
-                    filename: `${updated.requestId}-completed-file${path.extname(updated.completedFile || '') || ''}`,
+                    filename: `${updated.requestId}-completed-file${getStoredFileExtension(updated.completedFile) || path.extname(updated.completedFile || '') || ''}`,
                     path: updated.completedFile
                 }]
                 : undefined;

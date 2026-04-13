@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import multer from 'multer';
-import path from 'path';
 import { authenticate, requireRole } from '../middleware/authMiddleware';
+import { academicServiceAttachmentUpload } from '../middleware/upload';
 import {
     createAcademicServicePaymentOrder,
     createAcademicServiceRequest,
@@ -15,22 +14,6 @@ import {
     uploadAcademicServiceAttachments,
     verifyAcademicServicePayment,
 } from '../controllers/academicServicesController';
-
-const uploadsDir = path.join(__dirname, '../../uploads/');
-
-const attachmentStorage = multer.diskStorage({
-    destination: uploadsDir,
-    filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname || '').toLowerCase();
-        const safeExt = ext || '.bin';
-        cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-    }
-});
-
-const upload = multer({
-    storage: attachmentStorage,
-    limits: { fileSize: 10 * 1024 * 1024 },
-});
 
 const router = Router();
 
@@ -46,6 +29,6 @@ router.get('/admin/academic-services', authenticate, requireRole('ADMIN'), getAl
 router.get('/admin/academic-services/settings', authenticate, requireRole('ADMIN'), getAcademicServiceSettingsAdmin);
 router.put('/admin/academic-services/settings', authenticate, requireRole('ADMIN'), updateAcademicServiceSettingsAdmin);
 router.put('/admin/academic-services/:id', authenticate, requireRole('ADMIN'), updateAcademicServiceRequest);
-router.post('/admin/academic-services/:id/attachments', authenticate, requireRole('ADMIN'), upload.array('files', 5), uploadAcademicServiceAttachments);
+router.post('/admin/academic-services/:id/attachments', authenticate, requireRole('ADMIN'), academicServiceAttachmentUpload.array('files', 5), uploadAcademicServiceAttachments);
 
 export default router;

@@ -4,6 +4,7 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
+import { sendStoredFile } from '../utils/fileStorage';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -70,8 +71,10 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
         const userId = (req as any).user.id;
         const file = req.file;
 
-        // In a real app you would upload this to Cloudinary. For now, we mock the URL.
-        const idProofUrl = file ? `/uploads/${file.filename}` : undefined;
+        const idProofUrl = file ? String((file as any).location || '') : '';
+        if (file && !idProofUrl) {
+            return res.status(500).json({ message: 'File upload failed' });
+        }
 
         const body = req.body;
         const usn = body.usn;
@@ -162,6 +165,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
 
             res.status(201).json({
                 request: certificateRequest,
+                fileUrl: idProofUrl,
                 zwitchOrder: {
                     id: order.id,
                     amount: order.amount,
@@ -389,13 +393,10 @@ export const downloadStudentIssuedCertificate = async (req: Request, res: Respon
             return res.status(400).json({ message: 'Soft copy is not available for this request' });
         }
 
-        const resolvedFilePath = resolveStoredFilePath(request.issuedCertificateUrl);
-        if (!resolvedFilePath) {
+        const served = await sendStoredFile(res, request.issuedCertificateUrl, `${request.id}-certificate`);
+        if (!served) {
             return res.status(404).json({ message: 'Certificate file not found. Please contact admin.' });
         }
-
-        const extension = path.extname(resolvedFilePath || '') || inferExtensionFromFile(resolvedFilePath) || '';
-        return res.download(resolvedFilePath, `${request.id}-certificate${extension}`);
     } catch (error) {
         console.error('Error downloading issued certificate:', error);
         return res.status(500).json({ message: 'Internal server error' });

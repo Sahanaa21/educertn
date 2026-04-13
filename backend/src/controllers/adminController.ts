@@ -4,6 +4,7 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
+import { getStoredFileExtension, isRemoteFileUrl, resolveLocalStoredPath, sendStoredFile } from '../utils/fileStorage';
 
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
     if (!storedPath) return null;
@@ -159,8 +160,9 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
             pPosted = true;
         } else if (action === 'UPLOAD_SOFT_COPY' || req.file) {
             updateData.softCopyEmailed = true;
-            if (req.file?.filename) {
-                updateData.issuedCertificateUrl = `/uploads/${req.file.filename}`;
+            const issuedCertificateUrl = String((req.file as any)?.location || '');
+            if (issuedCertificateUrl) {
+                updateData.issuedCertificateUrl = issuedCertificateUrl;
             }
             sEmailed = true;
         }
@@ -224,7 +226,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 
                 let attachments = [];
                 if (req.file) {
-                    attachments.push({ filename: req.file.originalname, path: req.file.path });
+                    attachments.push({ filename: req.file.originalname, path: String((req.file as any).location || req.file.path) });
                 }
                 await sendEmail(updated.user.email, 'Certificate Soft Copy Delivery', emailHtml, attachments);
             }
@@ -260,7 +262,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
             }
         }
 
-        res.json(updated);
+        res.json({ ...updated, fileUrl: String((req.file as any)?.location || req.file?.path || '') });
     } catch (error) {
         console.error('Error updating certificate status:', error);
         res.status(500).json({ message: 'Internal server error', error: String(error), stack: (error as any).stack });
@@ -306,7 +308,11 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
             refundMarkedInitiated = true;
         }
 
-        if (status === 'COMPLETED' && (!existing.completedFile || !fs.existsSync(existing.completedFile))) {
+        const hasCompletedFile = Boolean(existing.completedFile) && (
+            isRemoteFileUrl(existing.completedFile) || Boolean(resolveLocalStoredPath(existing.completedFile))
+        );
+
+        if (status === 'COMPLETED' && !hasCompletedFile) {
             return res.status(400).json({ message: 'Upload completed file before marking as completed' });
         }
 
@@ -347,7 +353,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
 
             const attachments = updated.completedFile
                 ? [{
-                    filename: `${updated.requestId}-completed-file${path.extname(updated.completedFile || '') || ''}`,
+                    filename: `${updated.requestId}-completed-file${getStoredFileExtension(updated.completedFile) || path.extname(updated.completedFile || '') || ''}`,
                     path: updated.completedFile
                 }]
                 : undefined;
@@ -410,14 +416,10 @@ export const downloadVerificationTemplate = async (req: Request, res: Response):
             return res.status(404).json({ message: 'Verification request not found' });
         }
 
-        const resolvedTemplatePath = resolveStoredFilePath(verification.uploadedTemplate);
-
-        if (!resolvedTemplatePath) {
+        const served = await sendStoredFile(res, verification.uploadedTemplate, `${verification.requestId}-template${getStoredFileExtension(verification.uploadedTemplate)}`);
+        if (!served) {
             return res.status(404).json({ message: 'Uploaded template file not found' });
         }
-
-        const extension = path.extname(resolvedTemplatePath || '') || inferExtensionFromFile(resolvedTemplatePath) || '';
-        return res.download(resolvedTemplatePath, `${verification.requestId}-template${extension}`);
     } catch (error) {
         console.error('Error downloading verification template:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -437,13 +439,10 @@ export const downloadCertificateIdProof = async (req: Request, res: Response): P
             return res.status(404).json({ message: 'Certificate request not found' });
         }
 
-        const resolvedFilePath = resolveStoredFilePath(certificate.idProofUrl);
-        if (!resolvedFilePath) {
+        const served = await sendStoredFile(res, certificate.idProofUrl, `${certificate.id}-id-proof${getStoredFileExtension(certificate.idProofUrl)}`);
+        if (!served) {
             return res.status(404).json({ message: 'Uploaded ID proof not found' });
         }
-
-        const extension = path.extname(resolvedFilePath || '') || inferExtensionFromFile(resolvedFilePath) || '';
-        return res.download(resolvedFilePath, `${certificate.id}-id-proof${extension}`);
     } catch (error) {
         console.error('Error downloading certificate ID proof:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -466,12 +465,12 @@ export const uploadVerificationCompletedFile = async (req: Request, res: Respons
         const updated = await prisma.verificationRequest.update({
             where: { id },
             data: {
-                completedFile: req.file.path,
+                completedFile: String((req.file as any).location || req.file.path),
                 status: existing.status === 'PENDING' ? 'PROCESSING' : existing.status
             }
         });
 
-        return res.json(updated);
+        return res.json({ ...updated, fileUrl: String((req.file as any).location || req.file.path) });
     } catch (error) {
         console.error('Error uploading completed verification file:', error);
         return res.status(500).json({ message: 'Internal server error' });

@@ -18,6 +18,7 @@ const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const html_1 = require("../utils/html");
+const fileStorage_1 = require("../utils/fileStorage");
 const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const VERIFICATION_FEE = 5000;
@@ -94,6 +95,10 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
         if (!templateFile) {
             return res.status(400).json({ message: 'Verification template file is required' });
         }
+        const templateUrl = String(templateFile.location || '');
+        if (!templateUrl) {
+            return res.status(500).json({ message: 'File upload failed' });
+        }
         const requestId = yield (0, generateId_1.generateVerificationRequestId)();
         const created = yield prisma_1.prisma.verificationRequest.create({
             data: {
@@ -104,7 +109,7 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
                 phone: phone || null,
                 studentName,
                 usn,
-                uploadedTemplate: templateFile.path,
+                uploadedTemplate: templateUrl,
                 paymentStatus: 'PENDING',
                 status: 'PENDING'
             }
@@ -132,6 +137,7 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
             });
             res.status(201).json({
                 request: created,
+                fileUrl: templateUrl,
                 amount: VERIFICATION_FEE,
                 zwitchOrder: {
                     id: order.id,
@@ -301,12 +307,13 @@ const downloadCompanyCompletedFile = (req, res) => __awaiter(void 0, void 0, voi
         if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
             return res.status(404).json({ message: 'Request not found' });
         }
-        const resolvedCompletedFilePath = resolveStoredFilePath(request.completedFile);
-        if (request.status !== 'COMPLETED' || !resolvedCompletedFilePath) {
+        if (request.status !== 'COMPLETED' || !request.completedFile) {
             return res.status(400).json({ message: 'Completed response file not available yet' });
         }
-        const extension = path_1.default.extname(resolvedCompletedFilePath || '') || inferExtensionFromFile(resolvedCompletedFilePath) || '';
-        return res.download(resolvedCompletedFilePath, `${request.requestId}-completed-file${extension}`);
+        const served = yield (0, fileStorage_1.sendStoredFile)(res, request.completedFile, `${request.requestId}-completed-file`);
+        if (!served) {
+            return res.status(404).json({ message: 'Completed response file not available yet' });
+        }
     }
     catch (error) {
         console.error('Error downloading completed verification file:', error);
@@ -334,7 +341,7 @@ const completeVerificationRequest = (req, res) => __awaiter(void 0, void 0, void
             `;
             const attachments = updated.completedFile
                 ? [{
-                        filename: `${updated.requestId}-completed-file${path_1.default.extname(updated.completedFile || '') || ''}`,
+                        filename: `${updated.requestId}-completed-file${(0, fileStorage_1.getStoredFileExtension)(updated.completedFile) || path_1.default.extname(updated.completedFile || '') || ''}`,
                         path: updated.completedFile
                     }]
                 : undefined;

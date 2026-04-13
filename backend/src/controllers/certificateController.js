@@ -18,6 +18,7 @@ const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../config/prisma");
 const email_1 = require("../utils/email");
 const html_1 = require("../utils/html");
+const fileStorage_1 = require("../utils/fileStorage");
 const zwitch_1 = require("../config/zwitch");
 const generateId_1 = require("../utils/generateId");
 const resolveStoredFilePath = (storedPath) => {
@@ -75,8 +76,10 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
     try {
         const userId = req.user.id;
         const file = req.file;
-        // In a real app you would upload this to Cloudinary. For now, we mock the URL.
-        const idProofUrl = file ? `/uploads/${file.filename}` : undefined;
+        const idProofUrl = file ? String(file.location || '') : '';
+        if (file && !idProofUrl) {
+            return res.status(500).json({ message: 'File upload failed' });
+        }
         const body = req.body;
         const usn = body.usn;
         const studentName = body.studentName;
@@ -153,6 +156,7 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
             });
             res.status(201).json({
                 request: certificateRequest,
+                fileUrl: idProofUrl,
                 zwitchOrder: {
                     id: order.id,
                     amount: order.amount,
@@ -360,12 +364,10 @@ const downloadStudentIssuedCertificate = (req, res) => __awaiter(void 0, void 0,
         if (request.copyType === 'HARD_COPY') {
             return res.status(400).json({ message: 'Soft copy is not available for this request' });
         }
-        const resolvedFilePath = resolveStoredFilePath(request.issuedCertificateUrl);
-        if (!resolvedFilePath) {
+        const served = yield (0, fileStorage_1.sendStoredFile)(res, request.issuedCertificateUrl, `${request.id}-certificate`);
+        if (!served) {
             return res.status(404).json({ message: 'Certificate file not found. Please contact admin.' });
         }
-        const extension = path_1.default.extname(resolvedFilePath || '') || inferExtensionFromFile(resolvedFilePath) || '';
-        return res.download(resolvedFilePath, `${request.id}-certificate${extension}`);
     }
     catch (error) {
         console.error('Error downloading issued certificate:', error);
