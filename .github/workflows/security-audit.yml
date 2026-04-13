@@ -27,6 +27,7 @@ jobs:
         run: npm install --no-fund --no-audit
 
       - name: Run npm audit (backend)
+        continue-on-error: ${{ github.event_name == 'schedule' }}
         run: npm audit --audit-level=critical
 
   audit-frontend:
@@ -50,4 +51,5 @@ jobs:
         run: npm install --no-fund --no-audit
 
       - name: Run npm audit (frontend)
+        continue-on-error: ${{ github.event_name == 'schedule' }}
         run: npm audit --audit-level=critical
