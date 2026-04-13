@@ -32,7 +32,6 @@ const createUpload = ({
 		s3: s3Client,
 		bucket: process.env.AWS_BUCKET_NAME || '',
 		contentType: multerS3.AUTO_CONTENT_TYPE,
-		acl: 'public-read',
 		key: (_req, file, cb) => {
 			cb(null, `${folder}/${sanitizeFileName(file.originalname || 'file')}`);
 		},
