@@ -18,28 +18,21 @@ export default function Header() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 text-slate-800 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
-            <div className="container mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
+            <div className="container mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-2 lg:py-3">
                 {/* Logo and Title Section */}
-                <div className="flex items-center gap-3 min-w-0">
-                    <Link href="/" className="shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div className="flex h-12 w-[5.8rem] items-center justify-center overflow-hidden sm:h-14 sm:w-[6.6rem] lg:h-16 lg:w-[7.4rem]">
-                            <Image
-                                src="/logo.png?v=20260414b"
-                                alt="GATDEX Logo"
-                                width={4096}
-                                height={2769}
-                                unoptimized
-                                className="h-auto w-full object-contain"
-                                priority
-                            />
-                        </div>
-                    </Link>
-
-                    <div className="flex flex-col justify-center leading-tight">
-                        <span className="text-sm font-bold text-blue-950 uppercase tracking-tight sm:text-base lg:text-lg lg:tracking-wide">GATDEX</span>
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 sm:text-xs">Certificate, Verification & Academic Services</span>
+                <Link href="/" className="shrink-0 flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
+                    <div className="flex h-14 w-auto items-center justify-center overflow-hidden sm:h-16 lg:h-20">
+                        <Image
+                            src="/logo.png?v=20260414b"
+                            alt="GATDEX Logo"
+                            width={4096}
+                            height={2769}
+                            unoptimized
+                            className="h-full w-auto object-contain"
+                            priority
+                        />
                     </div>
-                </div>
+                </Link>
 
                 {/* Desktop Navigation */}
                 <nav className="ml-auto hidden lg:flex items-center gap-8 font-semibold text-sm">
