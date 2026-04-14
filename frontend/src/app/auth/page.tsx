@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -250,13 +251,25 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-16 flex flex-col items-center min-h-[70vh] bg-slate-50">
-            <Link href="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 mb-8 self-center sm:self-auto max-w-xl w-full">
+        <div className="min-h-[70vh] bg-[radial-gradient(circle_at_top,_#dbeafe_0%,_#f8fafc_40%,_#f8fafc_100%)] py-12 sm:py-16">
+            <div className="container mx-auto flex max-w-5xl flex-col items-center px-4">
+            <Link href="/" className="inline-flex w-full max-w-xl items-center text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 mb-6 self-center sm:self-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
             </Link>
 
-            <Card className="w-full max-w-xl shadow-xl border-t-4 border-t-blue-700">
-                <CardHeader className="text-center space-y-2">
+            <Card className="w-full max-w-xl border border-slate-200 shadow-2xl shadow-blue-900/10">
+                <CardHeader className="space-y-3 text-center">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+                        <Image
+                            src="/clglogo.png?v=20260414"
+                            alt="Global Academy of Technology Logo"
+                            width={56}
+                            height={56}
+                            unoptimized
+                            className="h-full w-full object-contain"
+                            priority
+                        />
+                    </div>
                     <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">{title}</CardTitle>
                     <CardDescription>
                         Use your email for OTP-based access.
@@ -407,6 +420,7 @@ export default function AuthPage() {
                     </form>
                 )}
             </Card>
+            </div>
         </div>
     );
 }

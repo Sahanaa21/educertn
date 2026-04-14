@@ -17,26 +17,26 @@ export default function Header() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-white text-slate-800 shadow-sm">
+        <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 text-slate-800 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
             <div className="container mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
                 {/* Logo and Title Section */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Link href="/" className="shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div className="relative h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16">
+                        <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:h-14 sm:w-14 lg:h-16 lg:w-16">
                             <Image
-                                src="/logo.png?v=20260310"
+                                src="/clglogo.png?v=20260414"
                                 alt="Global Academy of Technology Logo"
                                 fill
                                 unoptimized
-                                className="object-contain"
+                                className="object-contain p-1"
                                 priority
                             />
                         </div>
                     </Link>
 
                     <div className="flex flex-col justify-center leading-tight">
-                        <span className="text-sm sm:text-base lg:text-lg font-bold text-blue-950 uppercase tracking-tight lg:tracking-wide">Global Academy of Technology</span>
-                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-tight lg:tracking-wide">Certificate & Verification Portal</span>
+                        <span className="text-sm font-bold text-blue-950 uppercase tracking-tight sm:text-base lg:text-lg lg:tracking-wide">Global Academy of Technology</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 sm:text-xs">Certificate & Verification Portal</span>
                     </div>
                 </div>
 
