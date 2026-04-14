@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('homepage loads and shows portal heading', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(/Global Academy of Technology|Verification Portal/i);
+  await expect(page).toHaveTitle(/GATDEX|Certificate, Verification & Academic Services/i);
   await expect(page.getByRole('link', { name: /Report Issue/i })).toBeVisible();
 });
 
