@@ -22,13 +22,14 @@ export default function Header() {
                 {/* Logo and Title Section */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Link href="/" className="shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:h-14 sm:w-14 lg:h-16 lg:w-16">
+                        <div className="flex h-12 w-[4.2rem] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white px-1 shadow-sm sm:h-14 sm:w-[4.8rem] lg:h-16 lg:w-[5.5rem]">
                             <Image
-                                src="/clglogo.png?v=20260414"
+                                src="/clglogo.png?v=20260414a"
                                 alt="Global Academy of Technology Logo"
-                                fill
+                                width={128}
+                                height={92}
                                 unoptimized
-                                className="object-contain p-1"
+                                className="h-auto w-full object-contain"
                                 priority
                             />
                         </div>
