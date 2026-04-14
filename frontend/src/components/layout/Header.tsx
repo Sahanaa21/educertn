@@ -20,17 +20,21 @@ export default function Header() {
         <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 text-slate-800 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
             <div className="container mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-2 lg:py-3">
                 {/* Logo and Title Section */}
-                <Link href="/" className="shrink-0 flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="flex h-14 w-12 items-center justify-center overflow-hidden sm:h-16 sm:w-14 lg:h-20 lg:w-16">
+                <Link href="/" className="shrink-0 flex items-center gap-2 sm:gap-3 min-w-0" onClick={() => setIsMobileMenuOpen(false)}>
+                    <div className="flex h-12 w-12 items-center justify-center sm:h-14 sm:w-14 lg:h-16 lg:w-16">
                         <Image
                             src="/logo.png?v=20260414b"
                             alt="GATDEX Logo"
                             width={4096}
                             height={2769}
                             unoptimized
-                            className="h-full w-full object-cover object-right scale-150"
+                            className="h-full w-full object-contain"
                             priority
                         />
+                    </div>
+                    <div className="hidden sm:flex flex-col leading-tight">
+                        <span className="text-sm font-bold text-blue-950 uppercase tracking-tight lg:text-base">GATDEX</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 lg:text-[11px]">Certificate, Verification & Academic Services</span>
                     </div>
                 </Link>
 
