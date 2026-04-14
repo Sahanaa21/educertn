@@ -1,23 +1,18 @@
+"use client";
+
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { BadgeCheck, CircleX, ExternalLink, Home, ListChecks } from 'lucide-react';
-
-type PageProps = {
-    searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
-const normalize = (value: string | string[] | undefined) => {
-    if (Array.isArray(value)) return value[0] || '';
-    return String(value || '');
-};
 
 const statusLabel = (value: string) => value.replace(/_/g, ' ').trim();
 
-export default async function IssueMailActionPage({ searchParams }: PageProps) {
-    const params = await searchParams;
-    const ok = normalize(params.ok) === '1';
-    const issueId = normalize(params.issueId);
-    const status = normalize(params.status).toUpperCase();
-    const message = normalize(params.message) || (ok ? 'Issue status updated' : 'Could not update issue status');
+function IssueMailActionContent() {
+    const searchParams = useSearchParams();
+    const ok = (searchParams.get('ok') || '') === '1';
+    const issueId = searchParams.get('issueId') || '';
+    const status = (searchParams.get('status') || '').toUpperCase();
+    const message = searchParams.get('message') || (ok ? 'Issue status updated' : 'Could not update issue status');
 
     return (
         <div className="relative overflow-hidden bg-linear-to-br from-slate-100 via-emerald-50 to-blue-100 px-4 py-16 sm:px-8">
@@ -76,5 +71,13 @@ export default async function IssueMailActionPage({ searchParams }: PageProps) {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function IssueMailActionPage() {
+    return (
+        <Suspense fallback={<div className="px-4 py-16 text-center text-slate-600">Loading action status...</div>}>
+            <IssueMailActionContent />
+        </Suspense>
     );
 }
