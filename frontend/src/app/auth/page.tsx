@@ -259,12 +259,12 @@ export default function AuthPage() {
 
                 <Card className="w-full max-w-xl border border-slate-200 shadow-2xl shadow-blue-900/10">
                     <CardHeader className="space-y-3 text-center">
-                        <div className="mx-auto flex h-16 w-24 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white px-2 shadow-sm sm:h-[4.5rem] sm:w-28">
+                        <div className="mx-auto flex h-16 w-[6.5rem] items-center justify-center overflow-hidden sm:h-[4.5rem] sm:w-[7.5rem]">
                             <Image
-                                src="/clglogo.png?v=20260414a"
-                                alt="Global Academy of Technology Logo"
-                                width={128}
-                                height={92}
+                                src="/logo.png?v=20260414b"
+                                alt="GATDEX Logo"
+                                width={4096}
+                                height={2769}
                                 unoptimized
                                 className="h-auto w-full object-contain"
                                 priority

@@ -22,12 +22,12 @@ export default function Header() {
                 {/* Logo and Title Section */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Link href="/" className="shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div className="flex h-12 w-[4.2rem] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white px-1 shadow-sm sm:h-14 sm:w-[4.8rem] lg:h-16 lg:w-[5.5rem]">
+                        <div className="flex h-12 w-[5.8rem] items-center justify-center overflow-hidden sm:h-14 sm:w-[6.6rem] lg:h-16 lg:w-[7.4rem]">
                             <Image
-                                src="/clglogo.png?v=20260414a"
-                                alt="Global Academy of Technology Logo"
-                                width={128}
-                                height={92}
+                                src="/logo.png?v=20260414b"
+                                alt="GATDEX Logo"
+                                width={4096}
+                                height={2769}
                                 unoptimized
                                 className="h-auto w-full object-contain"
                                 priority
@@ -36,8 +36,8 @@ export default function Header() {
                     </Link>
 
                     <div className="flex flex-col justify-center leading-tight">
-                        <span className="text-sm font-bold text-blue-950 uppercase tracking-tight sm:text-base lg:text-lg lg:tracking-wide">Global Academy of Technology</span>
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 sm:text-xs">Certificate & Verification Portal</span>
+                        <span className="text-sm font-bold text-blue-950 uppercase tracking-tight sm:text-base lg:text-lg lg:tracking-wide">GATDEX</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 sm:text-xs">Certificate, Verification & Academic Services</span>
                     </div>
                 </div>
 

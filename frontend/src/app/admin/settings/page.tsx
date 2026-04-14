@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
         frontendUrl: 'https://gat-verification-backend.onrender.com',
         maintenanceMode: false,
         allowCompanySignup: true,
-        smtpFromName: 'Global Academy of Technology',
+        smtpFromName: 'GATDEX',
         adminAllowedEmails: 'sahanaa2060@gmail.com',
     });
     const [newAdminEmail, setNewAdminEmail] = useState('');

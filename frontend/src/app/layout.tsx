@@ -9,8 +9,8 @@ import { Toaster } from '@/components/ui/sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Global Academy of Technology - Verification Portal',
-  description: 'Certificate and Background Verification Portal',
+  title: 'GATDEX - Certificate, Verification & Academic Services',
+  description: 'Unified portal for certificate requests, background verification, and academic service applications.',
 };
 
 export default function RootLayout({

@@ -3,7 +3,7 @@ export default function Footer() {
         <footer className="w-full bg-slate-900 py-10 text-white mt-auto border-t-4 border-yellow-500">
             <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-4 sm:px-8">
                 <div>
-                    <h3 className="text-xl font-bold mb-4 text-yellow-400">Global Academy of Technology</h3>
+                    <h3 className="text-xl font-bold mb-4 text-yellow-400">GATDEX</h3>
                     <p className="text-sm text-slate-300">Rajarajeshwari Nagar</p>
                     <p className="text-sm text-slate-300">Off Mysore Road</p>
                     <p className="text-sm text-slate-300">Bangalore &ndash; 560098</p>
@@ -24,8 +24,8 @@ export default function Footer() {
                 </div>
             </div>
             <div className="text-center text-xs text-slate-500 mt-10 pt-4 border-t border-slate-700">
-                <p className="mb-2">This portal is designed for secure certificate requests and academic verification services.</p>
-                <p>&copy; {new Date().getFullYear()} Global Academy of Technology. All rights reserved.</p>
+                <p className="mb-2">This portal is designed for certificate requests, company verification, and academic service workflows.</p>
+                <p>&copy; {new Date().getFullYear()} GATDEX. All rights reserved.</p>
             </div>
         </footer>
     );
