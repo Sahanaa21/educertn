@@ -449,6 +449,20 @@ export const completeUnifiedProfile = async (req: Request, res: Response): Promi
                 return res.status(400).json({ message: 'Enter a valid year of passing' });
             }
 
+            const usnOwner = await prisma.studentProfile.findFirst({
+                where: {
+                    usn,
+                    NOT: { userId: user.id }
+                },
+                select: { userId: true }
+            });
+
+            if (usnOwner) {
+                return res.status(409).json({
+                    message: 'An account with this USN already exists. Please login with the registered account.'
+                });
+            }
+
             await prisma.user.update({ where: { id: user.id }, data: { role: 'STUDENT', name } });
             await prisma.studentProfile.upsert({
                 where: { userId: user.id },

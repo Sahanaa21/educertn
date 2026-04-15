@@ -239,6 +239,15 @@ export const verifyAcademicServicePayment = async (req: Request, res: Response):
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
         }
 
+        const { active, start, end } = await getAcademicWindowState();
+        if (!active) {
+            return res.status(400).json({
+                message: 'Payment is not allowed because the academic service window is closed',
+                startAt: start,
+                endAt: end,
+            });
+        }
+
         const orderId = String(zwitchOrderId || request.paymentOrderId || '').trim();
         if (!orderId) {
             return res.status(400).json({ message: 'Payment order id is required for verification' });
@@ -288,6 +297,15 @@ export const createAcademicServicePaymentOrder = async (req: Request, res: Respo
 
         if (request.paymentStatus === 'PAID') {
             return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        const { active, start, end } = await getAcademicWindowState();
+        if (!active) {
+            return res.status(400).json({
+                message: 'Payment is not allowed because the academic service window is closed',
+                startAt: start,
+                endAt: end,
+            });
         }
 
         if (!hasZwitchConfig()) {

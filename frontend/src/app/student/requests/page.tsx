@@ -211,6 +211,14 @@ export default function StudentRequests() {
         };
     };
 
+    const formatEnumValue = (value: string) => {
+        return String(value || '')
+            .split('_')
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     const filteredRequests = requests.filter((req) => {
         const q = search.trim().toLowerCase();
         const matchesSearch = !q ||
@@ -326,8 +334,8 @@ export default function StudentRequests() {
                             {sortedRequests.map((req) => (
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium text-blue-600">{req.id}</TableCell>
-                                    <TableCell>{req.certificateType.replace('_', ' ').toUpperCase()}</TableCell>
-                                    <TableCell>{req.copyType.replace('_', ' ')}</TableCell>
+                                    <TableCell>{formatEnumValue(req.certificateType)}</TableCell>
+                                    <TableCell>{formatEnumValue(req.copyType)}</TableCell>
                                     <TableCell className="w-40 overflow-hidden">
                                         <div className="space-y-1">
                                             <Badge variant="outline" className={getPaymentMeta(req).className}>
@@ -356,7 +364,7 @@ export default function StudentRequests() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="hidden sm:inline-flex text-amber-700 border-amber-300"
+                                                className="inline-flex text-amber-700 border-amber-300"
                                                 onClick={() => retryPayment(req)}
                                                 disabled={payingId === req.id}
                                             >
@@ -366,7 +374,7 @@ export default function StudentRequests() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="hidden sm:inline-flex text-blue-600 border-blue-200"
+                                                className="inline-flex text-blue-600 border-blue-200"
                                                 onClick={() => downloadCertificate(req.id)}
                                                 disabled={downloadingId === req.id}
                                             >
@@ -386,7 +394,7 @@ export default function StudentRequests() {
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Certificate Type</p>
-                                                                <p className="font-medium text-slate-900">{req.certificateType.replace('_', ' ').toUpperCase()}</p>
+                                                                <p className="font-medium text-slate-900">{formatEnumValue(req.certificateType)}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Status</p>
@@ -396,7 +404,7 @@ export default function StudentRequests() {
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Delivery Mode</p>
-                                                                <p className="font-medium text-slate-900">{req.copyType.replace('_', ' ')}</p>
+                                                                <p className="font-medium text-slate-900">{formatEnumValue(req.copyType)}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-slate-500">Amount Paid</p>

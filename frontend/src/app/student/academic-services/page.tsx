@@ -9,8 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
 import { openZwitchCheckout } from '@/lib/zwitch';
+import { verifyAcademicServicePaymentWithRetry } from '@/lib/payment';
 
 type Availability = {
     active: boolean;
@@ -64,6 +66,7 @@ export default function StudentAcademicServicesPage() {
 
     const selectedService = SERVICE_OPTIONS.find((option) => option.value === serviceType) || SERVICE_OPTIONS[0];
     const totalAmount = useMemo(() => Number(courseCount || 0) * selectedService.unitFee, [courseCount, selectedService.unitFee]);
+    const isWindowClosed = !availability?.active;
 
     const getStudentToken = useCallback(() => {
         const token = sessionStorage.getItem('token');
@@ -199,26 +202,17 @@ export default function StudentAcademicServicesPage() {
                 environment: order.environment
             });
 
-            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
-            if (!shouldVerify) {
-                toast.message('Payment verification skipped for now. You can retry from your request list.');
-                return;
-            }
-
-            const verifyRes = await apiFetch(`/api/student/academic-services/${request.id}/verify-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    zwitchOrderId: order.id,
-                })
+            toast.message('Payment window opened. Verifying automatically...');
+            const verification = await verifyAcademicServicePaymentWithRetry({
+                requestId: request.id,
+                zwitchOrderId: order.id,
+                token,
+                attempts: 10,
+                intervalMs: 3000,
             });
 
-            const verifyJson = await verifyRes.json().catch(() => null);
-            if (!verifyRes.ok) {
-                toast.error(verifyJson?.message || 'Payment verification failed');
+            if (!verification.verified) {
+                toast.error(verification.message || 'Payment verification failed');
                 return;
             }
 
@@ -228,7 +222,12 @@ export default function StudentAcademicServicesPage() {
             setCourseCount('1');
             await fetchData();
         } catch (error: any) {
-            toast.error(error?.message || 'Payment failed or cancelled');
+            const message = String(error?.message || '').toLowerCase();
+            if (message.includes('cancelled')) {
+                toast.message('Payment was cancelled. You can retry when ready.');
+            } else {
+                toast.error(error?.message || 'Payment failed');
+            }
         } finally {
             setSubmitting(false);
         }
@@ -264,33 +263,29 @@ export default function StudentAcademicServicesPage() {
                 environment: order.environment
             });
 
-            const shouldVerify = window.confirm('After completing payment in the opened page, click OK to verify payment now.');
-            if (!shouldVerify) {
-                toast.message('Payment verification skipped for now. You can retry later.');
-                return;
-            }
-
-            const verifyRes = await apiFetch(`/api/student/academic-services/${request.id}/verify-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    zwitchOrderId: order.id,
-                })
+            toast.message('Payment window opened. Verifying automatically...');
+            const verification = await verifyAcademicServicePaymentWithRetry({
+                requestId: request.id,
+                zwitchOrderId: order.id,
+                token,
+                attempts: 10,
+                intervalMs: 3000,
             });
 
-            const verifyJson = await verifyRes.json().catch(() => null);
-            if (!verifyRes.ok) {
-                toast.error(verifyJson?.message || 'Payment verification failed');
+            if (!verification.verified) {
+                toast.error(verification.message || 'Payment verification failed');
                 return;
             }
 
             toast.success('Payment completed');
             await fetchData();
         } catch (error: any) {
-            toast.error(error?.message || 'Payment failed or cancelled');
+            const message = String(error?.message || '').toLowerCase();
+            if (message.includes('cancelled')) {
+                toast.message('Payment was cancelled. You can retry when ready.');
+            } else {
+                toast.error(error?.message || 'Payment failed');
+            }
         } finally {
             setPayingId(null);
         }
@@ -427,65 +422,79 @@ export default function StudentAcademicServicesPage() {
                 {!availability?.active ? <p className="px-6 pb-5 text-xs text-amber-700">Requests are disabled outside the configured date window.</p> : null}
             </Card>
 
-            <Card>
+            <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                     <CardTitle>My Academic Service Requests</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b text-left">
-                                    <th className="py-2 pr-3">Request ID</th>
-                                    <th className="py-2 pr-3">Type</th>
-                                    <th className="py-2 pr-3">Semester</th>
-                                    <th className="py-2 pr-3">Courses</th>
-                                    <th className="py-2 pr-3">Amount</th>
-                                    <th className="py-2 pr-3">Payment</th>
-                                    <th className="py-2 pr-3">Status</th>
-                                    <th className="py-2 pr-3">Remarks</th>
-                                    <th className="py-2 pr-3">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                    <div className="overflow-x-auto rounded-lg border border-slate-200">
+                        <Table>
+                            <TableHeader className="bg-slate-50">
+                                <TableRow>
+                                    <TableHead>Request ID</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Semester</TableHead>
+                                    <TableHead>Courses</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Payment</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Remarks</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {requests.length === 0 ? (
-                                    <tr>
-                                        <td className="py-4 text-slate-500" colSpan={9}>No requests yet.</td>
-                                    </tr>
-                                ) : requests.map((request) => (
-                                    <tr key={request.id} className="border-b align-top">
-                                        <td className="py-2 pr-3 font-medium">{request.requestId}</td>
-                                        <td className="py-2 pr-3">{String(request.serviceType || '').replace('_', ' ')}</td>
-                                        <td className="py-2 pr-3">{request.semester}</td>
-                                        <td className="py-2 pr-3">{request.courseCount}</td>
-                                        <td className="py-2 pr-3">Rs {Number(request.amount || 0).toFixed(2)}</td>
-                                        <td className="py-2 pr-3">{request.paymentStatus}</td>
-                                        <td className="py-2 pr-3">{request.status}</td>
-                                        <td className="py-2 pr-3 max-w-sm">
-                                            {request.status === 'RESULT_PUBLISHED' && request.resultSummary ? (
-                                                <p className="text-slate-700">{request.resultSummary}</p>
-                                            ) : request.status === 'REJECTED' && request.adminRemarks ? (
-                                                <p className="text-red-700">{request.adminRemarks}</p>
-                                            ) : (
-                                                <p className="text-slate-400">-</p>
-                                            )}
-                                        </td>
-                                        <td className="py-2 pr-3">
-                                            {request.paymentStatus !== 'PAID' ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => retryPayment(request)}
-                                                    disabled={payingId === request.id}
-                                                >
-                                                    {payingId === request.id ? 'Processing...' : 'Pay Now'}
-                                                </Button>
-                                            ) : null}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                    <TableRow>
+                                        <TableCell className="py-6 text-center text-slate-500" colSpan={9}>No requests yet.</TableCell>
+                                    </TableRow>
+                                ) : requests.map((request) => {
+                                    const canPayNow = request.paymentStatus !== 'PAID' && request.status !== 'REJECTED' && availability?.active;
+                                    return (
+                                        <TableRow key={request.id} className="align-top">
+                                            <TableCell className="font-semibold text-slate-800">{request.requestId}</TableCell>
+                                            <TableCell>{String(request.serviceType || '').replaceAll('_', ' ')}</TableCell>
+                                            <TableCell>{request.semester}</TableCell>
+                                            <TableCell>{request.courseCount}</TableCell>
+                                            <TableCell>Rs {Number(request.amount || 0).toFixed(2)}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={request.paymentStatus === 'PAID' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700'}>
+                                                    {request.paymentStatus}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={request.status === 'RESULT_PUBLISHED' ? 'border-blue-500 bg-blue-50 text-blue-700' : request.status === 'REJECTED' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-400 bg-slate-100 text-slate-700'}>
+                                                    {request.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="max-w-sm">
+                                                {request.status === 'RESULT_PUBLISHED' && request.resultSummary ? (
+                                                    <p className="text-slate-700">{request.resultSummary}</p>
+                                                ) : request.status === 'REJECTED' && request.adminRemarks ? (
+                                                    <p className="text-red-700">{request.adminRemarks}</p>
+                                                ) : (
+                                                    <p className="text-slate-400">-</p>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {canPayNow ? (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                                                        onClick={() => retryPayment(request)}
+                                                        disabled={payingId === request.id || isWindowClosed}
+                                                    >
+                                                        {payingId === request.id ? 'Processing...' : 'Pay Now'}
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-slate-500">-</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                     </div>
                 </CardContent>
             </Card>
