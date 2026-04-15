@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
 import AcademicServiceRequestsTable from '@/components/admin/AcademicServiceRequestsTable';
+import { FileText, CheckCircle, Clock3, XCircle } from 'lucide-react';
 
 type SettingsState = {
     academicServicesEnabled: boolean;
@@ -123,11 +125,37 @@ export default function AdminAcademicServicesHubPage() {
         ? serviceTypeParam
         : 'ALL';
 
+    const summaryCards = [
+        { label: 'Total Requests', value: 'All academic requests', icon: FileText, tone: 'text-blue-700 bg-blue-50 border-blue-200' },
+        { label: 'Active Window', value: settings.academicServicesEnabled ? 'Enabled' : 'Disabled', icon: CheckCircle, tone: settings.academicServicesEnabled ? 'text-green-700 bg-green-50 border-green-200' : 'text-slate-700 bg-slate-100 border-slate-200' },
+        { label: 'Window Start', value: settings.academicServicesStartAt || 'Not set', icon: Clock3, tone: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+        { label: 'Window End', value: settings.academicServicesEndAt || 'Not set', icon: XCircle, tone: 'text-rose-700 bg-rose-50 border-rose-200' },
+    ];
+
     return (
         <div className="space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h1 className="text-2xl font-bold text-slate-900">Academic Services</h1>
                 <p className="text-sm text-slate-500">Photocopy and re-evaluation workflows with service-window controls.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {summaryCards.map((card) => {
+                    const Icon = card.icon;
+                    return (
+                        <Card key={card.label} className="border border-slate-200 shadow-sm">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-slate-600">{card.label}</CardTitle>
+                                <span className={`inline-flex rounded-full border p-2 ${card.tone}`}>
+                                    <Icon className="h-4 w-4" />
+                                </span>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-lg font-semibold text-slate-900">{card.value}</div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
 
             <AcademicServiceRequestsTable
@@ -137,25 +165,33 @@ export default function AdminAcademicServicesHubPage() {
             />
 
             <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between gap-3">
                     <CardTitle>Service Window</CardTitle>
+                    <Badge variant="outline" className={settings.academicServicesEnabled ? 'border-green-500 text-green-700 bg-green-50' : 'border-slate-400 text-slate-700 bg-slate-100'}>
+                        {settings.academicServicesEnabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
                 </CardHeader>
                 <CardContent className="space-y-5">
                     <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
                         Academic services are controlled here only. Admin email governance lives in the Settings page.
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="academicServicesEnabled">Academic Services Status</Label>
-                            <Button
-                                id="academicServicesEnabled"
-                                type="button"
-                                variant="outline"
-                                className={settings.academicServicesEnabled ? 'w-full justify-start border-green-300 bg-green-50 text-green-700 hover:bg-green-100' : 'w-full justify-start border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
-                                onClick={() => setSettings((prev) => ({ ...prev, academicServicesEnabled: !prev.academicServicesEnabled }))}
-                            >
-                                {settings.academicServicesEnabled ? 'Enabled' : 'Disabled'}
-                            </Button>
+                        <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <Label htmlFor="academicServicesEnabled" className="text-sm font-medium text-slate-700">Academic Services Status</Label>
+                                    <p className="mt-1 text-xs text-slate-500">Turn the academic services module on or off.</p>
+                                </div>
+                                <Button
+                                    id="academicServicesEnabled"
+                                    type="button"
+                                    variant="outline"
+                                    className={settings.academicServicesEnabled ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
+                                    onClick={() => setSettings((prev) => ({ ...prev, academicServicesEnabled: !prev.academicServicesEnabled }))}
+                                >
+                                    {settings.academicServicesEnabled ? 'Enabled' : 'Disabled'}
+                                </Button>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="academicServicesStartAt">Start Date and Time</Label>
