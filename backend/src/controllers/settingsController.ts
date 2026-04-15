@@ -42,10 +42,7 @@ export const getPortalSettings = async (_req: Request, res: Response): Promise<a
             update: {},
             create: DEFAULT_SETTINGS
         });
-
-        const normalizedAllowlist = mergeAllowlistWithDefaults(
-            parseAdminAllowlist(settings?.adminAllowedEmails)
-        );
+        const normalizedAllowlist = parseAdminAllowlist(settings?.adminAllowedEmails);
 
         return res.json({
             ...settings,
@@ -79,7 +76,10 @@ export const updatePortalSettings = async (req: Request, res: Response): Promise
             return res.status(400).json({ message: 'supportEmail, frontendUrl and smtpFromName are required' });
         }
 
-        const mergedAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(adminAllowedEmails));
+        const mergedAllowlist = parseAdminAllowlist(adminAllowedEmails);
+        if (mergedAllowlist.length === 0) {
+            return res.status(400).json({ message: 'Provide at least one valid admin email' });
+        }
         const actorId = String((req as any).user?.id || 'unknown');
         const actorEmail = String((req as any).user?.email || 'unknown');
 
@@ -144,7 +144,7 @@ export const registerAdminEmail = async (req: Request, res: Response): Promise<a
             create: DEFAULT_SETTINGS
         });
 
-        const currentAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(settings?.adminAllowedEmails));
+        const currentAllowlist = parseAdminAllowlist(settings?.adminAllowedEmails);
         if (!currentAllowlist.includes(email)) {
             currentAllowlist.push(email);
         }
@@ -207,7 +207,7 @@ export const removeAdminEmail = async (req: Request, res: Response): Promise<any
             create: DEFAULT_SETTINGS
         });
 
-        const currentAllowlist = mergeAllowlistWithDefaults(parseAdminAllowlist(settings?.adminAllowedEmails));
+        const currentAllowlist = parseAdminAllowlist(settings?.adminAllowedEmails);
         if (!currentAllowlist.includes(email)) {
             return res.status(404).json({ message: 'Admin email not found in allowlist' });
         }

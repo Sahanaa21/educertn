@@ -42,22 +42,23 @@ const parseAdminAllowlist = (raw: string | null | undefined) => {
 };
 
 const getAdminAllowlist = async () => {
-    const allowlist = new Set(DEFAULT_ADMIN_ALLOWLIST);
-
     try {
         const settings = await (prisma as any).portalSettings.findUnique({
             where: { id: 1 },
             select: { adminAllowedEmails: true }
         });
 
-        for (const email of parseAdminAllowlist(settings?.adminAllowedEmails)) {
-            allowlist.add(email);
+        const storedAllowlist = parseAdminAllowlist(settings?.adminAllowedEmails);
+        if (storedAllowlist.length > 0) {
+            return new Set(storedAllowlist);
         }
+
+        return new Set(DEFAULT_ADMIN_ALLOWLIST);
     } catch {
         // Fall back to the default allowlist when settings are unavailable.
     }
 
-    return allowlist;
+    return new Set(DEFAULT_ADMIN_ALLOWLIST);
 };
 
 const isAllowlistedAdminEmail = async (email: string) => {
