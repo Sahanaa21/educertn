@@ -1,3 +1,3 @@
-const { startServer } = require('./src/index.js');
+const { startServer } = require('./dist/index.js');
 
 startServer();
