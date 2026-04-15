@@ -194,6 +194,10 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
         }
 
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
+        }
+
         const orderId = String(zwitchOrderId || request.paymentOrderId || '').trim();
         if (!orderId) {
             return res.status(400).json({ message: 'Payment order id is required for verification' });
@@ -247,8 +251,8 @@ export const createVerificationPaymentOrder = async (req: AuthRequest, res: Resp
             return res.status(400).json({ message: 'Payment already completed for this request' });
         }
 
-        if (request.status === 'REJECTED') {
-            return res.status(400).json({ message: 'Payment is not allowed for rejected requests' });
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
         }
 
         if (!hasZwitchConfig()) {
@@ -347,6 +351,13 @@ export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Respon
 export const completeVerificationRequest = async (req: Request, res: Response): Promise<any> => {
     try {
         const id = req.params.id as string;
+        const existing = await prisma.verificationRequest.findUnique({ where: { id }, select: { paymentStatus: true } });
+        if (!existing) {
+            return res.status(404).json({ message: 'Verification request not found' });
+        }
+        if (existing.paymentStatus !== 'PAID') {
+            return res.status(400).json({ message: 'Only paid requests can be completed' });
+        }
         const updated = await prisma.verificationRequest.update({
             where: { id },
             data: { status: 'COMPLETED' }
@@ -392,4 +403,45 @@ export const cancelCompanyVerificationRequest = async (req: AuthRequest, res: Re
     return res.status(403).json({
         message: 'Cancellation is disabled. Please contact the college office for any corrections or refund requests.'
     });
+};
+
+export const markCompanyVerificationPaymentFailed = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const companyEmail = await getAuthenticatedCompanyEmail(req);
+        if (!companyEmail) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const id = String(req.params.id || '');
+        if (!id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const request = await prisma.verificationRequest.findUnique({
+            where: { id },
+            select: { id: true, companyEmail: true, paymentStatus: true, status: true }
+        });
+
+        if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
+        }
+
+        const updated = await prisma.verificationRequest.update({
+            where: { id },
+            data: { paymentStatus: 'FAILED' }
+        });
+
+        return res.json({ message: 'Payment marked as failed', request: updated });
+    } catch (error) {
+        console.error('Error marking verification payment as failed:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 };

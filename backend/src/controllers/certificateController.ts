@@ -204,7 +204,7 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
 
         const request = await prisma.certificateRequest.findUnique({
             where: { id },
-            select: { id: true, userId: true, paymentStatus: true, paymentOrderId: true }
+            select: { id: true, userId: true, paymentStatus: true, paymentOrderId: true, status: true }
         });
 
         if (!request || request.userId !== userId) {
@@ -213,6 +213,10 @@ export const verifyCertificatePayment = async (req: Request, res: Response): Pro
 
         if (request.paymentStatus === 'PAID') {
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
+        }
+
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
         }
 
         const orderId = String(zwitchOrderId || request.paymentOrderId || '').trim();
@@ -266,8 +270,8 @@ export const createCertificatePaymentOrder = async (req: Request, res: Response)
             return res.status(400).json({ message: 'Payment already completed for this request' });
         }
 
-        if (request.status === 'REJECTED') {
-            return res.status(400).json({ message: 'Payment is not allowed for rejected requests' });
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
         }
 
         if (!hasZwitchConfig()) {
@@ -335,6 +339,13 @@ export const getStudentRequests = async (req: Request, res: Response): Promise<a
 export const completeCertificateRequest = async (req: Request, res: Response): Promise<any> => {
     try {
         const id = req.params.id as string;
+        const existing = await prisma.certificateRequest.findUnique({ where: { id }, select: { paymentStatus: true } });
+        if (!existing) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+        if (existing.paymentStatus !== 'PAID') {
+            return res.status(400).json({ message: 'Only paid requests can be completed' });
+        }
         const updated = await prisma.certificateRequest.update({
             where: { id },
             data: { status: 'COMPLETED' },
@@ -407,4 +418,42 @@ export const cancelStudentCertificateRequest = async (req: Request, res: Respons
     return res.status(403).json({
         message: 'Cancellation is disabled. Please contact the college office for any corrections or refund requests.'
     });
+};
+
+export const markStudentCertificatePaymentFailed = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String((req as any).user?.id || '');
+        const id = String(req.params.id || '');
+
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const request = await prisma.certificateRequest.findUnique({
+            where: { id },
+            select: { id: true, userId: true, paymentStatus: true, status: true }
+        });
+
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Certificate request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
+        }
+
+        const updated = await prisma.certificateRequest.update({
+            where: { id },
+            data: { paymentStatus: 'FAILED' }
+        });
+
+        return res.json({ message: 'Payment marked as failed', request: updated });
+    } catch (error) {
+        console.error('Error marking certificate payment as failed:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 };

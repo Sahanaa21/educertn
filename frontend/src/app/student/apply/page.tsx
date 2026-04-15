@@ -203,6 +203,14 @@ export default function ApplyCertificate() {
                     });
                 } catch (checkoutErr: any) {
                     const checkoutMessage = String(checkoutErr?.message || '').toLowerCase();
+                    if (createdRequest?.id) {
+                        await apiFetch(`/api/student/certificates/${createdRequest.id}/mark-payment-failed`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        }).catch(() => undefined);
+                    }
                     if (checkoutMessage.includes('cancelled')) {
                         toast.message('Payment was cancelled. You can retry when ready.');
                     } else {
@@ -222,6 +230,12 @@ export default function ApplyCertificate() {
                 });
 
                 if (!verification.verified) {
+                    await apiFetch(`/api/student/certificates/${createdRequest.id}/mark-payment-failed`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }).catch(() => undefined);
                     toast.error(verification.message || 'Payment is still processing. Check My Requests in a minute.');
                     router.push('/student/requests');
                     return;

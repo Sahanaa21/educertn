@@ -228,7 +228,7 @@ export const verifyAcademicServicePayment = async (req: Request, res: Response):
 
         const request = await (prisma as any).academicServiceRequest.findUnique({
             where: { id },
-            select: { id: true, userId: true, requestId: true, paymentStatus: true, paymentOrderId: true }
+            select: { id: true, userId: true, requestId: true, paymentStatus: true, paymentOrderId: true, status: true }
         });
 
         if (!request || request.userId !== userId) {
@@ -237,6 +237,10 @@ export const verifyAcademicServicePayment = async (req: Request, res: Response):
 
         if (request.paymentStatus === 'PAID') {
             return res.json({ message: 'Payment already verified', paymentStatus: 'PAID' });
+        }
+
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
         }
 
         const { active, start, end } = await getAcademicWindowState();
@@ -297,6 +301,10 @@ export const createAcademicServicePaymentOrder = async (req: Request, res: Respo
 
         if (request.paymentStatus === 'PAID') {
             return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
         }
 
         const { active, start, end } = await getAcademicWindowState();
@@ -382,7 +390,7 @@ export const getAllAcademicServiceRequests = async (_req: Request, res: Response
         const serviceType = ['PHOTOCOPY', 'REEVALUATION'].includes(rawServiceType) ? rawServiceType : null;
 
         const requests = await (prisma as any).academicServiceRequest.findMany({
-            where: serviceType ? { serviceType } : undefined,
+            where: serviceType ? { serviceType, paymentStatus: 'PAID' } : { paymentStatus: 'PAID' },
             include: {
                 user: { select: { email: true, name: true } }
             },
@@ -392,6 +400,44 @@ export const getAllAcademicServiceRequests = async (_req: Request, res: Response
         return res.json(requests);
     } catch (error) {
         console.error('Failed to fetch admin academic service requests:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const markAcademicServicePaymentFailed = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String((req as any).user?.id || '');
+        const id = String(req.params.id || '');
+
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const request = await (prisma as any).academicServiceRequest.findUnique({
+            where: { id },
+            select: { id: true, userId: true, paymentStatus: true, status: true }
+        });
+
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (request.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: 'Payment already completed for this request' });
+        }
+
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Payment is not allowed after request is submitted to admin' });
+        }
+
+        const updated = await (prisma as any).academicServiceRequest.update({
+            where: { id },
+            data: { paymentStatus: 'FAILED' }
+        });
+
+        return res.json({ message: 'Payment marked as failed', request: updated });
+    } catch (error) {
+        console.error('Failed to mark academic service payment as failed:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -409,6 +455,10 @@ export const updateAcademicServiceRequest = async (req: Request, res: Response):
         const existing = await (prisma as any).academicServiceRequest.findUnique({ where: { id } });
         if (!existing) {
             return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (existing.paymentStatus !== 'PAID' && action !== 'MARK_REFUND_COMPLETED') {
+            return res.status(400).json({ message: 'Only paid requests can be processed by admin' });
         }
 
         if (action === 'MARK_REFUND_COMPLETED') {

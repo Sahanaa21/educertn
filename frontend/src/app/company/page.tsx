@@ -246,15 +246,17 @@ export default function CompanyVerification() {
                 }
 
                 try {
-                    void openZwitchCheckout({
+                    await openZwitchCheckout({
                         paymentToken: order.id,
                         accessKey: order.accessKey,
                         fallbackAccessKey: order.fallbackAccessKey,
                         environment: order.environment
-                    }).catch((checkoutErr: any) => {
-                        toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     });
                 } catch (checkoutErr: any) {
+                    await fetch(`${API_BASE}/api/company/verifications/${createdRequest.id}/mark-payment-failed`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(() => undefined);
                     toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
                     return;
                 }
@@ -270,6 +272,10 @@ export default function CompanyVerification() {
                 });
 
                 if (!verification.verified) {
+                    await fetch(`${API_BASE}/api/company/verifications/${createdRequest.id}/mark-payment-failed`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(() => undefined);
                     toast.error(verification.message || 'Payment is still processing. Check requests page shortly.');
                     setPanelView('requests');
                     router.replace('/company/requests');
@@ -368,13 +374,11 @@ export default function CompanyVerification() {
                 return;
             }
 
-            void openZwitchCheckout({
+            await openZwitchCheckout({
                 paymentToken: order.id,
                 accessKey: order.accessKey,
                 fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
-            }).catch((checkoutErr: any) => {
-                toast.error(checkoutErr?.message || 'Unable to open payment checkout');
             });
 
             toast.message('Payment window opened. Verifying automatically...');
@@ -388,6 +392,10 @@ export default function CompanyVerification() {
             });
 
             if (!verification.verified) {
+                await fetch(`${API_BASE}/api/company/verifications/${request.id}/mark-payment-failed`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => undefined);
                 toast.error(verification.message || 'Payment is still processing. Refresh requests shortly.');
                 await fetchRequests(token);
                 return;
@@ -398,7 +406,16 @@ export default function CompanyVerification() {
             setPanelView('requests');
             router.replace('/company/requests');
         } catch (error: any) {
-            toast.error(error?.message || 'Payment failed or cancelled');
+            const message = String(error?.message || '').toLowerCase();
+            await fetch(`${API_BASE}/api/company/verifications/${request.id}/mark-payment-failed`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).catch(() => undefined);
+            if (message.includes('cancelled')) {
+                toast.message('Payment was cancelled. You can retry when ready.');
+            } else {
+                toast.error(error?.message || 'Payment failed');
+            }
         } finally {
             setPayingRequestId(null);
         }
@@ -445,10 +462,18 @@ export default function CompanyVerification() {
             };
         }
 
+        if (request.paymentStatus === 'FAILED') {
+            return {
+                label: 'FAILED',
+                className: 'border-red-500 text-red-700 bg-red-50',
+                hint: 'Previous payment attempt failed. Retry to continue.'
+            };
+        }
+
         return {
-            label: String(request.paymentStatus || 'PENDING'),
+            label: 'PAYMENT REQUIRED',
             className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
-            hint: ''
+            hint: 'Complete payment to send this request to admin.'
         };
     };
 
@@ -681,7 +706,7 @@ export default function CompanyVerification() {
                                                         >
                                                             Download
                                                         </Button>
-                                                    ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
+                                                    ) : req.paymentStatus !== 'PAID' && req.status === 'PENDING' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -832,7 +857,7 @@ export default function CompanyVerification() {
                                                         >
                                                             Download
                                                         </Button>
-                                                    ) : req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
+                                                    ) : req.paymentStatus !== 'PAID' && req.status === 'PENDING' ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"

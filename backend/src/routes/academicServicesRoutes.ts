@@ -13,6 +13,7 @@ import {
     updateAcademicServiceSettingsAdmin,
     uploadAcademicServiceAttachments,
     verifyAcademicServicePayment,
+    markAcademicServicePaymentFailed,
 } from '../controllers/academicServicesController';
 
 const router = Router();
@@ -24,6 +25,7 @@ router.post('/student/academic-services', authenticate, requireRole('STUDENT'), 
 router.get('/student/academic-services', authenticate, requireRole('STUDENT'), getStudentAcademicServiceRequests);
 router.post('/student/academic-services/:id/create-payment-order', authenticate, requireRole('STUDENT'), createAcademicServicePaymentOrder);
 router.post('/student/academic-services/:id/verify-payment', authenticate, requireRole('STUDENT'), verifyAcademicServicePayment);
+router.post('/student/academic-services/:id/mark-payment-failed', authenticate, requireRole('STUDENT'), markAcademicServicePaymentFailed);
 
 router.get('/admin/academic-services', authenticate, requireRole('ADMIN'), getAllAcademicServiceRequests);
 router.get('/admin/academic-services/settings', authenticate, requireRole('ADMIN'), getAcademicServiceSettingsAdmin);

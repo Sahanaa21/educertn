@@ -153,6 +153,7 @@ export default function StudentAcademicServicesPage() {
     const submitRequest = async () => {
         const token = getStudentToken();
         if (!token) return;
+        let createdRequestId = '';
 
         const parsedCount = Number(courseCount);
         const normalizedCourseNames = courseNames.map((name) => name.trim()).filter(Boolean);
@@ -198,6 +199,7 @@ export default function StudentAcademicServicesPage() {
 
             const request = createJson?.request;
             const order = createJson?.zwitchOrder;
+            createdRequestId = String(request?.id || '');
             if (!request?.id || !order?.id || !order?.accessKey) {
                 toast.error('Payment initialization failed');
                 return;
@@ -220,6 +222,10 @@ export default function StudentAcademicServicesPage() {
             });
 
             if (!verification.verified) {
+                await apiFetch(`/api/student/academic-services/${request.id}/mark-payment-failed`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => undefined);
                 toast.error(verification.message || 'Payment verification failed');
                 return;
             }
@@ -231,6 +237,12 @@ export default function StudentAcademicServicesPage() {
             await fetchData();
         } catch (error: any) {
             const message = String(error?.message || '').toLowerCase();
+            if (createdRequestId) {
+                await apiFetch(`/api/student/academic-services/${createdRequestId}/mark-payment-failed`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => undefined);
+            }
             if (message.includes('cancelled')) {
                 toast.message('Payment was cancelled. You can retry when ready.');
             } else {
@@ -281,6 +293,10 @@ export default function StudentAcademicServicesPage() {
             });
 
             if (!verification.verified) {
+                await apiFetch(`/api/student/academic-services/${request.id}/mark-payment-failed`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => undefined);
                 toast.error(verification.message || 'Payment verification failed');
                 return;
             }
@@ -289,6 +305,10 @@ export default function StudentAcademicServicesPage() {
             await fetchData();
         } catch (error: any) {
             const message = String(error?.message || '').toLowerCase();
+            await apiFetch(`/api/student/academic-services/${request.id}/mark-payment-failed`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => undefined);
             if (message.includes('cancelled')) {
                 toast.message('Payment was cancelled. You can retry when ready.');
             } else {
@@ -456,7 +476,17 @@ export default function StudentAcademicServicesPage() {
                                         <TableCell className="py-6 text-center text-slate-500" colSpan={9}>No requests yet.</TableCell>
                                     </TableRow>
                                 ) : requests.map((request) => {
-                                    const canPayNow = request.paymentStatus !== 'PAID' && request.status !== 'REJECTED' && availability?.active;
+                                    const canPayNow = request.paymentStatus !== 'PAID' && request.status === 'PENDING' && availability?.active;
+                                    const paymentLabel = request.paymentStatus === 'PAID'
+                                        ? 'Paid'
+                                        : request.paymentStatus === 'FAILED'
+                                            ? 'Failed'
+                                            : 'Payment Required';
+                                    const paymentClassName = request.paymentStatus === 'PAID'
+                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                        : request.paymentStatus === 'FAILED'
+                                            ? 'border-red-500 bg-red-50 text-red-700'
+                                            : 'border-amber-500 bg-amber-50 text-amber-700';
                                     return (
                                         <TableRow key={request.id} className="align-top">
                                             <TableCell className="font-semibold text-slate-800">{request.requestId}</TableCell>
@@ -465,8 +495,8 @@ export default function StudentAcademicServicesPage() {
                                             <TableCell>{request.courseCount}</TableCell>
                                             <TableCell>Rs {Number(request.amount || 0).toFixed(2)}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className={request.paymentStatus === 'PAID' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700'}>
-                                                    {formatEnumValue(request.paymentStatus)}
+                                                <Badge variant="outline" className={paymentClassName}>
+                                                    {paymentLabel}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>

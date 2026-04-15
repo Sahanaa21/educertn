@@ -62,12 +62,12 @@ const inferExtensionFromFile = (filePath: string): string => {
 
 export const getDashboardStats = async (req: Request, res: Response): Promise<any> => {
     try {
-        const totalCerts = await prisma.certificateRequest.count();
-        const pendingCerts = await prisma.certificateRequest.count({ where: { status: 'PENDING' } });
-        const processingCerts = await prisma.certificateRequest.count({ where: { status: 'PROCESSING' } });
+        const totalCerts = await prisma.certificateRequest.count({ where: { paymentStatus: 'PAID' } });
+        const pendingCerts = await prisma.certificateRequest.count({ where: { paymentStatus: 'PAID', status: 'PENDING' } });
+        const processingCerts = await prisma.certificateRequest.count({ where: { paymentStatus: 'PAID', status: 'PROCESSING' } });
 
-        const totalVerifications = await prisma.verificationRequest.count();
-        const pendingVerifs = await prisma.verificationRequest.count({ where: { status: 'PENDING' } });
+        const totalVerifications = await prisma.verificationRequest.count({ where: { paymentStatus: 'PAID' } });
+        const pendingVerifs = await prisma.verificationRequest.count({ where: { paymentStatus: 'PAID', status: 'PENDING' } });
 
         const certsRevenue = await prisma.certificateRequest.aggregate({
             _sum: { amount: true },
@@ -83,11 +83,13 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
         const totalRevenue = (certsRevenue._sum.amount || 0) + verificationRevenue;
 
         const recentCertificates = await prisma.certificateRequest.findMany({
+            where: { paymentStatus: 'PAID' },
             orderBy: { createdAt: 'desc' },
             take: 5
         });
 
         const recentVerifications = await prisma.verificationRequest.findMany({
+            where: { paymentStatus: 'PAID' },
             orderBy: { createdAt: 'desc' },
             take: 5
         });
@@ -111,6 +113,7 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
 export const getAllCertificates = async (req: Request, res: Response): Promise<any> => {
     try {
         const certificates = await prisma.certificateRequest.findMany({
+            where: { paymentStatus: 'PAID' },
             orderBy: { createdAt: 'desc' },
             include: { user: { select: { email: true } } }
         });
@@ -128,6 +131,9 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 
         const request = await prisma.certificateRequest.findUnique({ where: { id }, include: { user: true } }) as any;
         if (!request) return res.status(404).json({ message: 'Not found' });
+        if (request.paymentStatus !== 'PAID' && action !== 'MARK_REFUND_COMPLETED') {
+            return res.status(400).json({ message: 'Only paid requests can be processed by admin' });
+        }
 
         let updateData: any = {};
         let refundMarkedInitiated = false;
@@ -272,6 +278,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 export const getAllVerifications = async (req: Request, res: Response): Promise<any> => {
     try {
         const verifications = await prisma.verificationRequest.findMany({
+            where: { paymentStatus: 'PAID' },
             orderBy: { createdAt: 'desc' },
         });
         res.json(verifications);
@@ -301,6 +308,10 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
         const existing = await prisma.verificationRequest.findUnique({ where: { id } });
         if (!existing) {
             return res.status(404).json({ message: 'Verification request not found' });
+        }
+
+        if (existing.paymentStatus !== 'PAID' && action !== 'MARK_REFUND_COMPLETED') {
+            return res.status(400).json({ message: 'Only paid requests can be processed by admin' });
         }
 
         let refundMarkedInitiated = false;

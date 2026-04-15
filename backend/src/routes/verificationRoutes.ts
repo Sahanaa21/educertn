@@ -5,7 +5,8 @@ import {
 	getCompanyVerifications,
 	verifyVerificationPayment,
 	createVerificationPaymentOrder,
-	cancelCompanyVerificationRequest
+	cancelCompanyVerificationRequest,
+	markCompanyVerificationPaymentFailed
 } from '../controllers/verificationController';
 import { authenticate } from '../middleware/authMiddleware';
 import { verificationTemplateUpload } from '../middleware/upload';
@@ -29,6 +30,7 @@ router.get('/company/verifications', authenticate, getCompanyVerifications);
 router.get('/company/verifications/:id/response', authenticate, downloadCompanyCompletedFile);
 router.post('/company/verifications/:id/verify-payment', authenticate, verifyVerificationPayment);
 router.post('/company/verifications/:id/create-payment-order', authenticate, createVerificationPaymentOrder);
+router.post('/company/verifications/:id/mark-payment-failed', authenticate, markCompanyVerificationPaymentFailed);
 router.post('/company/verifications/:id/cancel', authenticate, cancelCompanyVerificationRequest);
 
 export default router;

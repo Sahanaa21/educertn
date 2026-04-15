@@ -6,7 +6,8 @@ import {
 	downloadStudentIssuedCertificate,
 	verifyCertificatePayment,
 	createCertificatePaymentOrder,
-	cancelStudentCertificateRequest
+	cancelStudentCertificateRequest,
+	markStudentCertificatePaymentFailed
 } from '../controllers/certificateController';
 import { authenticate } from '../middleware/authMiddleware';
 import { certificateIdProofUpload } from '../middleware/upload';
@@ -30,6 +31,7 @@ router.get('/student/certificates', authenticate, getStudentRequests);
 router.get('/student/certificates/:id/download', authenticate, downloadStudentIssuedCertificate);
 router.post('/student/certificates/:id/verify-payment', authenticate, verifyCertificatePayment);
 router.post('/student/certificates/:id/create-payment-order', authenticate, createCertificatePaymentOrder);
+router.post('/student/certificates/:id/mark-payment-failed', authenticate, markStudentCertificatePaymentFailed);
 router.post('/student/certificates/:id/cancel', authenticate, cancelStudentCertificateRequest);
 
 // Admin routes

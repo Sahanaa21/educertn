@@ -144,6 +144,10 @@ export default function StudentRequests() {
             });
 
             if (!verification.verified) {
+                await fetch(`${API_BASE}/api/student/certificates/${req.id}/mark-payment-failed`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => undefined);
                 toast.error(verification.message || 'Payment is still processing. Refresh My Requests shortly.');
                 await fetchRequests();
                 return;
@@ -153,6 +157,10 @@ export default function StudentRequests() {
             fetchRequests();
         } catch (error: any) {
             const paymentMessage = String(error?.message || '').toLowerCase();
+            await fetch(`${API_BASE}/api/student/certificates/${req.id}/mark-payment-failed`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).catch(() => undefined);
             if (paymentMessage.includes('cancelled')) {
                 toast.message('Payment was cancelled. You can retry when ready.');
             } else {
@@ -204,10 +212,18 @@ export default function StudentRequests() {
             };
         }
 
+        if (req.paymentStatus === 'FAILED') {
+            return {
+                label: 'FAILED',
+                className: 'border-red-500 text-red-700 bg-red-50',
+                hint: 'Previous payment attempt failed. Retry to continue.'
+            };
+        }
+
         return {
-            label: String(req.paymentStatus || 'PENDING'),
+            label: 'PAYMENT REQUIRED',
             className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
-            hint: ''
+            hint: 'Complete payment to send this request to admin.'
         };
     };
 
@@ -360,7 +376,7 @@ export default function StudentRequests() {
                                     </TableCell>
                                     <TableCell className="text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        {req.paymentStatus !== 'PAID' && req.status !== 'REJECTED' ? (
+                                        {req.paymentStatus !== 'PAID' && req.status === 'PENDING' ? (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
