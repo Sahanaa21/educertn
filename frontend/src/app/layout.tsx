@@ -5,11 +5,12 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import SentryInit from '@/components/SentryInit';
 import { Toaster } from '@/components/ui/sonner';
+import { COLLEGE_NAME, PORTAL_NAME } from '@/lib/branding';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Global Academy of Technology | Official College Portal',
+  title: `${COLLEGE_NAME} | ${PORTAL_NAME}`,
   description: 'Official college portal for certificate services, company verification, and academic service applications.',
 };
 

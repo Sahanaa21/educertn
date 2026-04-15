@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api';
+import { COLLEGE_NAME } from '@/lib/branding';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BRANCHES = [
@@ -262,7 +263,7 @@ export default function AuthPage() {
                         <div className="mx-auto flex h-16 w-26 items-center justify-center overflow-hidden sm:h-18 sm:w-30">
                             <Image
                                 src="/logo.png?v=20260414b"
-                                alt="Global Academy of Technology Logo"
+                                alt={`${COLLEGE_NAME} Logo`}
                                 width={4096}
                                 height={2769}
                                 unoptimized

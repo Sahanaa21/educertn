@@ -6,6 +6,7 @@ import { GraduationCap, Building2, SearchCheck, ArrowRight } from 'lucide-react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { COLLEGE_CONTACT, COLLEGE_NAME, PORTAL_NAME, PORTAL_SERVICES_LABEL } from '@/lib/branding';
 
 type AcademicAvailability = {
   active: boolean;
@@ -56,7 +57,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex w-full flex-col">
       {/* Hero Section */}
       <section
         className="relative flex w-full items-center justify-center overflow-hidden bg-cover bg-center py-16 lg:py-24"
@@ -68,12 +69,12 @@ export default function Home() {
         <div className="container relative z-10 mx-auto px-4 text-center">
           <div className="mb-6 inline-flex items-center rounded-full border border-amber-400/40 bg-amber-300/10 px-3 py-1 text-sm font-medium text-amber-200">
             <span className="mr-2 flex h-2 w-2 rounded-full bg-amber-300"></span>
-            Official College Portal
+            {PORTAL_NAME}
           </div>
 
           <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-black tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
-            Global Academy of Technology
-            <span className="mt-2 block text-amber-300">Certificate, Verification and Academic Services Portal</span>
+            {COLLEGE_NAME}
+            <span className="mt-2 block text-amber-300">{PORTAL_SERVICES_LABEL}</span>
           </h1>
 
           <p className="mx-auto mb-10 max-w-3xl text-lg text-blue-100 sm:text-xl">
@@ -92,22 +93,22 @@ export default function Home() {
           <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border border-white/15 bg-slate-900/35 p-4 text-left backdrop-blur-sm sm:grid-cols-3">
             <div>
               <p className="text-xs uppercase tracking-wider text-amber-200">Institution</p>
-              <p className="text-sm font-semibold text-white">Global Academy of Technology</p>
+              <p className="text-sm font-semibold text-white">{COLLEGE_NAME}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wider text-amber-200">Official Email</p>
-              <p className="text-sm font-semibold text-white">gatcoedex@gmail.com</p>
+              <p className="text-sm font-semibold text-white">{COLLEGE_CONTACT.email}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wider text-amber-200">Helpline</p>
-              <p className="text-sm font-semibold text-white">080-28603158/57</p>
+              <p className="text-sm font-semibold text-white">{COLLEGE_CONTACT.phone}</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section className="w-full bg-slate-50 py-16 pb-12">
+      <section className="w-full bg-linear-to-b from-slate-50 to-white py-16 pb-12">
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
             <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Services Available in the Official College Portal</h2>

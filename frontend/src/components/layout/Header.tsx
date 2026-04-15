@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
+import { COLLEGE_NAME, PORTAL_NAME } from '@/lib/branding';
 
 const navLinks = [
     { href: '/', label: 'Home' },
@@ -24,7 +25,7 @@ export default function Header() {
                     <div className="flex h-12 w-12 items-center justify-center sm:h-14 sm:w-14 lg:h-16 lg:w-16">
                         <Image
                             src="/logo.png?v=20260414b"
-                            alt="Global Academy of Technology Logo"
+                            alt={`${COLLEGE_NAME} Logo`}
                             width={4096}
                             height={2769}
                             unoptimized
@@ -32,9 +33,9 @@ export default function Header() {
                             priority
                         />
                     </div>
-                    <div className="hidden sm:flex flex-col leading-tight">
-                        <span className="text-sm font-bold text-blue-950 tracking-tight lg:text-base">Global Academy of Technology</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 lg:text-[11px]">Official College Portal</span>
+                    <div className="flex min-w-0 flex-col leading-tight">
+                        <span className="truncate text-xs font-bold text-blue-950 tracking-tight sm:text-sm lg:text-base">{COLLEGE_NAME}</span>
+                        <span className="truncate text-[9px] font-semibold uppercase tracking-wide text-slate-600 sm:text-[10px] lg:text-[11px]">{PORTAL_NAME}</span>
                     </div>
                 </Link>
 
