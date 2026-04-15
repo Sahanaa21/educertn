@@ -126,14 +126,14 @@ export default function StudentRequests() {
                 return;
             }
 
-            void openZwitchCheckout({
+            await openZwitchCheckout({
                 paymentToken: order.id,
                 accessKey: order.accessKey,
                 fallbackAccessKey: order.fallbackAccessKey,
                 environment: order.environment
             });
 
-            toast.message('Payment completed. Verifying automatically...');
+            toast.message('Payment window opened. Verifying automatically after completion...');
 
             const verification = await verifyStudentCertificatePaymentWithRetry({
                 requestId: req.id,
@@ -152,7 +152,12 @@ export default function StudentRequests() {
             toast.success('Payment successful');
             fetchRequests();
         } catch (error: any) {
-            toast.error(error?.message || 'Payment failed or cancelled');
+            const paymentMessage = String(error?.message || '').toLowerCase();
+            if (paymentMessage.includes('cancelled')) {
+                toast.message('Payment was cancelled. You can retry when ready.');
+            } else {
+                toast.error(error?.message || 'Payment failed');
+            }
         } finally {
             setPayingId(null);
         }
