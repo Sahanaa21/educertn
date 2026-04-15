@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch, API_BASE } from '@/lib/api';
 import { RefreshCw, Search, FileText, CheckCircle, XCircle } from 'lucide-react';
 
@@ -201,6 +202,10 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
             ? Boolean(photocopyFiles[id]?.answerSheet && photocopyFiles[id]?.evaluationScheme)
             : true;
 
+        if (nextStatus === 'RESULT_PUBLISHED') {
+            setExpandedFilesId(id);
+        }
+
         if (request.serviceType === 'PHOTOCOPY' && nextStatus === 'RESULT_PUBLISHED' && currentAttachmentCount < 2 && !hasBothFilesReady) {
             toast.error('Upload both answer sheet copy and course evaluation scheme before marking completed');
             return;
@@ -371,25 +376,25 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
             <Card className="overflow-hidden border border-slate-200 shadow-md">
                 <div className="w-full overflow-x-auto pb-2">
-                        <table className="w-full min-w-375 table-fixed text-sm">
-                            <thead className="bg-slate-50 border-b">
-                                <tr>
-                                    <th className="w-40 px-3 py-3 text-left font-semibold text-slate-700">Request</th>
-                                    <th className="w-30 px-3 py-3 text-left font-semibold text-slate-700">Service</th>
-                                    <th className="w-47.5 px-3 py-3 text-left font-semibold text-slate-700">Student</th>
-                                    <th className="w-42.5 px-3 py-3 text-left font-semibold text-slate-700">Details</th>
-                                    <th className="w-30 px-3 py-3 text-left font-semibold text-slate-700">Payment</th>
-                                    <th className="w-37.5 px-3 py-3 text-left font-semibold text-slate-700">Status</th>
-                                    <th className="w-42.5 px-3 py-3 text-left font-semibold text-slate-700">Remarks</th>
-                                    <th className="w-60 px-3 py-3 text-left font-semibold text-slate-700">Files</th>
-                                    <th className="w-40 px-3 py-3 text-left font-semibold text-slate-700">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <Table className="w-full min-w-7xl text-sm">
+                            <TableHeader className="bg-slate-50 border-b">
+                                <TableRow>
+                                    <TableHead className="min-w-48 whitespace-nowrap font-semibold text-slate-700">Request</TableHead>
+                                    <TableHead className="min-w-32 whitespace-nowrap font-semibold text-slate-700">Service</TableHead>
+                                    <TableHead className="min-w-56 whitespace-nowrap font-semibold text-slate-700">Student</TableHead>
+                                    <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Details</TableHead>
+                                    <TableHead className="min-w-36 whitespace-nowrap font-semibold text-slate-700">Payment</TableHead>
+                                    <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Status</TableHead>
+                                    <TableHead className="min-w-56 whitespace-nowrap font-semibold text-slate-700">Remarks</TableHead>
+                                    <TableHead className="min-w-56 whitespace-nowrap font-semibold text-slate-700">Files</TableHead>
+                                    <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {filteredRequests.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={9} className="py-6 text-center text-slate-500">No requests found.</td>
-                                    </tr>
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="py-6 text-center text-slate-500">No requests found.</TableCell>
+                                    </TableRow>
                                 ) : filteredRequests.map((request) => {
                                     const rowServiceType = request.serviceType === 'PHOTOCOPY' ? 'PHOTOCOPY' : 'REEVALUATION';
                                     const current = rowState[request.id] || {
@@ -399,37 +404,37 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                     const attachments = parseAttachmentUrls(request.attachmentUrls);
 
                                     return (
-                                        <tr key={request.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 border-b align-top">
-                                            <td className="px-3 py-3 align-top">
+                                        <TableRow key={request.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 align-top">
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <div className="font-semibold text-slate-900">{request.requestId}</div>
                                                 <div className="text-xs text-slate-500">{new Date(request.createdAt).toLocaleString()}</div>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <Badge variant="outline" className={rowServiceType === 'PHOTOCOPY' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-violet-500 text-violet-700 bg-violet-50'}>
                                                     {rowServiceType === 'PHOTOCOPY' ? 'Photocopy' : 'Re-evaluation'}
                                                 </Badge>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <div className="font-medium text-slate-900">{request.user?.name || 'Student'}</div>
-                                                <div className="truncate text-xs text-blue-700">{request.user?.email || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3 text-xs text-slate-700 align-top">
+                                                <div className="text-xs text-blue-700 break-all">{request.user?.email || '-'}</div>
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 text-xs text-slate-700 align-top">
                                                 <div>Semester: {request.semester}</div>
                                                 <div>Courses: {request.courseCount}</div>
-                                                <div className="truncate">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3 text-xs align-top">
+                                                <div className="wrap-break-word">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 text-xs align-top">
                                                 <div className="font-semibold text-slate-800">{request.paymentStatus}</div>
                                                 <div className="text-slate-500">Rs {Number(request.amount || 0).toFixed(2)}</div>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <div className="space-y-2">
-                                                    <Badge variant="outline" className={badgeClass(request.status)}>
+                                                    <Badge variant="outline" className={`${badgeClass(request.status)} whitespace-nowrap`}>
                                                         {STATUS_LABELS[rowServiceType][request.status] || request.status}
                                                     </Badge>
                                                 </div>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <div className="space-y-2">
                                                     <Textarea
                                                         value={current.adminRemarks}
@@ -444,6 +449,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                             }));
                                                         }}
                                                         rows={2}
+                                                        className="min-h-20"
                                                         placeholder="Admin remarks"
                                                         disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                     />
@@ -461,13 +467,14 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                                 }));
                                                             }}
                                                             rows={2}
+                                                            className="min-h-20"
                                                             placeholder="Result summary (required for result published)"
                                                             disabled={request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED'}
                                                         />
                                                     ) : null}
                                                 </div>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                                                     <button
                                                         type="button"
@@ -566,8 +573,8 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                         </div>
                                                     ) : null}
                                                 </div>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="px-3 py-3 align-top">
                                                 <div className="flex flex-col gap-2">
                                                     {request.status === 'PENDING' ? (
                                                         <Button
@@ -623,12 +630,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                         </Button>
                                                     ) : null}
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                 </div>
             </Card>
 

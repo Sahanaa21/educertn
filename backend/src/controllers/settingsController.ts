@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS = {
     maintenanceMode: false,
     allowCompanySignup: true,
     smtpFromName: 'Global Academy of Technology',
-    adminAllowedEmails: DEFAULT_ADMIN_ALLOWLIST.join('\n')
+    adminAllowedEmails: ''
 };
 
 export const getPortalSettings = async (_req: Request, res: Response): Promise<any> => {
