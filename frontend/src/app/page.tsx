@@ -6,7 +6,7 @@ import { GraduationCap, Building2, SearchCheck, ArrowRight } from 'lucide-react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import { COLLEGE_NAME, PORTAL_NAME, PORTAL_SERVICES_LABEL } from '@/lib/branding';
+import { COLLEGE_NAME, PLATFORM_NAME, PORTAL_NAME, PORTAL_SERVICES_LABEL } from '@/lib/branding';
 
 type AcademicAvailability = {
   active: boolean;
@@ -69,7 +69,7 @@ export default function Home() {
         <div className="container relative z-10 mx-auto px-4 text-center">
           <div className="mb-6 inline-flex items-center rounded-full border border-amber-400/40 bg-amber-300/10 px-3 py-1 text-sm font-medium text-amber-200">
             <span className="mr-2 flex h-2 w-2 rounded-full bg-amber-300"></span>
-            {PORTAL_NAME}
+            {PORTAL_NAME} | {PLATFORM_NAME}
           </div>
 
           <h1 className="mx-auto mb-6 max-w-5xl text-3xl font-black tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">

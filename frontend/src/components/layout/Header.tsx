@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
-import { COLLEGE_NAME, PORTAL_NAME } from '@/lib/branding';
+import { COLLEGE_NAME, PLATFORM_NAME, PORTAL_NAME } from '@/lib/branding';
 
 const navLinks = [
     { href: '/', label: 'Home' },
@@ -35,7 +35,7 @@ export default function Header() {
                     </div>
                     <div className="flex min-w-0 max-w-54 flex-col leading-tight sm:max-w-none">
                         <span className="truncate text-xs font-bold text-blue-950 tracking-tight sm:text-sm lg:text-base">{COLLEGE_NAME}</span>
-                        <span className="truncate text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-600 sm:text-[10px] lg:text-[11px]">{PORTAL_NAME}</span>
+                        <span className="truncate text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-600 sm:text-[10px] lg:text-[11px]">{PORTAL_NAME} | {PLATFORM_NAME}</span>
                     </div>
                 </Link>
 

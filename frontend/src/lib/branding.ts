@@ -1,5 +1,6 @@
 export const COLLEGE_NAME = 'Global Academy of Technology';
 export const PORTAL_NAME = 'Official College Portal';
+export const PLATFORM_NAME = 'GATDEX';
 export const PORTAL_SERVICES_LABEL = 'Certificate, Verification and Academic Services Portal';
 
 export const COLLEGE_CONTACT = {
