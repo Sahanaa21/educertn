@@ -10,6 +10,7 @@ export default function Footer() {
                     <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-amber-300">Institution</p>
                     <h3 className="mb-4 text-2xl font-bold text-white">{COLLEGE_NAME}</h3>
                     <p className="max-w-md text-sm leading-7 text-slate-300">Official College Portal for certificate requests, company verification, and academic service workflows.</p>
+                    <p className="mt-2 text-xs text-slate-400">Powered by GATDEX platform.</p>
                     <p className="mt-4 text-xs uppercase tracking-[0.18em] text-slate-400">Bengaluru, Karnataka</p>
                 </div>
 
