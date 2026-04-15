@@ -195,6 +195,7 @@ export default function CompanyVerification() {
         if (!validateVerificationForm()) return;
 
         setLoading(true);
+        let createdRequestId = '';
 
         try {
             const token = sessionStorage.getItem('companyToken');
@@ -239,6 +240,7 @@ export default function CompanyVerification() {
                 const data = await res.json();
                 const createdRequest = data?.request;
                 const order = data?.zwitchOrder;
+                createdRequestId = String(createdRequest?.id || '');
 
                 if (!createdRequest?.id || !order?.id || !order?.accessKey) {
                     toast.error('Failed to initialize payment order.');
@@ -301,6 +303,13 @@ export default function CompanyVerification() {
                 toast.error(data.message || 'Failed to submit verification request.');
             }
         } catch {
+            const token = sessionStorage.getItem('companyToken');
+            if (token && createdRequestId) {
+                await fetch(`${API_BASE}/api/company/verifications/${createdRequestId}/mark-payment-failed`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => undefined);
+            }
             toast.error('Network error. Failed to submit.');
         } finally {
             setLoading(false);
@@ -475,6 +484,19 @@ export default function CompanyVerification() {
             className: 'border-yellow-500 text-yellow-700 bg-yellow-50',
             hint: 'Complete payment to send this request to admin.'
         };
+    };
+
+    const formatEnumValue = (value: string) => {
+        return String(value || '')
+            .split('_')
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    };
+
+    const canPayVerification = (request: VerificationRequest) => {
+        const paymentNeedsRetry = request.paymentStatus === 'PENDING' || request.paymentStatus === 'FAILED';
+        return paymentNeedsRetry && request.status === 'PENDING';
     };
 
     const handleLogout = () => {
@@ -686,7 +708,7 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
                                                         <Badge variant="outline" className={getVerificationStatusBadgeClass(req)}>
-                                                            {getVerificationStatusLabel(req)}
+                                                            {formatEnumValue(getVerificationStatusLabel(req))}
                                                         </Badge>
                                                         {req.status === 'REJECTED' && req.rejectionReason ? (
                                                             <p className="max-w-65 whitespace-normal text-xs text-red-700">
@@ -706,7 +728,7 @@ export default function CompanyVerification() {
                                                         >
                                                             Download
                                                         </Button>
-                                                    ) : req.paymentStatus !== 'PAID' && req.status === 'PENDING' ? (
+                                                    ) : canPayVerification(req) ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -738,16 +760,16 @@ export default function CompanyVerification() {
                 ) : (
                     panelView === 'requests' ? (
                         <div className="space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+                            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
                                 <div className="flex items-center gap-3">
-                                    <ClipboardList className="h-6 w-6 text-orange-400" />
-                                    <h2 className="text-lg font-bold tracking-tight">My Verification Applications</h2>
-                                    <span className="text-sm text-slate-400">{requests.length} requests</span>
+                                    <ClipboardList className="h-6 w-6 text-yellow-700" />
+                                    <h2 className="text-lg font-bold tracking-tight text-slate-900">My Verification Applications</h2>
+                                    <span className="text-sm text-slate-500">{requests.length} requests</span>
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                                    className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                                     onClick={() => {
                                         const token = sessionStorage.getItem('companyToken');
                                         if (token) fetchRequests(token);
@@ -757,14 +779,14 @@ export default function CompanyVerification() {
                                 </Button>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-800 p-3 rounded-lg text-slate-200">
+                            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">Status:</span>
+                                    <span className="text-sm font-medium text-slate-700">Status:</span>
                                     <Select value={requestStatusFilter} onValueChange={(value) => setRequestStatusFilter(value || 'ALL')}>
-                                        <SelectTrigger className="w-36 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                                        <SelectTrigger className="h-8 w-36 border-slate-300 bg-white text-slate-700">
                                             <SelectValue placeholder="All" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                                             <SelectItem value="ALL">All</SelectItem>
                                             <SelectItem value="PENDING">Pending</SelectItem>
                                             <SelectItem value="PROCESSING">Processing</SelectItem>
@@ -775,12 +797,12 @@ export default function CompanyVerification() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <ArrowUpDown className="h-4 w-4 text-slate-400" />
+                                    <ArrowUpDown className="h-4 w-4 text-slate-500" />
                                     <Select value={requestSortBy} onValueChange={(value) => setRequestSortBy(value || 'NEWEST')}>
-                                        <SelectTrigger className="w-44 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                                        <SelectTrigger className="h-8 w-44 border-slate-300 bg-white text-slate-700">
                                             <SelectValue placeholder="Sort by" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                                             <SelectItem value="NEWEST">Newest First</SelectItem>
                                             <SelectItem value="OLDEST">Oldest First</SelectItem>
                                             <SelectItem value="STATUS_ASC">Status (A-Z)</SelectItem>
@@ -793,7 +815,7 @@ export default function CompanyVerification() {
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                                     <Input
                                         placeholder="Search by ID, student, USN, status..."
-                                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                                        className="h-9 border-slate-300 bg-white pl-9 text-slate-700 placeholder:text-slate-400"
                                         value={requestSearch}
                                         onChange={(e) => setRequestSearch(e.target.value)}
                                     />
@@ -806,16 +828,16 @@ export default function CompanyVerification() {
                                 <CardDescription>Track all requests and download completed responses.</CardDescription>
                             </CardHeader>
                             <div className="overflow-x-auto w-full">
-                                <Table className="w-full min-w-5xl text-sm">
-                                    <TableHeader className="bg-slate-900 border-y">
+                                <Table className="w-full min-w-245 text-sm">
+                                    <TableHeader className="border-y bg-slate-50">
                                         <TableRow>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Request ID</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Student Name</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">USN</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Payment</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
-                                            <TableHead className="whitespace-nowrap text-slate-200 font-semibold">Download Response</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">Request ID</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">Student Name</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">USN</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">Payment</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">Status</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">Date</TableHead>
+                                            <TableHead className="whitespace-nowrap font-semibold text-slate-700">Download Response</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -837,7 +859,7 @@ export default function CompanyVerification() {
                                                 <TableCell className="whitespace-nowrap">
                                                     <div className="space-y-1">
                                                         <Badge variant="outline" className={getVerificationStatusBadgeClass(req)}>
-                                                            {getVerificationStatusLabel(req)}
+                                                            {formatEnumValue(getVerificationStatusLabel(req))}
                                                         </Badge>
                                                         {req.status === 'REJECTED' && req.rejectionReason ? (
                                                             <p className="max-w-65 whitespace-normal text-xs text-red-700">
@@ -857,7 +879,7 @@ export default function CompanyVerification() {
                                                         >
                                                             Download
                                                         </Button>
-                                                    ) : req.paymentStatus !== 'PAID' && req.status === 'PENDING' ? (
+                                                    ) : canPayVerification(req) ? (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -885,8 +907,8 @@ export default function CompanyVerification() {
                         </Card>
                         </div>
                     ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
-                        <Card className="shadow-md border-t-4 border-t-yellow-500">
+                    <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
+                        <Card className="border border-slate-200 shadow-md">
                             <CardHeader>
                                 <CardTitle>Agency / Company Details</CardTitle>
                                 <CardDescription>Details of the organization requesting the verification.</CardDescription>
@@ -918,7 +940,7 @@ export default function CompanyVerification() {
                             </CardContent>
                         </Card>
 
-                        <Card className="shadow-md">
+                        <Card className="border border-slate-200 shadow-md">
                             <CardHeader>
                                 <CardTitle>Student Details</CardTitle>
                                 <CardDescription>Details of the candidate being verified.</CardDescription>
@@ -937,7 +959,7 @@ export default function CompanyVerification() {
                             </CardContent>
                         </Card>
 
-                        <Card className="shadow-md">
+                        <Card className="border border-slate-200 shadow-md">
                             <CardHeader>
                                 <CardTitle>Verification Template Upload</CardTitle>
                                 <CardDescription>Upload your company verification format file (PDF, DOC, DOCX, JPG, PNG up to 10MB).</CardDescription>
@@ -984,7 +1006,8 @@ export default function CompanyVerification() {
                                     </Label>
                                 </div>
                             </CardContent>
-                            <CardFooter className="bg-slate-100 border-t flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+                            <CardFooter className="border-t bg-slate-100 p-6">
+                                <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex flex-col text-center sm:text-left">
                                     <span className="text-xs text-amber-700 mt-1 font-medium">Please verify all details before payment. Submitted requests cannot be edited or cancelled.</span>
                                     <span className="text-sm text-slate-500">Verification Fee</span>
@@ -994,6 +1017,7 @@ export default function CompanyVerification() {
                                     {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
                                     {loading ? 'Processing...' : 'Pay & Submit Request'}
                                 </Button>
+                                </div>
                             </CardFooter>
                         </Card>
                     </form>
