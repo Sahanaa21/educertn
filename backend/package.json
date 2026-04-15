@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node index.js",
-    "test:api": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "prisma generate && tsc -p tsconfig.json",
     "db:ping": "node scripts/db_ping.js",
@@ -16,10 +15,7 @@
     "ops:restore:db": "bash scripts/restore_postgres.sh",
     "ops:backup:uploads": "bash scripts/backup_uploads.sh",
     "migrate:upload-extensions": "node scripts/migrate_upload_extensions.js",
-    "cleanup:test-data": "node scripts/cleanup_test_data.js",
-    "cleanup:orphan-files": "node scripts/cleanup_orphan_file_refs.js",
-    "test:verification": "node scripts/test_verification_api.js",
-    "test:issues": "node scripts/test_issue_reports.js"
+    "cleanup:orphan-files": "node scripts/cleanup_orphan_file_refs.js"
   },
   "keywords": [],
   "author": "",
@@ -46,9 +42,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.3.5",
     "@types/nodemailer": "^7.0.11",
-    "@types/supertest": "^7.2.0",
     "prisma": "^6.19.2",
-    "supertest": "^7.2.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
