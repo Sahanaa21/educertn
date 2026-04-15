@@ -10,4 +10,6 @@ This folder contains the active operational and governance documents for the sel
 - [GitHub Hardening Checklist](GITHUB_HARDENING_CHECKLIST.md)
 - [Incident Rollback Playbook](INCIDENT_ROLLBACK_PLAYBOOK.md)
 - [Operations Runbook](OPERATIONS_RUNBOOK.md)
+- [Professionalization Roadmap](PROFESSIONALIZATION_ROADMAP.md)
+- [Self-Hosted Auto-Deploy](SELF_HOSTED_AUTO_DEPLOY.md)
 - [Week 1 / Week 2 Execution Tracker](WEEK1_WEEK2_EXECUTION_TRACKER.md)

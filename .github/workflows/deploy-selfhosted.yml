@@ -1,0 +1,41 @@
+name: Deploy Self-Hosted
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy to College Server
+    runs-on: ubuntu-latest
+    if: ${{ vars.DEPLOY_ENABLED == 'true' && secrets.DEPLOY_HOST != '' && secrets.DEPLOY_USER != '' && secrets.DEPLOY_SSH_KEY != '' && vars.DEPLOY_PATH != '' }}
+    steps:
+      - name: Remote deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd "${{ vars.DEPLOY_PATH }}"
+
+            git fetch origin
+            git checkout main
+            git pull --ff-only origin main
+
+            cd backend
+            npm ci --no-fund --no-audit
+            npm run build
+            cd ..
+
+            cd frontend
+            npm ci --no-fund --no-audit
+            npm run build
+            cd ..
+
+            pm2 restart backend || pm2 start backend/ecosystem.config.js
+            pm2 restart frontend || pm2 start npm --name frontend --cwd frontend -- start
+            pm2 save

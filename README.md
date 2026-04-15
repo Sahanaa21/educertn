@@ -152,3 +152,8 @@ GitHub is the source of truth for this project. For any future change:
 5. Deploy or restart the server from the updated repository state.
 
 If the college IT team only has GitHub access, they can keep the server synchronized by pulling `main` and restarting the backend and frontend services after each approved update.
+
+## Operations References
+
+- Professional roadmap: `docs/operations/PROFESSIONALIZATION_ROADMAP.md`
+- Auto-deploy and manual fallback: `docs/operations/SELF_HOSTED_AUTO_DEPLOY.md`
