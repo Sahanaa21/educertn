@@ -70,6 +70,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
     const [rowState, setRowState] = useState<Record<string, RowState>>({});
     const [rowFiles, setRowFiles] = useState<Record<string, FileList | null>>({});
     const [photocopyFiles, setPhotocopyFiles] = useState<Record<string, { answerSheet: File | null; evaluationScheme: File | null }>>({});
+    const [expandedFilesId, setExpandedFilesId] = useState<string | null>(null);
 
     const tokenOrRedirect = useCallback(() => {
         const token = sessionStorage.getItem('adminToken');
@@ -368,20 +369,20 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                 </div>
             </div>
 
-            <Card className="overflow-hidden shadow-md border border-slate-200">
-                <div className="overflow-x-auto w-full pb-2">
-                        <table className="w-full min-w-340 table-auto text-sm">
+            <Card className="overflow-hidden border border-slate-200 shadow-md">
+                <div className="w-full overflow-x-auto pb-2">
+                        <table className="w-full min-w-375 table-fixed text-sm">
                             <thead className="bg-slate-50 border-b">
                                 <tr>
-                                    <th className="min-w-42.5 px-4 py-3 text-left font-semibold text-slate-700">Request</th>
-                                    <th className="min-w-30 px-3 py-3 text-left font-semibold text-slate-700">Service</th>
-                                    <th className="min-w-47.5 px-3 py-3 text-left font-semibold text-slate-700">Student</th>
-                                    <th className="min-w-42.5 px-3 py-3 text-left font-semibold text-slate-700">Details</th>
-                                    <th className="min-w-30 px-3 py-3 text-left font-semibold text-slate-700">Payment</th>
-                                    <th className="min-w-37.5 px-3 py-3 text-left font-semibold text-slate-700">Status</th>
-                                    <th className="min-w-60 px-3 py-3 text-left font-semibold text-slate-700">Remarks</th>
-                                    <th className="min-w-70 px-3 py-3 text-left font-semibold text-slate-700">Files</th>
-                                    <th className="min-w-45 px-3 py-3 text-left font-semibold text-slate-700">Actions</th>
+                                    <th className="w-40 px-3 py-3 text-left font-semibold text-slate-700">Request</th>
+                                    <th className="w-30 px-3 py-3 text-left font-semibold text-slate-700">Service</th>
+                                    <th className="w-47.5 px-3 py-3 text-left font-semibold text-slate-700">Student</th>
+                                    <th className="w-42.5 px-3 py-3 text-left font-semibold text-slate-700">Details</th>
+                                    <th className="w-30 px-3 py-3 text-left font-semibold text-slate-700">Payment</th>
+                                    <th className="w-37.5 px-3 py-3 text-left font-semibold text-slate-700">Status</th>
+                                    <th className="w-42.5 px-3 py-3 text-left font-semibold text-slate-700">Remarks</th>
+                                    <th className="w-60 px-3 py-3 text-left font-semibold text-slate-700">Files</th>
+                                    <th className="w-40 px-3 py-3 text-left font-semibold text-slate-700">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -399,36 +400,36 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
                                     return (
                                         <tr key={request.id} className="hover:bg-slate-50 odd:bg-white even:bg-slate-50/50 border-b align-top">
-                                            <td className="py-3 px-4">
+                                            <td className="px-3 py-3 align-top">
                                                 <div className="font-semibold text-slate-900">{request.requestId}</div>
                                                 <div className="text-xs text-slate-500">{new Date(request.createdAt).toLocaleString()}</div>
                                             </td>
-                                            <td className="py-3 px-3">
+                                            <td className="px-3 py-3 align-top">
                                                 <Badge variant="outline" className={rowServiceType === 'PHOTOCOPY' ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-violet-500 text-violet-700 bg-violet-50'}>
                                                     {rowServiceType === 'PHOTOCOPY' ? 'Photocopy' : 'Re-evaluation'}
                                                 </Badge>
                                             </td>
-                                            <td className="py-3 px-3">
+                                            <td className="px-3 py-3 align-top">
                                                 <div className="font-medium text-slate-900">{request.user?.name || 'Student'}</div>
-                                                <div className="text-xs text-blue-700">{request.user?.email || '-'}</div>
+                                                <div className="truncate text-xs text-blue-700">{request.user?.email || '-'}</div>
                                             </td>
-                                            <td className="py-3 px-3 text-xs text-slate-700">
+                                            <td className="px-3 py-3 text-xs text-slate-700 align-top">
                                                 <div>Semester: {request.semester}</div>
                                                 <div>Courses: {request.courseCount}</div>
-                                                <div className="max-w-xs wrap-break-word">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
+                                                <div className="truncate">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
                                             </td>
-                                            <td className="py-3 px-3 text-xs">
+                                            <td className="px-3 py-3 text-xs align-top">
                                                 <div className="font-semibold text-slate-800">{request.paymentStatus}</div>
                                                 <div className="text-slate-500">Rs {Number(request.amount || 0).toFixed(2)}</div>
                                             </td>
-                                            <td className="py-3 px-3">
+                                            <td className="px-3 py-3 align-top">
                                                 <div className="space-y-2">
                                                     <Badge variant="outline" className={badgeClass(request.status)}>
                                                         {STATUS_LABELS[rowServiceType][request.status] || request.status}
                                                     </Badge>
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-3">
+                                            <td className="px-3 py-3 align-top">
                                                 <div className="space-y-2">
                                                     <Textarea
                                                         value={current.adminRemarks}
@@ -466,115 +467,107 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                     ) : null}
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-3 align-top">
-                                                {request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED' ? (
-                                                    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Final Files</div>
-                                                        {attachments.length > 0 ? (
-                                                            <div className="space-y-1">
-                                                                {attachments.map((url, idx) => (
-                                                                    <a
-                                                                        key={`${request.id}-file-${idx}`}
-                                                                        href={`${API_BASE}${url}`}
-                                                                        target="_blank"
-                                                                        rel="noreferrer"
-                                                                        className="block rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-blue-700 underline underline-offset-2 hover:border-blue-200 hover:bg-blue-50"
-                                                                    >
-                                                                        {rowServiceType === 'PHOTOCOPY' && idx === 0 ? 'Answer Sheet Copy' : rowServiceType === 'PHOTOCOPY' && idx === 1 ? 'Course Evaluation Scheme' : `Attachment ${idx + 1}`}
-                                                                    </a>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-xs text-slate-500">No files were uploaded for this request.</p>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
-                                                        <div className="space-y-2">
-                                                            {rowServiceType === 'PHOTOCOPY' ? (
-                                                                <>
-                                                                    <div className="space-y-1">
-                                                                        <Label className="text-xs text-slate-600">Answer Sheet Copy</Label>
-                                                                        <Input
-                                                                            type="file"
-                                                                            onChange={(e) => {
-                                                                                const file = e.target.files?.[0] || null;
-                                                                                setPhotocopyFiles((prev) => ({
-                                                                                    ...prev,
-                                                                                    [request.id]: {
-                                                                                        answerSheet: file,
-                                                                                        evaluationScheme: prev[request.id]?.evaluationScheme || null,
-                                                                                    },
-                                                                                }));
-                                                                            }}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <Label className="text-xs text-slate-600">Course Evaluation Scheme</Label>
-                                                                        <Input
-                                                                            type="file"
-                                                                            onChange={(e) => {
-                                                                                const file = e.target.files?.[0] || null;
-                                                                                setPhotocopyFiles((prev) => ({
-                                                                                    ...prev,
-                                                                                    [request.id]: {
-                                                                                        answerSheet: prev[request.id]?.answerSheet || null,
-                                                                                        evaluationScheme: file,
-                                                                                    },
-                                                                                }));
-                                                                            }}
-                                                                        />
-                                                                    </div>
-                                                                </>
-                                                            ) : (
+                                            <td className="px-3 py-3 align-top">
+                                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs font-semibold text-blue-700 underline underline-offset-2"
+                                                        onClick={() => setExpandedFilesId((prev) => prev === request.id ? null : request.id)}
+                                                    >
+                                                        {expandedFilesId === request.id ? 'Hide uploaded files' : 'Click to view uploaded files'}
+                                                    </button>
+
+                                                    {expandedFilesId === request.id ? (
+                                                        <div className="mt-3 space-y-3">
+                                                            {request.status === 'RESULT_PUBLISHED' || request.status === 'REJECTED' ? (
                                                                 <div className="space-y-1">
-                                                                    <Label className="text-xs text-slate-600">Attachments</Label>
-                                                                    <Input
-                                                                        type="file"
-                                                                        multiple
-                                                                        onChange={(e) => setRowFiles((prev) => ({ ...prev, [request.id]: e.target.files }))}
-                                                                    />
+                                                                    {attachments.length > 0 ? attachments.map((url, idx) => (
+                                                                        <a
+                                                                            key={`${request.id}-file-${idx}`}
+                                                                            href={`${API_BASE}${url}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="block rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-blue-700 underline underline-offset-2 hover:border-blue-200 hover:bg-blue-50"
+                                                                        >
+                                                                            {rowServiceType === 'PHOTOCOPY' && idx === 0 ? 'Answer Sheet Copy' : rowServiceType === 'PHOTOCOPY' && idx === 1 ? 'Course Evaluation Scheme' : `Attachment ${idx + 1}`}
+                                                                        </a>
+                                                                    )) : (
+                                                                        <p className="text-xs text-slate-500">No files were uploaded for this request.</p>
+                                                                    )}
                                                                 </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="space-y-2">
+                                                                        {rowServiceType === 'PHOTOCOPY' ? (
+                                                                            <>
+                                                                                <div className="space-y-1">
+                                                                                    <Label className="text-xs text-slate-600">Answer Sheet Copy</Label>
+                                                                                    <Input
+                                                                                        type="file"
+                                                                                        onChange={(e) => {
+                                                                                            const file = e.target.files?.[0] || null;
+                                                                                            setPhotocopyFiles((prev) => ({
+                                                                                                ...prev,
+                                                                                                [request.id]: {
+                                                                                                    answerSheet: file,
+                                                                                                    evaluationScheme: prev[request.id]?.evaluationScheme || null,
+                                                                                                },
+                                                                                            }));
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="space-y-1">
+                                                                                    <Label className="text-xs text-slate-600">Course Evaluation Scheme</Label>
+                                                                                    <Input
+                                                                                        type="file"
+                                                                                        onChange={(e) => {
+                                                                                            const file = e.target.files?.[0] || null;
+                                                                                            setPhotocopyFiles((prev) => ({
+                                                                                                ...prev,
+                                                                                                [request.id]: {
+                                                                                                    answerSheet: prev[request.id]?.answerSheet || null,
+                                                                                                    evaluationScheme: file,
+                                                                                                },
+                                                                                            }));
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+                                                                            </>
+                                                                        ) : (
+                                                                            <div className="space-y-1">
+                                                                                <Label className="text-xs text-slate-600">Attachments</Label>
+                                                                                <Input
+                                                                                    type="file"
+                                                                                    multiple
+                                                                                    onChange={(e) => setRowFiles((prev) => ({ ...prev, [request.id]: e.target.files }))}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => {
+                                                                            const token = tokenOrRedirect();
+                                                                            if (!token) return;
+                                                                            void uploadFilesForRequest(request.id, token, request).then((uploaded) => {
+                                                                                if (uploaded) {
+                                                                                    void fetchData();
+                                                                                }
+                                                                            });
+                                                                        }}
+                                                                        disabled={uploadingId === request.id}
+                                                                    >
+                                                                        {uploadingId === request.id ? 'Uploading...' : 'Upload Files'}
+                                                                    </Button>
+                                                                </>
                                                             )}
                                                         </div>
-
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => {
-                                                                const token = tokenOrRedirect();
-                                                                if (!token) return;
-                                                                void uploadFilesForRequest(request.id, token, request).then((uploaded) => {
-                                                                    if (uploaded) {
-                                                                        void fetchData();
-                                                                    }
-                                                                });
-                                                            }}
-                                                            disabled={uploadingId === request.id}
-                                                        >
-                                                            {uploadingId === request.id ? 'Uploading...' : 'Upload Files'}
-                                                        </Button>
-
-                                                        {attachments.length > 0 ? (
-                                                            <div className="space-y-1">
-                                                                <p className="text-xs font-medium text-slate-600">Uploaded files</p>
-                                                                {attachments.map((url, idx) => (
-                                                                    <a
-                                                                        key={`${request.id}-file-${idx}`}
-                                                                        href={`${API_BASE}${url}`}
-                                                                        target="_blank"
-                                                                        rel="noreferrer"
-                                                                        className="block text-xs text-blue-700 underline underline-offset-2"
-                                                                    >
-                                                                        {rowServiceType === 'PHOTOCOPY' && idx === 0 ? 'Answer Sheet Copy' : rowServiceType === 'PHOTOCOPY' && idx === 1 ? 'Course Evaluation Scheme' : `Attachment ${idx + 1}`}
-                                                                    </a>
-                                                                ))}
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                )}
+                                                    ) : null}
+                                                </div>
                                             </td>
-                                            <td className="py-3 px-3 min-w-45">
+                                            <td className="px-3 py-3 align-top">
                                                 <div className="flex flex-col gap-2">
                                                     {request.status === 'PENDING' ? (
                                                         <Button

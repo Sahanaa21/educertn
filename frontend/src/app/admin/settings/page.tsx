@@ -45,30 +45,33 @@ export default function AdminSettingsPage() {
         }
     };
 
-    useEffect(() => {
+    const fetchSettings = async () => {
         const token = sessionStorage.getItem('adminToken');
         if (!token) return;
 
-        const fetchSettings = async () => {
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/settings`, {
-                    headers: { Authorization: `Bearer ${token}` }
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/settings`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setSettings({
+                    supportEmail: data.supportEmail,
+                    frontendUrl: data.frontendUrl,
+                    maintenanceMode: data.maintenanceMode,
+                    allowCompanySignup: data.allowCompanySignup,
+                    smtpFromName: data.smtpFromName,
+                    adminAllowedEmails: data.adminAllowedEmails || '',
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    setSettings({
-                        supportEmail: data.supportEmail,
-                        frontendUrl: data.frontendUrl,
-                        maintenanceMode: data.maintenanceMode,
-                        allowCompanySignup: data.allowCompanySignup,
-                        smtpFromName: data.smtpFromName,
-                        adminAllowedEmails: data.adminAllowedEmails || '',
-                    });
-                }
-            } catch {
-                toast.error('Unable to fetch saved settings.');
             }
-        };
+        } catch {
+            toast.error('Unable to fetch saved settings.');
+        }
+    };
+
+    useEffect(() => {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) return;
 
         const checkHealth = async () => {
             await refreshSystemHealth();
@@ -140,10 +143,7 @@ export default function AdminSettingsPage() {
                 return;
             }
 
-            setSettings((prev) => ({
-                ...prev,
-                adminAllowedEmails: data.adminAllowedEmails || prev.adminAllowedEmails
-            }));
+            await fetchSettings();
             setNewAdminEmail('');
             toast.success('Admin email registered successfully');
         } catch {
@@ -181,10 +181,7 @@ export default function AdminSettingsPage() {
                 return;
             }
 
-            setSettings((prev) => ({
-                ...prev,
-                adminAllowedEmails: data.adminAllowedEmails || prev.adminAllowedEmails
-            }));
+            await fetchSettings();
             toast.success('Admin email removed successfully');
         } catch {
             toast.error('Network error while removing admin email');
