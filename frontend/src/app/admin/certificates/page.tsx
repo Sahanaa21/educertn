@@ -107,6 +107,14 @@ export default function AdminCertificates() {
             .replace(/\b\w/g, (char) => char.toUpperCase());
     };
 
+    const formatEnumLabel = (value: string) => {
+        return String(value || '')
+            .split('_')
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     const handleExportCSV = () => {
         if (requests.length === 0) return;
 
@@ -208,33 +216,37 @@ export default function AdminCertificates() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:p-6">
                 <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-orange-400" />
-                    <h1 className="text-xl font-bold tracking-tight">Certificate Applications</h1>
-                    <span className="text-sm text-slate-400">{requests.length} all applications</span>
+                    <FileText className="h-6 w-6 text-blue-700" />
+                    <h1 className="text-xl font-bold tracking-tight text-slate-900">Certificate Applications</h1>
+                    <span className="text-sm text-slate-500">{requests.length} paid applications</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700" onClick={handleExportCSV}>
+                    <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={handleExportCSV}>
                         <Download className="mr-2 h-4 w-4" /> Export CSV
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700" onClick={() => window.print()}>
+                    <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={() => window.print()}>
                         <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700" onClick={fetchRequests}>
+                    <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={fetchRequests}>
                         <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                     </Button>
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">
+                Admin queue displays paid requests only. Unpaid submissions are blocked before admin processing.
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">Filter by Status:</span>
+                    <span className="text-sm font-medium text-slate-700">Filter by Status:</span>
                     <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'ALL')}>
-                        <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-32 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="All" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="ALL">All</SelectItem>
                             <SelectItem value="PENDING">Pending</SelectItem>
                             <SelectItem value="PROCESSING">Processing</SelectItem>
@@ -253,7 +265,7 @@ export default function AdminCertificates() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search by USN or Name..."
-                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                        className="h-9 border-slate-300 bg-white pl-9 text-slate-700 placeholder:text-slate-400"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -263,17 +275,17 @@ export default function AdminCertificates() {
             <Card className="overflow-hidden shadow-md border border-slate-200">
                 <div className="w-full overflow-x-auto pb-2">
                     <Table className="w-full min-w-350 text-sm">
-                        <TableHeader className="bg-slate-900 border-b">
-                            <TableRow className="hover:bg-slate-900 border-slate-700">
-                                <TableHead className="min-w-52 whitespace-nowrap text-slate-200 font-semibold">Request</TableHead>
-                                <TableHead className="min-w-52 whitespace-nowrap text-slate-200 font-semibold">Student</TableHead>
-                                <TableHead className="min-w-48 whitespace-nowrap text-slate-200 font-semibold">Certificate</TableHead>
-                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Delivery</TableHead>
-                                <TableHead className="min-w-64 whitespace-nowrap text-slate-200 font-semibold">Contact</TableHead>
-                                <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
-                                <TableHead className="min-w-48 whitespace-nowrap text-slate-200 font-semibold">Payment</TableHead>
-                                <TableHead className="min-w-28 whitespace-nowrap text-slate-200 font-semibold">Document</TableHead>
-                                <TableHead className="min-w-70 whitespace-nowrap text-slate-200 font-semibold">Action</TableHead>
+                        <TableHeader className="bg-slate-50 border-b">
+                            <TableRow>
+                                <TableHead className="min-w-52 whitespace-nowrap font-semibold text-slate-700">Request</TableHead>
+                                <TableHead className="min-w-52 whitespace-nowrap font-semibold text-slate-700">Student</TableHead>
+                                <TableHead className="min-w-48 whitespace-nowrap font-semibold text-slate-700">Certificate</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Delivery</TableHead>
+                                <TableHead className="min-w-64 whitespace-nowrap font-semibold text-slate-700">Contact</TableHead>
+                                <TableHead className="min-w-36 whitespace-nowrap font-semibold text-slate-700">Status</TableHead>
+                                <TableHead className="min-w-48 whitespace-nowrap font-semibold text-slate-700">Payment</TableHead>
+                                <TableHead className="min-w-28 whitespace-nowrap font-semibold text-slate-700">Document</TableHead>
+                                <TableHead className="min-w-70 whitespace-nowrap font-semibold text-slate-700">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -330,7 +342,7 @@ export default function AdminCertificates() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top py-3 w-40 overflow-hidden">
-                                        <div className={`font-bold ${req.paymentStatus === 'REFUND_INITIATED' ? 'text-amber-700' : req.paymentStatus === 'REFUND_COMPLETED' || req.paymentStatus === 'REFUNDED' ? 'text-emerald-700' : req.paymentStatus === 'PAID' ? 'text-green-700' : 'text-slate-700'}`}>{req.paymentStatus}</div>
+                                        <div className={`font-bold ${req.paymentStatus === 'REFUND_INITIATED' ? 'text-amber-700' : req.paymentStatus === 'REFUND_COMPLETED' || req.paymentStatus === 'REFUNDED' ? 'text-emerald-700' : req.paymentStatus === 'PAID' ? 'text-green-700' : 'text-slate-700'}`}>{formatEnumLabel(req.paymentStatus)}</div>
                                         <div className="text-xs text-slate-500">Amount: Rs {Number(req.amount || 0).toFixed(2)}</div>
                                         <div className="text-xs text-slate-400 truncate" title={req.paymentOrderId || 'N/A'}>Order ID: {req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>

@@ -34,15 +34,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setMounted(true);
     }, []);
 
-    useEffect(() => {
-        const clearAdminSession = () => {
-            sessionStorage.removeItem('adminToken');
-        };
-
-        window.addEventListener('beforeunload', clearAdminSession);
-        return () => window.removeEventListener('beforeunload', clearAdminSession);
-    }, []);
-
     if (!mounted) return null;
 
     if (pathname === '/admin/login') {
@@ -54,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Mobile-only top bar — in normal document flow */}
             <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 text-white md:hidden">
                 <span className="font-bold">Admin Hub</span>
-                <button onClick={() => setIsSidebarOpen(true)}>
+                <button aria-label="Open admin navigation menu" onClick={() => setIsSidebarOpen(true)}>
                     <Menu />
                 </button>
             </div>
@@ -90,6 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         )}
                         {/* Close on mobile */}
                         <button
+                            aria-label="Close admin navigation menu"
                             onClick={() => setIsSidebarOpen(false)}
                             className="rounded-md p-1 text-slate-400 hover:bg-slate-800 md:hidden"
                         >
@@ -97,6 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </button>
                         {/* Collapse toggle on desktop */}
                         <button
+                            aria-label={isSidebarOpen ? 'Collapse admin sidebar' : 'Expand admin sidebar'}
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                             className="hidden md:flex p-1 rounded-md hover:bg-slate-800 text-slate-400"
                         >

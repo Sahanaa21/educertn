@@ -219,19 +219,27 @@ export default function AdminVerifications() {
         return 'font-bold text-slate-700';
     };
 
+    const formatEnumLabel = (value: string) => {
+        return String(value || '')
+            .split('_')
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
                 <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-orange-400" />
-                    <h1 className="text-xl font-bold tracking-tight">Company Verifications</h1>
-                    <span className="text-sm text-slate-400">{requests.length} requests</span>
+                    <FileText className="h-6 w-6 text-blue-700" />
+                    <h1 className="text-xl font-bold tracking-tight text-slate-900">Company Verifications</h1>
+                    <span className="text-sm text-slate-500">{requests.length} paid requests</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
-                        className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                        className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                         onClick={fetchRequests}
                     >
                         <RefreshCw className="mr-2 h-4 w-4" /> Refresh
@@ -239,14 +247,18 @@ export default function AdminVerifications() {
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">
+                Admin queue displays paid requests only. Unpaid submissions are blocked before verification processing.
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">Filter by Status:</span>
+                    <span className="text-sm font-medium text-slate-700">Filter by Status:</span>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'ALL')}>
-                        <SelectTrigger className="w-40 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-40 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="All" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="ALL">All</SelectItem>
                             <SelectItem value="PENDING">Pending</SelectItem>
                             <SelectItem value="PROCESSING">Processing</SelectItem>
@@ -267,7 +279,7 @@ export default function AdminVerifications() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search by Company or USN..."
-                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                        className="h-9 border-slate-300 bg-white pl-9 text-slate-700 placeholder:text-slate-400"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -277,15 +289,15 @@ export default function AdminVerifications() {
             <Card className="overflow-hidden shadow-md border border-slate-200">
                 <div className="overflow-x-auto w-full pb-2">
                     <Table className="w-full min-w-7xl text-sm">
-                        <TableHeader className="bg-slate-900 border-b">
-                            <TableRow className="hover:bg-slate-900 border-slate-700">
-                                <TableHead className="min-w-48 whitespace-nowrap text-slate-200 font-semibold">Request</TableHead>
-                                <TableHead className="min-w-56 whitespace-nowrap text-slate-200 font-semibold">Company</TableHead>
-                                <TableHead className="min-w-52 whitespace-nowrap text-slate-200 font-semibold">Student</TableHead>
-                                <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Template</TableHead>
-                                <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
-                                <TableHead className="min-w-32 whitespace-nowrap text-slate-200 font-semibold">Payment</TableHead>
-                                <TableHead className="min-w-72 whitespace-nowrap text-slate-200 font-semibold">Action</TableHead>
+                        <TableHeader className="bg-slate-50 border-b">
+                            <TableRow>
+                                <TableHead className="min-w-48 whitespace-nowrap font-semibold text-slate-700">Request</TableHead>
+                                <TableHead className="min-w-56 whitespace-nowrap font-semibold text-slate-700">Company</TableHead>
+                                <TableHead className="min-w-52 whitespace-nowrap font-semibold text-slate-700">Student</TableHead>
+                                <TableHead className="min-w-36 whitespace-nowrap font-semibold text-slate-700">Template</TableHead>
+                                <TableHead className="min-w-36 whitespace-nowrap font-semibold text-slate-700">Status</TableHead>
+                                <TableHead className="min-w-32 whitespace-nowrap font-semibold text-slate-700">Payment</TableHead>
+                                <TableHead className="min-w-72 whitespace-nowrap font-semibold text-slate-700">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -321,7 +333,7 @@ export default function AdminVerifications() {
                                     <TableCell className="align-top py-3">
                                         <div className="space-y-1">
                                             <Badge variant="outline" className={getStatusBadgeClass(req)}>
-                                                {getStatusLabel(req)}
+                                                {formatEnumLabel(getStatusLabel(req))}
                                             </Badge>
                                             {req.status === 'REJECTED' && req.rejectionReason ? (
                                                 <p className="max-w-65 whitespace-normal text-xs text-red-700">
@@ -331,7 +343,7 @@ export default function AdminVerifications() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top py-3 w-40 overflow-hidden">
-                                        <div className={getPaymentTextClass(req)}>{req.paymentStatus}</div>
+                                        <div className={getPaymentTextClass(req)}>{formatEnumLabel(req.paymentStatus)}</div>
                                         <div className="mt-1 text-xs text-slate-500">Amount: Rs 5000.00</div>
                                         <div className="text-xs text-slate-400 truncate" title={req.paymentOrderId || 'N/A'}>Order ID: {req.paymentOrderId || 'N/A'}</div>
                                     </TableCell>
