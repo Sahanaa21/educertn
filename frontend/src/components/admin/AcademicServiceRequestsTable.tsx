@@ -370,18 +370,18 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
             <Card className="overflow-hidden shadow-md border border-slate-200">
                 <div className="overflow-x-auto w-full pb-2">
-                        <table className="w-full min-w-[1360px] text-sm table-auto">
+                        <table className="w-full min-w-340 text-sm table-auto">
                             <thead className="bg-slate-900 border-b">
                                 <tr className="hover:bg-slate-900 border-slate-700">
-                                    <th className="py-3 px-4 min-w-[170px] text-left text-slate-200 font-semibold">Request</th>
-                                    <th className="py-3 px-3 min-w-[120px] text-left text-slate-200 font-semibold">Service</th>
-                                    <th className="py-3 px-3 min-w-[190px] text-left text-slate-200 font-semibold">Student</th>
-                                    <th className="py-3 px-3 min-w-[170px] text-left text-slate-200 font-semibold">Details</th>
-                                    <th className="py-3 px-3 min-w-[120px] text-left text-slate-200 font-semibold">Payment</th>
-                                    <th className="py-3 px-3 min-w-[150px] text-left text-slate-200 font-semibold">Status</th>
-                                    <th className="py-3 px-3 min-w-[240px] text-left text-slate-200 font-semibold">Remarks</th>
-                                    <th className="py-3 px-3 min-w-[280px] text-left text-slate-200 font-semibold">Files</th>
-                                    <th className="py-3 px-3 min-w-[180px] text-left text-slate-200 font-semibold">Actions</th>
+                                    <th className="py-3 px-4 min-w-42.5 text-left text-slate-200 font-semibold">Request</th>
+                                    <th className="py-3 px-3 min-w-30 text-left text-slate-200 font-semibold">Service</th>
+                                    <th className="py-3 px-3 min-w-47.5 text-left text-slate-200 font-semibold">Student</th>
+                                    <th className="py-3 px-3 min-w-42.5 text-left text-slate-200 font-semibold">Details</th>
+                                    <th className="py-3 px-3 min-w-30 text-left text-slate-200 font-semibold">Payment</th>
+                                    <th className="py-3 px-3 min-w-37.5 text-left text-slate-200 font-semibold">Status</th>
+                                    <th className="py-3 px-3 min-w-60 text-left text-slate-200 font-semibold">Remarks</th>
+                                    <th className="py-3 px-3 min-w-70 text-left text-slate-200 font-semibold">Files</th>
+                                    <th className="py-3 px-3 min-w-45 text-left text-slate-200 font-semibold">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -415,7 +415,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                             <td className="py-3 px-3 text-xs text-slate-700">
                                                 <div>Semester: {request.semester}</div>
                                                 <div>Courses: {request.courseCount}</div>
-                                                <div className="max-w-xs break-words">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
+                                                <div className="max-w-xs wrap-break-word">{Array.isArray(request.courseNames) ? request.courseNames.join(', ') : '-'}</div>
                                             </td>
                                             <td className="py-3 px-3 text-xs">
                                                 <div className="font-semibold text-slate-800">{request.paymentStatus}</div>
@@ -551,7 +551,7 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                                                     ) : null}
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-3 min-w-[180px]">
+                                            <td className="py-3 px-3 min-w-45">
                                                 <div className="flex flex-col gap-2">
                                                     {request.status === 'PENDING' ? (
                                                         <Button

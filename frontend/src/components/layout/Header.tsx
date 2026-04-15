@@ -17,7 +17,7 @@ export default function Header() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 text-slate-800 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
+        <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 text-slate-800 shadow-sm backdrop-blur supports-backdrop-filter:bg-white/85">
             <div className="container mx-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-2 lg:py-3">
                 {/* Logo and Title Section */}
                 <Link href="/" className="shrink-0 flex items-center gap-2 sm:gap-3 min-w-0" onClick={() => setIsMobileMenuOpen(false)}>
