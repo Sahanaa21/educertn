@@ -29,7 +29,7 @@ export default function Footer() {
                     <div className="space-y-3 text-sm text-slate-300">
                         <p className="flex items-start gap-2"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /><span>{COLLEGE_CONTACT.email}</span></p>
                         <p className="flex items-start gap-2"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /><span>{COLLEGE_CONTACT.phone}</span></p>
-                        <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /><span>{COLLEGE_CONTACT.addressLine1}, {COLLEGE_CONTACT.addressLine2}</span></p>
+                        <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /><span><span className="block">{COLLEGE_CONTACT.addressLine1}</span><span className="block">{COLLEGE_CONTACT.addressLine2}</span></span></p>
                     </div>
                 </div>
             </div>

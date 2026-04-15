@@ -60,7 +60,7 @@ export default function Home() {
     <div className="flex w-full flex-col">
       {/* Hero Section */}
       <section
-        className="relative flex w-full items-center justify-center overflow-hidden bg-cover bg-center py-16 lg:py-24"
+        className="relative flex w-full items-center justify-center overflow-hidden bg-cover bg-center py-14 sm:py-16 lg:py-24"
         style={{ backgroundImage: "url('/college.image.png')" }}
       >
         <div className="absolute inset-0 bg-slate-950/70"></div>
@@ -72,12 +72,12 @@ export default function Home() {
             {PORTAL_NAME}
           </div>
 
-          <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-black tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="mx-auto mb-6 max-w-5xl text-3xl font-black tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
             {COLLEGE_NAME}
             <span className="mt-2 block text-amber-300">{PORTAL_SERVICES_LABEL}</span>
           </h1>
 
-          <p className="mx-auto mb-10 max-w-3xl text-lg text-blue-100 sm:text-xl">
+          <p className="mx-auto mb-8 max-w-3xl text-base text-blue-100 sm:mb-10 sm:text-xl">
             A single, secure platform for student certificate requests, company background verification, academic service applications, and request status tracking.
           </p>
 
