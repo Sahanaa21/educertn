@@ -6,7 +6,7 @@ import { GraduationCap, Building2, SearchCheck, ArrowRight } from 'lucide-react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import { COLLEGE_CONTACT, COLLEGE_NAME, PORTAL_NAME, PORTAL_SERVICES_LABEL } from '@/lib/branding';
+import { COLLEGE_NAME, PORTAL_NAME, PORTAL_SERVICES_LABEL } from '@/lib/branding';
 
 type AcademicAvailability = {
   active: boolean;
@@ -90,20 +90,6 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border border-white/15 bg-slate-900/35 p-4 text-left backdrop-blur-sm sm:grid-cols-3">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-amber-200">Institution</p>
-              <p className="text-sm font-semibold text-white">{COLLEGE_NAME}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-amber-200">Official Email</p>
-              <p className="text-sm font-semibold text-white">{COLLEGE_CONTACT.email}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-amber-200">Helpline</p>
-              <p className="text-sm font-semibold text-white">{COLLEGE_CONTACT.phone}</p>
-            </div>
-          </div>
         </div>
       </section>
 

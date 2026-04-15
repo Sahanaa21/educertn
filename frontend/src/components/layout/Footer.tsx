@@ -7,9 +7,8 @@ export default function Footer() {
             <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-4 sm:px-8">
                 <div>
                     <h3 className="mb-4 text-xl font-bold text-amber-300">{COLLEGE_NAME}</h3>
-                    <p className="text-sm text-slate-300">{COLLEGE_CONTACT.addressLine1}</p>
-                    <p className="text-sm text-slate-300">{COLLEGE_CONTACT.addressLine2}</p>
-                    <p className="mt-2 text-sm text-slate-300">Official College Portal for Student and Verification Services</p>
+                    <p className="text-sm leading-6 text-slate-300">Official College Portal for certificate requests, company verification, and academic service workflows.</p>
+                    <p className="mt-3 text-xs uppercase tracking-wide text-slate-400">Global Academy of Technology, Bengaluru</p>
                 </div>
                 <div>
                     <h3 className="mb-4 text-lg font-bold text-amber-300">Quick Links</h3>
@@ -23,7 +22,9 @@ export default function Footer() {
                     <h3 className="mb-4 text-lg font-bold text-amber-300">Contact Information</h3>
                     <p className="text-sm text-slate-300">Email: {COLLEGE_CONTACT.email}</p>
                     <p className="text-sm text-slate-300">Phone: {COLLEGE_CONTACT.phone}</p>
-                    <p className="text-sm text-slate-300">Address: {COLLEGE_CONTACT.addressLine1}, {COLLEGE_CONTACT.addressLine2}</p>
+                    <p className="text-sm text-slate-300">Address:</p>
+                    <p className="text-sm text-slate-300">{COLLEGE_CONTACT.addressLine1}</p>
+                    <p className="text-sm text-slate-300">{COLLEGE_CONTACT.addressLine2}</p>
                 </div>
             </div>
             <div className="text-center text-xs text-slate-500 mt-10 pt-4 border-t border-slate-700">
