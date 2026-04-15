@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import AcademicServiceRequestsTable from '@/components/admin/AcademicServiceRequestsTable';
 
@@ -15,7 +14,6 @@ type SettingsState = {
     academicServicesEnabled: boolean;
     academicServicesStartAt: string;
     academicServicesEndAt: string;
-    adminAllowedEmails: string;
 };
 
 const toLocalInputDateTime = (value: string | null | undefined) => {
@@ -41,7 +39,6 @@ export default function AdminAcademicServicesHubPage() {
         academicServicesEnabled: false,
         academicServicesStartAt: '',
         academicServicesEndAt: '',
-        adminAllowedEmails: 'sahanaa2060@gmail.com',
     });
 
     const tokenOrRedirect = useCallback(() => {
@@ -69,7 +66,6 @@ export default function AdminAcademicServicesHubPage() {
                     academicServicesEnabled: Boolean(settingsJson.academicServicesEnabled),
                     academicServicesStartAt: toLocalInputDateTime(settingsJson.academicServicesStartAt),
                     academicServicesEndAt: toLocalInputDateTime(settingsJson.academicServicesEndAt),
-                    adminAllowedEmails: String(settingsJson.adminAllowedEmails || 'sahanaa2060@gmail.com'),
                 });
             }
 
@@ -100,7 +96,6 @@ export default function AdminAcademicServicesHubPage() {
                     academicServicesEnabled: settings.academicServicesEnabled,
                     academicServicesStartAt: fromLocalInputDateTime(settings.academicServicesStartAt),
                     academicServicesEndAt: fromLocalInputDateTime(settings.academicServicesEndAt),
-                    adminAllowedEmails: settings.adminAllowedEmails,
                 }),
             });
 
@@ -130,9 +125,9 @@ export default function AdminAcademicServicesHubPage() {
 
     return (
         <div className="space-y-6">
-            <div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h1 className="text-2xl font-bold text-slate-900">Academic Services</h1>
-                <p className="text-sm text-slate-500">Unified workflow for photocopy and re-evaluation requests.</p>
+                <p className="text-sm text-slate-500">Photocopy and re-evaluation workflows with service-window controls.</p>
             </div>
 
             <AcademicServiceRequestsTable
@@ -141,49 +136,49 @@ export default function AdminAcademicServicesHubPage() {
                 initialServiceFilter={initialServiceFilter as 'ALL' | 'PHOTOCOPY' | 'REEVALUATION'}
             />
 
-            <Card>
+            <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
-                    <CardTitle>Window and Access Controls</CardTitle>
+                    <CardTitle>Service Window</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5">
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                        Academic services are controlled here only. Admin email governance lives in the Settings page.
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Admin Allowed Emails</Label>
-                            <Textarea
-                                value={settings.adminAllowedEmails}
-                                onChange={(e) => setSettings((prev) => ({ ...prev, adminAllowedEmails: e.target.value }))}
-                                rows={3}
-                                placeholder="coe@gat.ac.in, principal@gat.ac.in"
-                            />
-                            <p className="text-xs text-slate-500">Separate multiple emails with commas or new lines.</p>
-                        </div>
-                        <div className="flex items-center gap-2 pt-7">
-                            <input
-                                type="checkbox"
-                                checked={settings.academicServicesEnabled}
-                                onChange={(e) => setSettings((prev) => ({ ...prev, academicServicesEnabled: e.target.checked }))}
-                                className="h-4 w-4"
-                            />
-                            <span className="text-sm">Enable academic services</span>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="academicServicesEnabled">Academic Services Status</Label>
+                            <Button
+                                id="academicServicesEnabled"
+                                type="button"
+                                variant="outline"
+                                className={settings.academicServicesEnabled ? 'w-full justify-start border-green-300 bg-green-50 text-green-700 hover:bg-green-100' : 'w-full justify-start border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
+                                onClick={() => setSettings((prev) => ({ ...prev, academicServicesEnabled: !prev.academicServicesEnabled }))}
+                            >
+                                {settings.academicServicesEnabled ? 'Enabled' : 'Disabled'}
+                            </Button>
                         </div>
                         <div className="space-y-2">
-                            <Label>Start Date and Time</Label>
+                            <Label htmlFor="academicServicesStartAt">Start Date and Time</Label>
                             <Input
+                                id="academicServicesStartAt"
                                 type="datetime-local"
                                 value={settings.academicServicesStartAt}
                                 onChange={(e) => setSettings((prev) => ({ ...prev, academicServicesStartAt: e.target.value }))}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>End Date and Time</Label>
+                            <Label htmlFor="academicServicesEndAt">End Date and Time</Label>
                             <Input
+                                id="academicServicesEndAt"
                                 type="datetime-local"
                                 value={settings.academicServicesEndAt}
                                 onChange={(e) => setSettings((prev) => ({ ...prev, academicServicesEndAt: e.target.value }))}
                             />
                         </div>
                     </div>
-                    <Button onClick={saveSettings} disabled={saving}>{saving ? 'Saving...' : 'Save Window Settings'}</Button>
+                    <div className="flex justify-end">
+                        <Button onClick={saveSettings} disabled={saving}>{saving ? 'Saving...' : 'Save Window Settings'}</Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>

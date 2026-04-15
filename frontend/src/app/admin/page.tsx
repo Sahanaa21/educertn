@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Building2, AlertCircle, IndianRupee, RefreshCw, ClipboardList, Settings } from 'lucide-react';
+import { FileText, Building2, AlertCircle, RefreshCw, ClipboardList, Settings } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ type DashboardStats = {
     totalCerts: number;
     pendingActions: number;
     totalVerifications: number;
-    totalRevenue?: number;
 };
 
 type CertificateRow = {
@@ -44,7 +43,6 @@ export default function AdminDashboard() {
         totalCerts: 0,
         pendingActions: 0,
         totalVerifications: 0,
-        totalRevenue: 0,
     });
     const [recentCertificates, setRecentCertificates] = useState<CertificateRow[]>([]);
     const [recentVerifications, setRecentVerifications] = useState<VerificationRow[]>([]);
@@ -107,14 +105,6 @@ export default function AdminDashboard() {
         void fetchDashboardData(false);
     }, [fetchDashboardData]);
 
-    const revenueLabel = useMemo(() => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).format(Number(stats.totalRevenue || 0));
-    }, [stats.totalRevenue]);
-
     if (loading) {
         return <div className="p-8 text-center text-slate-500">Loading admin dashboard...</div>;
     }
@@ -124,7 +114,7 @@ export default function AdminDashboard() {
             <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
-                    <p className="mt-1 text-slate-500">Operations overview, revenue snapshot, and latest processing queues.</p>
+                    <p className="mt-1 text-slate-500">Operations overview and latest processing queues.</p>
                 </div>
                 <Button variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={() => void fetchDashboardData(true)}>
                     <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -132,7 +122,7 @@ export default function AdminDashboard() {
                 </Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <Card className="border border-slate-200 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-slate-600">Total Cert Requests</CardTitle>
@@ -159,16 +149,6 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-slate-900">{stats.totalVerifications}</div>
-                    </CardContent>
-                </Card>
-                <Card className="border border-slate-200 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-600">Collected Revenue</CardTitle>
-                        <IndianRupee className="h-4 w-4 text-emerald-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-slate-900">{revenueLabel}</div>
-                        <p className="mt-1 text-xs text-slate-500">From paid certificate and verification requests</p>
                     </CardContent>
                 </Card>
             </div>
