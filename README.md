@@ -9,6 +9,7 @@ This repository is designed to run fully on one server using Node.js, PostgreSQL
 ```text
 educert/
 docs/
+docs/operations/
 frontend/
 backend/
 README.md
