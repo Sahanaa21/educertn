@@ -8,6 +8,7 @@ This repository is designed to run fully on one server using Node.js, PostgreSQL
 
 ```text
 educert/
+docs/
 frontend/
 backend/
 README.md
@@ -138,3 +139,15 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
 ## Database Schema
 
 Use `backend/prisma/local_schema.sql` if you want to create the schema manually in PostgreSQL.
+
+## Maintenance Workflow
+
+GitHub is the source of truth for this project. For any future change:
+
+1. Pull the latest `main` branch.
+2. Make the change locally.
+3. Run the backend and frontend builds.
+4. Commit and push to GitHub.
+5. Deploy or restart the server from the updated repository state.
+
+If the college IT team only has GitHub access, they can keep the server synchronized by pulling `main` and restarting the backend and frontend services after each approved update.
