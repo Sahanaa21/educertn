@@ -6,6 +6,7 @@ import {
     LayoutDashboard,
     FileText,
     Users,
+    BarChart3,
     Settings,
     LogOut,
     CheckSquare,
@@ -18,6 +19,7 @@ const menuItems = [
     { name: 'Certificates', href: '/admin/certificates', icon: FileText },
     { name: 'Verifications', href: '/admin/verifications', icon: CheckSquare },
     { name: 'Academic Services', href: '/admin/academic-services', icon: ClipboardList },
+    { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { name: 'Issues', href: '/admin/issues', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];

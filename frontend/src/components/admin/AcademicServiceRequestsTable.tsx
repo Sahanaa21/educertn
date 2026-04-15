@@ -302,30 +302,30 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:p-6">
                 <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-orange-400" />
+                    <FileText className="h-6 w-6 text-blue-700" />
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
-                        <p className="text-xs text-slate-400">{description}</p>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
+                        <p className="text-xs text-slate-500">{description}</p>
                     </div>
-                    <span className="text-sm text-slate-400">{filteredRequests.length} requests</span>
+                    <span className="text-sm text-slate-500">{filteredRequests.length} requests</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700" onClick={fetchData}>
+                    <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={fetchData}>
                         <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                     </Button>
                 </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row xl:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:flex-row xl:items-center">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">Service:</span>
+                    <span className="text-sm font-medium text-slate-700">Service:</span>
                     <Select value={serviceFilter} onValueChange={(value) => setServiceFilter((value as ServiceType) || 'ALL')}>
-                        <SelectTrigger className="w-44 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-44 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="All" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="ALL">All</SelectItem>
                             <SelectItem value="PHOTOCOPY">Photocopy</SelectItem>
                             <SelectItem value="REEVALUATION">Re-evaluation</SelectItem>
@@ -333,12 +333,12 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                     </Select>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">Status:</span>
+                    <span className="text-sm font-medium text-slate-700">Status:</span>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'ALL')}>
-                        <SelectTrigger className="w-44 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-44 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="All" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="ALL">All</SelectItem>
                             <SelectItem value="PENDING">Pending</SelectItem>
                             <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
@@ -355,13 +355,13 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
                     <span className="flex items-center text-red-500"><XCircle className="h-3 w-3 mr-1" /> REJECTED: {counts.rejected}</span>
                 </div>
 
-                <div className="text-xs font-semibold text-slate-300">PHOTOCOPY: {counts.photocopy} | RE-EVALUATION: {counts.reevaluation}</div>
+                <div className="text-xs font-semibold text-slate-600">PHOTOCOPY: {counts.photocopy} | RE-EVALUATION: {counts.reevaluation}</div>
 
                 <div className="xl:ml-auto relative w-full sm:w-72">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search by ID, student, semester"
-                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                        className="h-9 border-slate-300 bg-white pl-9 text-slate-700 placeholder:text-slate-400"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -370,18 +370,18 @@ export default function AcademicServiceRequestsTable({ initialServiceFilter = 'A
 
             <Card className="overflow-hidden shadow-md border border-slate-200">
                 <div className="overflow-x-auto w-full pb-2">
-                        <table className="w-full min-w-340 text-sm table-auto">
-                            <thead className="bg-slate-900 border-b">
-                                <tr className="hover:bg-slate-900 border-slate-700">
-                                    <th className="py-3 px-4 min-w-42.5 text-left text-slate-200 font-semibold">Request</th>
-                                    <th className="py-3 px-3 min-w-30 text-left text-slate-200 font-semibold">Service</th>
-                                    <th className="py-3 px-3 min-w-47.5 text-left text-slate-200 font-semibold">Student</th>
-                                    <th className="py-3 px-3 min-w-42.5 text-left text-slate-200 font-semibold">Details</th>
-                                    <th className="py-3 px-3 min-w-30 text-left text-slate-200 font-semibold">Payment</th>
-                                    <th className="py-3 px-3 min-w-37.5 text-left text-slate-200 font-semibold">Status</th>
-                                    <th className="py-3 px-3 min-w-60 text-left text-slate-200 font-semibold">Remarks</th>
-                                    <th className="py-3 px-3 min-w-70 text-left text-slate-200 font-semibold">Files</th>
-                                    <th className="py-3 px-3 min-w-45 text-left text-slate-200 font-semibold">Actions</th>
+                        <table className="w-full min-w-340 table-auto text-sm">
+                            <thead className="bg-slate-50 border-b">
+                                <tr>
+                                    <th className="min-w-42.5 px-4 py-3 text-left font-semibold text-slate-700">Request</th>
+                                    <th className="min-w-30 px-3 py-3 text-left font-semibold text-slate-700">Service</th>
+                                    <th className="min-w-47.5 px-3 py-3 text-left font-semibold text-slate-700">Student</th>
+                                    <th className="min-w-42.5 px-3 py-3 text-left font-semibold text-slate-700">Details</th>
+                                    <th className="min-w-30 px-3 py-3 text-left font-semibold text-slate-700">Payment</th>
+                                    <th className="min-w-37.5 px-3 py-3 text-left font-semibold text-slate-700">Status</th>
+                                    <th className="min-w-60 px-3 py-3 text-left font-semibold text-slate-700">Remarks</th>
+                                    <th className="min-w-70 px-3 py-3 text-left font-semibold text-slate-700">Files</th>
+                                    <th className="min-w-45 px-3 py-3 text-left font-semibold text-slate-700">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>

@@ -235,10 +235,6 @@ export default function AdminCertificates() {
                 </div>
             </div>
 
-            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">
-                Admin queue displays paid requests only. Unpaid submissions are blocked before admin processing.
-            </div>
-
             <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-slate-700">Filter by Status:</span>

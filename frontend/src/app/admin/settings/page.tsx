@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { ShieldCheck, RefreshCw, Settings2, UserCog } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 
 type AdminSettingsState = {
@@ -31,6 +34,16 @@ export default function AdminSettingsPage() {
     const [removingAdminEmail, setRemovingAdminEmail] = useState<string | null>(null);
     const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
     const [saving, setSaving] = useState(false);
+
+    const refreshSystemHealth = async () => {
+        try {
+            setBackendStatus('checking');
+            const res = await fetch(`${API_BASE}/api/health`);
+            setBackendStatus(res.ok ? 'online' : 'offline');
+        } catch {
+            setBackendStatus('offline');
+        }
+    };
 
     useEffect(() => {
         const token = sessionStorage.getItem('adminToken');
@@ -58,12 +71,7 @@ export default function AdminSettingsPage() {
         };
 
         const checkHealth = async () => {
-            try {
-                const res = await fetch(`${API_BASE}/api/health`);
-                setBackendStatus(res.ok ? 'online' : 'offline');
-            } catch {
-                setBackendStatus('offline');
-            }
+            await refreshSystemHealth();
         };
 
         fetchSettings();
@@ -194,28 +202,39 @@ export default function AdminSettingsPage() {
 
     return (
         <div className="space-y-6">
-            <div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-                <p className="text-slate-500">Manage portal preferences and operational toggles.</p>
+                <p className="text-slate-500">Manage operations controls, portal access, and admin governance.</p>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>System Status</CardTitle>
+            <Card className="border border-slate-200 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                        <ShieldCheck className="h-5 w-5 text-blue-700" />
+                        System Status
+                    </CardTitle>
+                    <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={refreshSystemHealth}>
+                        <RefreshCw className="mr-2 h-4 w-4" /> Refresh Health
+                    </Button>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-slate-600">
-                        Backend API: <span className={`font-semibold ${backendStatus === 'online' ? 'text-green-600' : backendStatus === 'offline' ? 'text-red-600' : 'text-slate-700'}`}>
-                            {backendStatus === 'checking' ? 'Checking...' : backendStatus.toUpperCase()}
-                        </span>
-                    </p>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <p className="text-sm text-slate-600">Backend API</p>
+                        <Badge variant="outline" className={backendStatus === 'online' ? 'border-green-500 text-green-700 bg-green-50' : backendStatus === 'offline' ? 'border-red-500 text-red-700 bg-red-50' : 'border-slate-400 text-slate-700 bg-slate-100'}>
+                            {backendStatus === 'checking' ? 'Checking' : backendStatus === 'online' ? 'Online' : 'Offline'}
+                        </Badge>
+                        <p className="text-xs text-slate-500">Use this before doing sensitive admin operations.</p>
+                    </div>
                 </CardContent>
             </Card>
 
             <div className="grid gap-6 lg:grid-cols-2">
-                <Card>
+                <Card className="border border-slate-200 shadow-sm">
                     <CardHeader>
-                        <CardTitle>General Configuration</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Settings2 className="h-5 w-5 text-blue-700" />
+                            General Configuration
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
@@ -233,7 +252,7 @@ export default function AdminSettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border border-slate-200 shadow-sm">
                     <CardHeader>
                         <CardTitle>Access Controls</CardTitle>
                     </CardHeader>
@@ -243,31 +262,40 @@ export default function AdminSettingsPage() {
                                 <p className="font-medium">Maintenance Mode</p>
                                 <p className="text-sm text-slate-500">Temporarily restrict portal operations.</p>
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={settings.maintenanceMode}
-                                onChange={(e) => setSettings((s) => ({ ...s, maintenanceMode: e.target.checked }))}
-                                className="h-4 w-4"
-                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={settings.maintenanceMode ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
+                                onClick={() => setSettings((s) => ({ ...s, maintenanceMode: !s.maintenanceMode }))}
+                            >
+                                {settings.maintenanceMode ? 'Enabled' : 'Disabled'}
+                            </Button>
                         </div>
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="font-medium">Allow Company Login/Signup</p>
                                 <p className="text-sm text-slate-500">Enable or disable company-side access.</p>
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={settings.allowCompanySignup}
-                                onChange={(e) => setSettings((s) => ({ ...s, allowCompanySignup: e.target.checked }))}
-                                className="h-4 w-4"
-                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={settings.allowCompanySignup ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
+                                onClick={() => setSettings((s) => ({ ...s, allowCompanySignup: !s.allowCompanySignup }))}
+                            >
+                                {settings.allowCompanySignup ? 'Enabled' : 'Disabled'}
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border border-slate-200 shadow-sm lg:col-span-2">
                     <CardHeader>
-                        <CardTitle>Admin Registration</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <UserCog className="h-5 w-5 text-blue-700" />
+                            Admin Governance
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
@@ -291,30 +319,38 @@ export default function AdminSettingsPage() {
 
                         <div className="space-y-2">
                             <Label htmlFor="adminAllowedEmails">Registered Admin Emails</Label>
-                            <textarea
-                                id="adminAllowedEmails"
-                                value={settings.adminAllowedEmails}
-                                readOnly
-                                rows={6}
-                                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm bg-slate-50"
-                            />
-                            <div className="space-y-2">
-                                {adminEmails.map((email) => (
-                                    <div key={email} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
-                                        <span className="text-sm text-slate-700">{email}</span>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => removeAdmin(email)}
-                                            disabled={removingAdminEmail === email}
-                                        >
-                                            {removingAdminEmail === email ? 'Removing...' : 'Remove'}
-                                        </Button>
-                                    </div>
-                                ))}
-                                {adminEmails.length === 0 && (
-                                    <p className="text-sm text-slate-500">No admin emails configured.</p>
-                                )}
+                            <div className="overflow-x-auto rounded-md border border-slate-200">
+                                <Table>
+                                    <TableHeader className="bg-slate-50 border-b">
+                                        <TableRow>
+                                            <TableHead className="font-semibold text-slate-700">Email</TableHead>
+                                            <TableHead className="w-36 text-right font-semibold text-slate-700">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {adminEmails.map((email) => (
+                                            <TableRow key={email}>
+                                                <TableCell className="text-slate-700">{email}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-red-200 text-red-700 hover:bg-red-50"
+                                                        onClick={() => removeAdmin(email)}
+                                                        disabled={removingAdminEmail === email}
+                                                    >
+                                                        {removingAdminEmail === email ? 'Removing...' : 'Remove'}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {adminEmails.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="py-4 text-center text-slate-500">No admin emails configured.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
                         </div>
                     </CardContent>

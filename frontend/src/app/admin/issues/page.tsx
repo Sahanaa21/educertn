@@ -105,30 +105,38 @@ export default function AdminIssuesPage() {
         return `Updated ${Math.floor(diffMs / day)} day ago`;
     };
 
+    const formatEnumLabel = (value: string) => {
+        return String(value || '')
+            .split('_')
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg bg-slate-900 p-4 text-white">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
                 <div className="flex items-center gap-3">
-                    <MessageSquareWarning className="h-6 w-6 text-orange-400" />
-                    <h1 className="text-xl font-bold tracking-tight">Issue Reports</h1>
-                    <span className="text-sm text-slate-400">{issues.length} reports</span>
+                    <MessageSquareWarning className="h-6 w-6 text-blue-700" />
+                    <h1 className="text-xl font-bold tracking-tight text-slate-900">Issue Reports</h1>
+                    <span className="text-sm text-slate-500">{issues.length} reports</span>
                 </div>
-                <Button variant="outline" size="sm" className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700" onClick={fetchIssues}>
+                <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={fetchIssues}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                 </Button>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-800 p-3 rounded-lg text-slate-200">
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">Filter by Status:</span>
+                    <span className="text-sm font-medium text-slate-700">Filter by Status:</span>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'ALL')}>
-                        <SelectTrigger className="w-40 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-40 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="All" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="ALL">All</SelectItem>
                             {STATUS_OPTIONS.map((status) => (
-                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                                <SelectItem key={status} value={status}>{formatEnumLabel(status)}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -137,7 +145,7 @@ export default function AdminIssuesPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search reports..."
-                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                        className="h-9 border-slate-300 bg-white pl-9 text-slate-700 placeholder:text-slate-400"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -151,16 +159,16 @@ export default function AdminIssuesPage() {
             <Card className="overflow-hidden border border-slate-200 shadow-md">
                 <div className="w-full overflow-x-auto pb-2">
                     <Table className="w-full min-w-7xl text-sm">
-                        <TableHeader className="bg-slate-900 border-b">
-                            <TableRow className="hover:bg-slate-900 border-slate-700">
-                                <TableHead className="min-w-56 whitespace-nowrap text-slate-200 font-semibold">Issue</TableHead>
-                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Priority / Tags</TableHead>
-                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Reporter</TableHead>
-                                <TableHead className="min-w-40 whitespace-nowrap text-slate-200 font-semibold">Category</TableHead>
-                                <TableHead className="min-w-40 whitespace-nowrap text-slate-200 font-semibold">Status</TableHead>
-                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Page</TableHead>
-                                <TableHead className="min-w-36 whitespace-nowrap text-slate-200 font-semibold">Date</TableHead>
-                                <TableHead className="min-w-44 whitespace-nowrap text-slate-200 font-semibold">Last Mail Update</TableHead>
+                        <TableHeader className="bg-slate-50 border-b">
+                            <TableRow>
+                                <TableHead className="min-w-56 whitespace-nowrap font-semibold text-slate-700">Issue</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Priority / Tags</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Reporter</TableHead>
+                                <TableHead className="min-w-40 whitespace-nowrap font-semibold text-slate-700">Category</TableHead>
+                                <TableHead className="min-w-40 whitespace-nowrap font-semibold text-slate-700">Status</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Page</TableHead>
+                                <TableHead className="min-w-36 whitespace-nowrap font-semibold text-slate-700">Date</TableHead>
+                                <TableHead className="min-w-44 whitespace-nowrap font-semibold text-slate-700">Last Mail Update</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -206,7 +214,7 @@ export default function AdminIssuesPage() {
                                                     issue.status === 'CLOSED' ? 'border-slate-500 text-slate-700 bg-slate-100 font-bold tracking-wider' :
                                                         'border-yellow-500 text-yellow-700 bg-yellow-50 font-bold tracking-wider'
                                         }>
-                                            {issue.status}
+                                            {formatEnumLabel(issue.status)}
                                         </Badge>
                                         {issue.mailActionUpdatedAt ? (
                                             <div className="mt-1 text-[11px] font-medium text-indigo-700">
