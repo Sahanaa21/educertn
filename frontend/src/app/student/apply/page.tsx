@@ -195,14 +195,19 @@ export default function ApplyCertificate() {
                 }
 
                 try {
-                    void openZwitchCheckout({
+                    await openZwitchCheckout({
                         paymentToken: order.id,
                         accessKey: order.accessKey,
                         fallbackAccessKey: order.fallbackAccessKey,
                         environment: order.environment
                     });
                 } catch (checkoutErr: any) {
-                    toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
+                    const checkoutMessage = String(checkoutErr?.message || '').toLowerCase();
+                    if (checkoutMessage.includes('cancelled')) {
+                        toast.message('Payment was cancelled. You can retry when ready.');
+                    } else {
+                        toast.error(checkoutErr?.message || 'Unable to open payment checkout.');
+                    }
                     return;
                 }
 
