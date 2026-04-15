@@ -16,10 +16,8 @@ Branch protection rules enforce code quality standards and prevent accidental de
 
 ### 2. **Require Status Checks to Pass**
 The following checks should pass before merge is allowed:
-- ✅ `ci / backend` - TypeScript typecheck, build, and tests
-- ✅ `ci / frontend` - Lint, build, and e2e smoke tests
-- ✅ `security-audit / backend` - npm audit for critical vulnerabilities
-- ✅ `security-audit / frontend` - npm audit for critical vulnerabilities
+- ✅ `Backend Checks` - TypeScript typecheck and build
+- ✅ `Frontend Checks` - Lint and build
 
 **Configuration:**
 - ✅ **Require branches to be up to date before merging**: Ensures PR is tested against latest `main`
@@ -101,10 +99,8 @@ PATCH /repos/{owner}/{repo}/branches/main/protection
   "required_status_checks": {
     "strict": true,
     "contexts": [
-      "ci/backend",
-      "ci/frontend",
-      "security-audit/backend",
-      "security-audit/frontend"
+      "Backend Checks",
+      "Frontend Checks"
     ]
   },
   "enforce_admins": true,

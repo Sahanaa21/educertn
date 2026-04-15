@@ -157,3 +157,6 @@ If the college IT team only has GitHub access, they can keep the server synchron
 
 - Professional roadmap: `docs/operations/PROFESSIONALIZATION_ROADMAP.md`
 - Auto-deploy and manual fallback: `docs/operations/SELF_HOSTED_AUTO_DEPLOY.md`
+- Release policy: `docs/operations/RELEASE_POLICY.md`
+- Restore drill log: `docs/operations/RESTORE_DRILL_LOG.md`
+- Implementation status tracker: `docs/operations/IMPLEMENTATION_STATUS.md`

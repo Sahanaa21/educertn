@@ -1,16 +1,17 @@
 # GitHub Hardening Checklist
 
 ## Branch Protection (`main`)
-- [ ] Require pull request before merging
-- [ ] Require approvals (minimum 1)
-- [ ] Dismiss stale approvals on new commits
-- [ ] Require status checks to pass
+- [x] CODEOWNERS file added in repo (`.github/CODEOWNERS`)
+- [ ] Require pull request before merging (set in GitHub settings)
+- [ ] Require approvals (minimum 1) (set in GitHub settings)
+- [ ] Dismiss stale approvals on new commits (set in GitHub settings)
+- [ ] Require status checks to pass (set in GitHub settings)
 - [ ] Required checks:
   - `Backend Checks`
   - `Frontend Checks`
-  - `Frontend E2E Smoke`
-- [ ] Require linear history
-- [ ] Restrict force pushes and deletions
+  - `Release / Validate Before Release` (for tag releases)
+- [ ] Require linear history (set in GitHub settings)
+- [ ] Restrict force pushes and deletions (set in GitHub settings)
 
 ## Repository Security
 - [ ] Enable Dependabot alerts
@@ -21,7 +22,8 @@
 ## Actions Hardening
 - [ ] Restrict Actions to verified creators or selected actions
 - [ ] Require approval for first-time external contributors
-- [ ] Review workflow permissions (least privilege)
+- [x] Review workflow permissions (least privilege baseline applied)
+- [x] Auto-deploy is CI-gated and opt-in via `DEPLOY_ENABLED`
 
 ## Team Access Model
 - [ ] Owner: full admin (you)
@@ -31,7 +33,14 @@
 
 ## Required Secrets
 - [ ] `HEALTH_BASE_URL`
+- [ ] `DEPLOY_HOST`
+- [ ] `DEPLOY_USER`
+- [ ] `DEPLOY_SSH_KEY`
 - [ ] Any monitoring/webhook keys when introduced
+
+## Required Variables
+- [ ] `DEPLOY_ENABLED=true` (to enable deployment)
+- [ ] `DEPLOY_PATH=/absolute/path/to/repo`
 
 ## Review Routine
 - [ ] Weekly: check failed workflows and security alerts
