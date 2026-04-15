@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -44,7 +43,6 @@ interface Issue {
 }
 
 export default function OpsDashboardPage() {
-    const router = useRouter();
     const [metrics, setMetrics] = useState<OpsMetrics | null>(null);
     const [issues, setIssues] = useState<Issue[]>([]);
     const [loading, setLoading] = useState(true);

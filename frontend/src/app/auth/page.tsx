@@ -48,8 +48,8 @@ export default function AuthPage() {
     const [usn, setUsn] = useState('');
     const [branch, setBranch] = useState('');
     const [yearOfPassing, setYearOfPassing] = useState('');
-    const [companyName, setCompanyName] = useState('');
-    const [contactPerson, setContactPerson] = useState('');
+    const [companyName] = useState('');
+    const [contactPerson] = useState('');
 
     const title = useMemo(() => mode === 'login' ? 'Sign In' : 'Create Account', [mode]);
 

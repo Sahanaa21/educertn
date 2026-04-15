@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -59,7 +59,7 @@ export default function CompanyVerification() {
     const [mainLoading, setMainLoading] = useState(true);
     const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
 
-    const handleUnauthorized = () => {
+    const handleUnauthorized = useCallback(() => {
         sessionStorage.removeItem('companyToken');
         sessionStorage.removeItem('companyEmail');
         setIsAuthenticated(false);
@@ -67,9 +67,9 @@ export default function CompanyVerification() {
         setMainLoading(false);
         toast.error('Session expired. Please login again.');
         router.push('/auth');
-    };
+    }, [router]);
 
-    const fetchRequests = async (token: string) => {
+    const fetchRequests = useCallback(async (token: string) => {
         try {
             const res = await apiFetch('/api/company/verifications', {
                 cache: 'no-store',
@@ -86,7 +86,7 @@ export default function CompanyVerification() {
         } finally {
             setMainLoading(false);
         }
-    };
+    }, [handleUnauthorized]);
 
     useEffect(() => {
         const loadingGuard = window.setTimeout(() => {
@@ -133,7 +133,7 @@ export default function CompanyVerification() {
         }
 
         return () => window.clearTimeout(loadingGuard);
-    }, []);
+    }, [fetchRequests, router]);
 
     useEffect(() => {
         if (pathname === '/company/requests') {
@@ -294,7 +294,7 @@ export default function CompanyVerification() {
                 const data = await res.json();
                 toast.error(data.message || 'Failed to submit verification request.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Network error. Failed to submit.');
         } finally {
             setLoading(false);
@@ -337,7 +337,7 @@ export default function CompanyVerification() {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch {
             toast.error('Download failed');
         }
     };

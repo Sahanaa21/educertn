@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -39,7 +39,7 @@ export default function AdminVerifications() {
     const [rejectionReason, setRejectionReason] = useState('');
     const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         const token = sessionStorage.getItem('adminToken');
         if (!token) {
             router.push('/admin/login');
@@ -62,11 +62,11 @@ export default function AdminVerifications() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
 
     useEffect(() => {
         fetchRequests();
-    }, [router]);
+    }, [fetchRequests]);
 
     const updateStatus = async (id: string, status?: string, rejReason?: string, action?: string) => {
         setProcessingId(id);
@@ -91,7 +91,7 @@ export default function AdminVerifications() {
             } else {
                 toast.error('Failed to update status');
             }
-        } catch (error) {
+        } catch {
             toast.error('Network error');
         } finally {
             setProcessingId(null);
@@ -130,7 +130,7 @@ export default function AdminVerifications() {
             link.click();
             link.remove();
             URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch {
             toast.error('Template download failed');
         }
     };
@@ -160,7 +160,7 @@ export default function AdminVerifications() {
                 toast.error(data.message || 'Upload failed');
                 return false;
             }
-        } catch (error) {
+        } catch {
             toast.error('Upload failed');
             return false;
         } finally {

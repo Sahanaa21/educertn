@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -25,7 +25,7 @@ export default function StudentRequests() {
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const [payingId, setPayingId] = useState<string | null>(null);
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         const token = sessionStorage.getItem('token');
         if (!token) {
             router.push('/student/login');
@@ -51,11 +51,11 @@ export default function StudentRequests() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
 
     useEffect(() => {
         fetchRequests();
-    }, [router]);
+    }, [fetchRequests]);
 
     const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
         if (!contentDisposition) return fallbackName;
@@ -93,7 +93,7 @@ export default function StudentRequests() {
             link.click();
             link.remove();
             URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch {
             toast.error('Download failed. Please try again.');
         } finally {
             setDownloadingId(null);
@@ -157,8 +157,6 @@ export default function StudentRequests() {
             setPayingId(null);
         }
     };
-
-    const canCancelRequest = (_req: any) => false;
 
     const isCancelledRequest = (req: any) => {
         return req.status === 'REJECTED' && String(req.rejectionReason || '').toLowerCase().includes('cancelled by user');

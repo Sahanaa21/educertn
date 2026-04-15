@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { GraduationCap, Building2, SearchCheck, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,22 +17,17 @@ type AcademicAvailability = {
 export default function Home() {
   const router = useRouter();
   const [academicAvailability, setAcademicAvailability] = useState<AcademicAvailability | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const token = sessionStorage.getItem('token');
     const companyToken = sessionStorage.getItem('companyToken');
     
     if (token) {
-      setIsAuthenticated(true);
       router.replace('/student');
       return;
     }
     
     if (companyToken) {
-      setIsAuthenticated(true);
       router.replace('/company');
       return;
     }

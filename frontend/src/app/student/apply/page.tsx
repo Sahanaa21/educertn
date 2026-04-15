@@ -243,7 +243,7 @@ export default function ApplyCertificate() {
 
                 toast.error(data?.message || 'Failed to submit application.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Network error. Failed to submit.');
         } finally {
             setLoading(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,7 +24,7 @@ export default function AdminCertificates() {
     const [rejectingId, setRejectingId] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         setLoading(true);
         const token = sessionStorage.getItem('adminToken');
         if (!token) {
@@ -48,11 +48,11 @@ export default function AdminCertificates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
 
     useEffect(() => {
         fetchRequests();
-    }, [router]);
+    }, [fetchRequests]);
 
     const updateStatus = async (id: string, status?: string, action?: string, reason?: string) => {
         setProcessingId(id);
@@ -94,7 +94,7 @@ export default function AdminCertificates() {
             } else {
                 toast.error('Failed to update status');
             }
-        } catch (error) {
+        } catch {
             toast.error('Network error');
         } finally {
             setProcessingId(null);
