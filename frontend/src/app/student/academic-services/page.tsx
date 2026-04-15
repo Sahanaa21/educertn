@@ -68,6 +68,14 @@ export default function StudentAcademicServicesPage() {
     const totalAmount = useMemo(() => Number(courseCount || 0) * selectedService.unitFee, [courseCount, selectedService.unitFee]);
     const isWindowClosed = !availability?.active;
 
+    const formatEnumValue = (value: string) => {
+        return String(value || '')
+            .split('_')
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     const getStudentToken = useCallback(() => {
         const token = sessionStorage.getItem('token');
         if (!token) {
@@ -297,12 +305,12 @@ export default function StudentAcademicServicesPage() {
 
     return (
         <div className="space-y-6">
-            <div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h1 className="text-2xl font-bold text-slate-900">Photocopy and Challenge Re-evaluation</h1>
-                <p className="text-sm text-slate-500">Apply for student-only academic services when the admin window is open.</p>
+                <p className="mt-2 text-sm text-slate-600">Apply for student-only academic services when the admin window is open.</p>
             </div>
 
-            <Card>
+            <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                     <CardTitle>Service Window</CardTitle>
                 </CardHeader>
@@ -318,7 +326,7 @@ export default function StudentAcademicServicesPage() {
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                     <CardTitle>New Request</CardTitle>
                 </CardHeader>
@@ -452,18 +460,18 @@ export default function StudentAcademicServicesPage() {
                                     return (
                                         <TableRow key={request.id} className="align-top">
                                             <TableCell className="font-semibold text-slate-800">{request.requestId}</TableCell>
-                                            <TableCell>{String(request.serviceType || '').replaceAll('_', ' ')}</TableCell>
+                                            <TableCell>{formatEnumValue(request.serviceType)}</TableCell>
                                             <TableCell>{request.semester}</TableCell>
                                             <TableCell>{request.courseCount}</TableCell>
                                             <TableCell>Rs {Number(request.amount || 0).toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className={request.paymentStatus === 'PAID' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700'}>
-                                                    {request.paymentStatus}
+                                                    {formatEnumValue(request.paymentStatus)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className={request.status === 'RESULT_PUBLISHED' ? 'border-blue-500 bg-blue-50 text-blue-700' : request.status === 'REJECTED' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-400 bg-slate-100 text-slate-700'}>
-                                                    {request.status}
+                                                    {formatEnumValue(request.status)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="max-w-sm">

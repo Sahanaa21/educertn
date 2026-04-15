@@ -256,10 +256,10 @@ export default function ApplyCertificate() {
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            <div>
+        <div className="max-w-4xl mx-auto space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">Apply for Certificate</h1>
-                <p className="text-slate-500 mt-1">Fill out the form below to request a new certificate or document.</p>
+                <p className="mt-2 text-slate-600">Fill out the form below to request a new certificate or document.</p>
             </div>
 
             <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
@@ -271,7 +271,7 @@ export default function ApplyCertificate() {
             </div>
 
             <form onSubmit={submitApplication}>
-                <Card className="shadow-sm">
+                <Card className="border border-slate-200 shadow-sm">
                     <CardHeader>
                         <CardTitle>Student Details</CardTitle>
                         <CardDescription>Ensure your details match university records.</CardDescription>
@@ -355,7 +355,7 @@ export default function ApplyCertificate() {
                     </CardContent>
                 </Card>
 
-                <Card className="mt-6 shadow-sm">
+                <Card className="mt-6 border border-slate-200 shadow-sm">
                     <CardHeader>
                         <CardTitle>Request Details</CardTitle>
                         <CardDescription>Select the type of certificate and delivery preferences.</CardDescription>
@@ -426,7 +426,7 @@ export default function ApplyCertificate() {
                     </CardContent>
                 </Card>
 
-                <Card className="mt-6 shadow-sm">
+                <Card className="mt-6 border border-slate-200 shadow-sm">
                     <CardHeader>
                         <CardTitle>Document Uploads</CardTitle>
                         <CardDescription>Provide supporting documents for verification.</CardDescription>
@@ -470,8 +470,9 @@ export default function ApplyCertificate() {
                             </Label>
                         </div>
                     </CardContent>
-                    <CardFooter className="bg-slate-50 border-t flex items-center justify-between p-6">
-                        <div className="flex flex-col">
+                    <CardFooter className="border-t bg-slate-50 p-6">
+                        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col text-center sm:text-left">
                             <span className="text-sm text-slate-500">
                                 Certificate Fee: {selectedCertificate ? `Rs ${selectedCertificate.fee.toFixed(2)}` : 'Select certificate type'}
                             </span>
@@ -479,10 +480,11 @@ export default function ApplyCertificate() {
                             <span className="text-sm text-slate-500">Total Amount Payable</span>
                             <span className="text-2xl font-bold text-slate-900">₹ {getFee().toFixed(2)}</span>
                         </div>
-                        <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700 w-1/2" disabled={loading}>
+                        <Button type="submit" size="lg" className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto" disabled={loading}>
                             {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
                             {loading ? 'Processing...' : 'Pay & Submit'}
                         </Button>
+                        </div>
                     </CardFooter>
                 </Card>
             </form>

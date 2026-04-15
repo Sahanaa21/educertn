@@ -257,30 +257,30 @@ export default function StudentRequests() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-lg text-white">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
                 <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-orange-400" />
-                    <h1 className="text-xl font-bold tracking-tight">My Applications</h1>
-                    <span className="text-sm text-slate-400">{requests.length} requests</span>
+                    <FileText className="h-6 w-6 text-blue-700" />
+                    <h1 className="text-xl font-bold tracking-tight text-slate-900">My Applications</h1>
+                    <span className="text-sm text-slate-500">{requests.length} requests</span>
                 </div>
                 <Button
                     variant="outline"
                     size="sm"
-                    className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                    className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                     onClick={fetchRequests}
                 >
                     <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                 </Button>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-800 p-3 rounded-lg text-slate-200">
+            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Status:</span>
+                    <span className="text-sm font-medium text-slate-700">Status:</span>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'ALL')}>
-                        <SelectTrigger className="w-36 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-36 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="All" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="ALL">All</SelectItem>
                             <SelectItem value="PENDING">Pending</SelectItem>
                             <SelectItem value="PROCESSING">Processing</SelectItem>
@@ -291,12 +291,12 @@ export default function StudentRequests() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <ArrowUpDown className="h-4 w-4 text-slate-400" />
+                    <ArrowUpDown className="h-4 w-4 text-slate-500" />
                     <Select value={sortBy} onValueChange={(value) => setSortBy(value || 'NEWEST')}>
-                        <SelectTrigger className="w-44 bg-slate-700 border-slate-600 text-slate-200 h-8">
+                        <SelectTrigger className="h-8 w-44 border-slate-300 bg-white text-slate-700">
                             <SelectValue placeholder="Sort by" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 text-slate-200 border-slate-700">
+                        <SelectContent className="border-slate-200 bg-white text-slate-700">
                             <SelectItem value="NEWEST">Newest First</SelectItem>
                             <SelectItem value="OLDEST">Oldest First</SelectItem>
                             <SelectItem value="STATUS_ASC">Status (A-Z)</SelectItem>
@@ -309,7 +309,7 @@ export default function StudentRequests() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search by ID, type, status, USN..."
-                        className="pl-9 h-9 bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-400"
+                        className="h-9 border-slate-300 bg-white pl-9 text-slate-700 placeholder:text-slate-400"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -318,16 +318,16 @@ export default function StudentRequests() {
 
             <Card className="overflow-hidden shadow-md border border-slate-200">
                 <div className="overflow-x-auto w-full pb-2">
-                    <Table className="w-full min-w-6xl text-sm">
-                        <TableHeader className="bg-slate-900 border-b">
+                    <Table className="w-full min-w-245 text-sm">
+                        <TableHeader className="border-b bg-slate-50">
                             <TableRow>
-                                <TableHead className="text-slate-200 font-semibold">Request ID</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Certificate Type</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Delivery Mode</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Payment</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Status</TableHead>
-                                <TableHead className="text-slate-200 font-semibold">Date Applied</TableHead>
-                                <TableHead className="text-right text-slate-200 font-semibold">Action</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Request ID</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Certificate Type</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Delivery Mode</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Payment</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Date Applied</TableHead>
+                                <TableHead className="text-right font-semibold text-slate-700">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
