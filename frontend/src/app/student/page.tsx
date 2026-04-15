@@ -16,8 +16,8 @@ export default function StudentServicesHome() {
         const token = sessionStorage.getItem('token');
         
         if (!token) {
-            // Redirect to home page if not authenticated
-            router.replace('/');
+            // Redirect to login page if not authenticated
+            router.replace('/auth');
             return;
         }
         

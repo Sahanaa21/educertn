@@ -11,7 +11,7 @@ const navLinks = [
     { href: '/student', label: 'Student Services' },
     { href: '/company', label: 'Company Verification' },
     { href: '/report-issue', label: 'Report Issue' },
-    { href: '#contact', label: 'Contact' },
+    { href: '/#contact', label: 'Contact' },
 ];
 
 export default function Header() {
