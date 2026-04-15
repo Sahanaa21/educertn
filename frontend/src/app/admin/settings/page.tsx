@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
         frontendUrl: 'http://localhost:3000',
         maintenanceMode: false,
         allowCompanySignup: true,
-        smtpFromName: 'GATDEX',
+        smtpFromName: 'Global Academy of Technology',
         adminAllowedEmails: 'sahanaa2060@gmail.com',
     });
     const [newAdminEmail, setNewAdminEmail] = useState('');

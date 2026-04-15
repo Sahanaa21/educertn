@@ -251,7 +251,7 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="min-h-[70vh] bg-[radial-gradient(circle_at_top,_#dbeafe_0%,_#f8fafc_40%,_#f8fafc_100%)] py-12 sm:py-16">
+        <div className="min-h-[70vh] bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_40%,#f8fafc_100%)] py-12 sm:py-16">
             <div className="container mx-auto flex max-w-5xl flex-col items-center px-4">
                 <Link href="/" className="mb-6 inline-flex w-full max-w-xl items-center self-center text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 sm:self-auto">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
@@ -259,10 +259,10 @@ export default function AuthPage() {
 
                 <Card className="w-full max-w-xl border border-slate-200 shadow-2xl shadow-blue-900/10">
                     <CardHeader className="space-y-3 text-center">
-                        <div className="mx-auto flex h-16 w-[6.5rem] items-center justify-center overflow-hidden sm:h-[4.5rem] sm:w-[7.5rem]">
+                        <div className="mx-auto flex h-16 w-26 items-center justify-center overflow-hidden sm:h-18 sm:w-30">
                             <Image
                                 src="/logo.png?v=20260414b"
-                                alt="GATDEX Logo"
+                                alt="Global Academy of Technology Logo"
                                 width={4096}
                                 height={2769}
                                 unoptimized

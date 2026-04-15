@@ -24,7 +24,7 @@ export default function Header() {
                     <div className="flex h-12 w-12 items-center justify-center sm:h-14 sm:w-14 lg:h-16 lg:w-16">
                         <Image
                             src="/logo.png?v=20260414b"
-                            alt="GATDEX Logo"
+                            alt="Global Academy of Technology Logo"
                             width={4096}
                             height={2769}
                             unoptimized
@@ -33,8 +33,8 @@ export default function Header() {
                         />
                     </div>
                     <div className="hidden sm:flex flex-col leading-tight">
-                        <span className="text-sm font-bold text-blue-950 uppercase tracking-tight lg:text-base">GATDEX</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 lg:text-[11px]">Certificate, Verification & Academic Services</span>
+                        <span className="text-sm font-bold text-blue-950 tracking-tight lg:text-base">Global Academy of Technology</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 lg:text-[11px]">Official College Portal</span>
                     </div>
                 </Link>
 

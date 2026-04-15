@@ -113,23 +113,7 @@ server {
 
 ## Environment Files
 
-Backend `backend/.env`:
-
-```env
-PORT=5000
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_NAME=educert
-JWT_SECRET=your_secret
-BASE_URL=http://localhost:5000
-FRONTEND_URL=http://localhost:3000
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
-```
+Use [backend/.env.example](backend/.env.example) as the full backend template. It includes all keys the code reads, grouped by database, URLs, auth, SMTP, payments, and observability. For local testing, you can fill it with personal/test credentials. For college deployment, keep the same keys and replace only the values with the college server, SMTP, and payment credentials.
 
 Frontend `frontend/.env.local`:
 

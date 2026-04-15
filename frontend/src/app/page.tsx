@@ -59,46 +59,63 @@ export default function Home() {
     <div className="flex flex-col w-full">
       {/* Hero Section */}
       <section
-        className="relative w-full overflow-hidden py-16 lg:py-24 flex items-center justify-center bg-center bg-cover"
+        className="relative flex w-full items-center justify-center overflow-hidden bg-cover bg-center py-16 lg:py-24"
         style={{ backgroundImage: "url('/college.image.png')" }}
       >
-        <div className="absolute inset-0 bg-slate-950/65"></div>
+        <div className="absolute inset-0 bg-slate-950/70"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.35),rgba(15,23,42,0.05)_45%,rgba(2,6,23,0.85)_90%)]" />
 
         <div className="container relative z-10 mx-auto px-4 text-center">
-          <div className="inline-flex items-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-sm font-medium text-yellow-400 mb-6 transition-colors hover:bg-yellow-500/20">
-            <span className="flex h-2 w-2 rounded-full bg-yellow-500 mr-2"></span>
-            GATDEX Platform
+          <div className="mb-6 inline-flex items-center rounded-full border border-amber-400/40 bg-amber-300/10 px-3 py-1 text-sm font-medium text-amber-200">
+            <span className="mr-2 flex h-2 w-2 rounded-full bg-amber-300"></span>
+            Official College Portal
           </div>
 
-          <h1 className="mx-auto max-w-4xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl mb-6">
-            GATDEX
-            <span className="block text-yellow-500 mt-2">Certificate, Verification & Academic Services</span>
+          <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-black tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+            Global Academy of Technology
+            <span className="mt-2 block text-amber-300">Certificate, Verification and Academic Services Portal</span>
           </h1>
 
-          <p className="mx-auto max-w-3xl text-lg text-blue-100 sm:text-xl mb-10">
-            A unified portal for certificate requests, company verification, academic service applications, secure payments, and live request tracking.
+          <p className="mx-auto mb-10 max-w-3xl text-lg text-blue-100 sm:text-xl">
+            A single, secure platform for student certificate requests, company background verification, academic service applications, and request status tracking.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/student/apply" className="inline-flex items-center justify-center rounded-md font-bold transition-colors bg-yellow-500 text-blue-950 hover:bg-yellow-400 w-full sm:w-auto h-12 px-8">
+            <Link href="/student/apply" className="inline-flex h-12 w-full items-center justify-center rounded-md bg-amber-400 px-8 font-bold text-blue-950 transition-colors hover:bg-amber-300 sm:w-auto">
               Apply for Certificate
             </Link>
-            <Link href="/company" className="inline-flex items-center justify-center rounded-md font-medium transition-colors text-white border-2 border-blue-400 hover:bg-blue-800 hover:text-white w-full sm:w-auto h-12 px-8 bg-transparent">
+            <Link href="/company" className="inline-flex h-12 w-full items-center justify-center rounded-md border-2 border-blue-300 bg-transparent px-8 font-medium text-white transition-colors hover:bg-blue-800 hover:text-white sm:w-auto">
               Start Verification
             </Link>
+          </div>
+
+          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 rounded-2xl border border-white/15 bg-slate-900/35 p-4 text-left backdrop-blur-sm sm:grid-cols-3">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-amber-200">Institution</p>
+              <p className="text-sm font-semibold text-white">Global Academy of Technology</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-amber-200">Official Email</p>
+              <p className="text-sm font-semibold text-white">gatcoedex@gmail.com</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-amber-200">Helpline</p>
+              <p className="text-sm font-semibold text-white">080-28603158/57</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section className="w-full py-16 pb-12 bg-slate-50">
+      <section className="w-full bg-slate-50 py-16 pb-12">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl text-center">Everything You Can Do in GATDEX</h2>
-            <div className="mt-4 h-1 w-20 bg-yellow-500 mx-auto rounded-full"></div>
+          <div className="mb-16 text-center">
+            <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Services Available in the Official College Portal</h2>
+            <p className="mx-auto mt-4 max-w-3xl text-slate-600">Designed for students, companies, and academic administration teams with secure, trackable workflows.</p>
+            <div className="mx-auto mt-4 h-1 w-20 rounded-full bg-amber-500" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
 
             <Card className="flex flex-col border-none shadow-lg hover:shadow-xl transition-shadow bg-white overflow-hidden group">
               <div className="h-2 w-full bg-blue-600"></div>
@@ -108,7 +125,7 @@ export default function Home() {
                 </div>
                 <CardTitle className="text-xl">Student Services</CardTitle>
                 <CardDescription className="text-base mt-2 leading-relaxed">
-                  Apply for grade card correction, duplicate grade cards, transcripts, PDC, course completion, no backlog, and other certificates online.
+                  Apply for grade card correction, duplicate grade cards, transcripts, PDC, course completion, no backlog, and other certificates through a guided online process.
                 </CardDescription>
               </CardHeader>
               <CardFooter className="mt-auto pt-6 border-t bg-slate-50">
@@ -126,7 +143,7 @@ export default function Home() {
                 </div>
                 <CardTitle className="text-xl">Company Verification</CardTitle>
                 <CardDescription className="text-base mt-2 leading-relaxed">
-                  Submit background verification requests, upload company templates, and track completion securely from one place.
+                  Submit verification requests, upload required company templates, and track progress in one secure workflow.
                 </CardDescription>
               </CardHeader>
               <CardFooter className="mt-auto pt-6 border-t bg-slate-50">
@@ -144,7 +161,7 @@ export default function Home() {
                 </div>
                 <CardTitle className="text-xl">Academic Services</CardTitle>
                 <CardDescription className="text-base mt-2 leading-relaxed">
-                  Apply for photocopy and challenge re-evaluation services during the active request window announced by the admin office.
+                  Apply for photocopy and challenge re-evaluation services during the active window announced by the administration office.
                 </CardDescription>
                 <p className={`text-sm font-semibold mt-2 ${academicAvailability?.active ? 'text-emerald-700' : 'text-amber-700'}`}>
                   {academicAvailability?.active ? 'Status: OPEN NOW' : 'Status: CURRENTLY CLOSED'}
@@ -159,9 +176,6 @@ export default function Home() {
                 </Link>
               </CardFooter>
             </Card>
-
-
-
           </div>
         </div>
       </section>
