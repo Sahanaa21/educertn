@@ -127,7 +127,7 @@ const getAllCertificates = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.getAllCertificates = getAllCertificates;
 const updateCertificateStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+    var _a;
     try {
         const id = String(req.params.id);
         const { status, action, rejectionReason } = req.body;
@@ -162,7 +162,7 @@ const updateCertificateStatus = (req, res) => __awaiter(void 0, void 0, void 0, 
         }
         else if (action === 'UPLOAD_SOFT_COPY' || req.file) {
             updateData.softCopyEmailed = true;
-            const issuedCertificateUrl = String(((_a = req.file) === null || _a === void 0 ? void 0 : _a.location) || '');
+            const issuedCertificateUrl = (0, fileStorage_1.getUploadedFileUrl)(req.file);
             if (issuedCertificateUrl) {
                 updateData.issuedCertificateUrl = issuedCertificateUrl;
             }
@@ -186,7 +186,7 @@ const updateCertificateStatus = (req, res) => __awaiter(void 0, void 0, void 0, 
             include: { user: true }
         });
         // Trigger granular emails
-        if ((_b = updated.user) === null || _b === void 0 ? void 0 : _b.email) {
+        if ((_a = updated.user) === null || _a === void 0 ? void 0 : _a.email) {
             if (status === 'REJECTED' && request.status !== 'REJECTED') {
                 const safeReason = String(rejectionReason || updated.rejectionReason || '').trim();
                 const safeStudentName = (0, html_1.escapeHtml)(updated.studentName);
@@ -222,7 +222,7 @@ const updateCertificateStatus = (req, res) => __awaiter(void 0, void 0, void 0, 
                 `;
                 let attachments = [];
                 if (req.file) {
-                    attachments.push({ filename: req.file.originalname, path: String(req.file.location || req.file.path) });
+                    attachments.push({ filename: req.file.originalname, path: String(req.file.path || '') });
                 }
                 yield (0, email_1.sendEmail)(updated.user.email, 'Certificate Soft Copy Delivery', emailHtml, attachments);
             }
@@ -255,7 +255,7 @@ const updateCertificateStatus = (req, res) => __awaiter(void 0, void 0, void 0, 
                 yield (0, email_1.sendEmail)(updated.user.email, 'Certificate Request Completed', emailHtml);
             }
         }
-        res.json(Object.assign(Object.assign({}, updated), { fileUrl: String(((_c = req.file) === null || _c === void 0 ? void 0 : _c.location) || ((_d = req.file) === null || _d === void 0 ? void 0 : _d.path) || '') }));
+        res.json(Object.assign(Object.assign({}, updated), { fileUrl: (0, fileStorage_1.getUploadedFileUrl)(req.file) }));
     }
     catch (error) {
         console.error('Error updating certificate status:', error);
@@ -299,7 +299,7 @@ const updateVerificationStatus = (req, res) => __awaiter(void 0, void 0, void 0,
         if (status === 'REJECTED' && existing.status !== 'REJECTED' && existing.paymentStatus === 'PAID') {
             refundMarkedInitiated = true;
         }
-        const hasCompletedFile = Boolean(existing.completedFile) && ((0, fileStorage_1.isRemoteFileUrl)(existing.completedFile) || Boolean((0, fileStorage_1.resolveLocalStoredPath)(existing.completedFile)));
+        const hasCompletedFile = Boolean(existing.completedFile) && Boolean((0, fileStorage_1.resolveLocalStoredPath)(existing.completedFile));
         if (status === 'COMPLETED' && !hasCompletedFile) {
             return res.status(400).json({ message: 'Upload completed file before marking as completed' });
         }
@@ -337,7 +337,7 @@ const updateVerificationStatus = (req, res) => __awaiter(void 0, void 0, void 0,
             const attachments = updated.completedFile
                 ? [{
                         filename: `${updated.requestId}-completed-file${(0, fileStorage_1.getStoredFileExtension)(updated.completedFile) || path_1.default.extname(updated.completedFile || '') || ''}`,
-                        path: updated.completedFile
+                        path: (0, fileStorage_1.resolveLocalStoredPath)(updated.completedFile) || updated.completedFile
                     }]
                 : undefined;
             yield (0, email_1.sendEmail)(updated.companyEmail, 'Verification Completed – Global Academy of Technology', emailHtml, attachments);
@@ -429,11 +429,11 @@ const uploadVerificationCompletedFile = (req, res) => __awaiter(void 0, void 0, 
         const updated = yield prisma_1.prisma.verificationRequest.update({
             where: { id },
             data: {
-                completedFile: String(req.file.location || req.file.path),
+                completedFile: (0, fileStorage_1.getUploadedFileUrl)(req.file),
                 status: existing.status === 'PENDING' ? 'PROCESSING' : existing.status
             }
         });
-        return res.json(Object.assign(Object.assign({}, updated), { fileUrl: String(req.file.location || req.file.path) }));
+        return res.json(Object.assign(Object.assign({}, updated), { fileUrl: (0, fileStorage_1.getUploadedFileUrl)(req.file) }));
     }
     catch (error) {
         console.error('Error uploading completed verification file:', error);

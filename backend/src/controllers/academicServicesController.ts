@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import { prisma } from '../config/prisma';
+import { getUploadedFileUrl } from '../utils/fileStorage';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -25,7 +26,7 @@ const getSettings = async () => {
         create: {
             id: 1,
             supportEmail: 'support@gat.ac.in',
-            frontendUrl: process.env.FRONTEND_URL || 'https://gat-verification-portal.vercel.app',
+            frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
             maintenanceMode: false,
             allowCompanySignup: true,
             smtpFromName: 'Global Academy of Technology',
@@ -473,7 +474,7 @@ export const uploadAcademicServiceAttachments = async (req: Request, res: Respon
         }
 
         const prev = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
-        const newUrls = validFiles.map((file) => String((file as any).location || ''));
+        const newUrls = validFiles.map((file) => getUploadedFileUrl(file as any));
         if (newUrls.some((url) => !url)) {
             return res.status(500).json({ message: 'File upload failed' });
         }
@@ -554,7 +555,7 @@ export const updateAcademicServiceSettingsAdmin = async (req: Request, res: Resp
             create: {
                 id: 1,
                 supportEmail: 'support@gat.ac.in',
-                frontendUrl: process.env.FRONTEND_URL || 'https://gat-verification-portal.vercel.app',
+                frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
                 maintenanceMode: false,
                 allowCompanySignup: true,
                 smtpFromName: 'Global Academy of Technology',

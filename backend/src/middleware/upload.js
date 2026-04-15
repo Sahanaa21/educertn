@@ -5,10 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.academicServiceAttachmentUpload = exports.certificateIssuedFileUpload = exports.verificationCompletedFileUpload = exports.verificationTemplateUpload = exports.certificateIdProofUpload = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
+const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
-const multer_s3_1 = __importDefault(require("multer-s3"));
 const path_1 = __importDefault(require("path"));
-const s3_1 = require("../utils/s3");
+const fileStorage_1 = require("../utils/fileStorage");
 dotenv_1.default.config();
 const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const sanitizeFileName = (originalname) => {
@@ -18,12 +18,15 @@ const sanitizeFileName = (originalname) => {
     return `${Date.now()}-${baseName}${extension}`;
 };
 const createUpload = ({ folder, allowedExtensions, allowedMimeTypes, maxFileSizeBytes = DEFAULT_MAX_FILE_SIZE_BYTES, }) => (0, multer_1.default)({
-    storage: (0, multer_s3_1.default)({
-        s3: s3_1.s3Client,
-        bucket: process.env.AWS_BUCKET_NAME || '',
-        contentType: multer_s3_1.default.AUTO_CONTENT_TYPE,
-        key: (_req, file, cb) => {
-            cb(null, `${folder}/${sanitizeFileName(file.originalname || 'file')}`);
+    storage: multer_1.default.diskStorage({
+        destination: (_req, _file, cb) => {
+            (0, fileStorage_1.ensureUploadsDir)();
+            const destination = path_1.default.resolve((0, fileStorage_1.getUploadsDir)(), folder);
+            fs_1.default.mkdirSync(destination, { recursive: true });
+            cb(null, destination);
+        },
+        filename: (_req, file, cb) => {
+            cb(null, sanitizeFileName(file.originalname || 'file'));
         },
     }),
     limits: { fileSize: maxFileSizeBytes },

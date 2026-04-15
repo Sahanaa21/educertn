@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "start": "node index.js",
     "test:api": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "prisma generate && tsc -p tsconfig.json",
@@ -26,18 +26,15 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1030.0",
     "@prisma/client": "^6.19.2",
     "@sendgrid/mail": "^8.1.6",
     "@sentry/node": "^10.48.0",
-    "@types/multer-s3": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "multer-s3": "^3.0.1",
     "nodemailer": "^8.0.1",
     "pg": "^8.20.0"
   },

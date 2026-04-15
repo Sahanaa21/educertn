@@ -1,28 +1,76 @@
 import fs from 'fs';
 import path from 'path';
-import { pipeline } from 'stream/promises';
-import { Readable } from 'stream';
 import type { Response } from 'express';
 
-export const isRemoteFileUrl = (value: string | null | undefined): value is string => {
-	return typeof value === 'string' && /^https?:\/\//i.test(value);
+const DEFAULT_BASE_URL = 'http://localhost:5000';
+
+export const getUploadsDir = (): string => path.resolve(process.cwd(), 'uploads');
+
+export const ensureUploadsDir = (): void => {
+	fs.mkdirSync(getUploadsDir(), { recursive: true });
+};
+
+const getBaseUrl = (): string => {
+	return String(process.env.BASE_URL || process.env.BACKEND_PUBLIC_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
+};
+
+const normalizeStoredRelativePath = (storedValue: string): string => {
+	const normalized = storedValue.replace(/\\/g, '/').trim();
+
+	if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+		try {
+			const parsed = new URL(normalized);
+			return parsed.pathname.replace(/^\/+/, '').replace(/^uploads\//i, '');
+		} catch {
+			return path.basename(normalized);
+		}
+	}
+
+	if (normalized.startsWith('/uploads/')) {
+		return normalized.slice('/uploads/'.length);
+	}
+
+	const uploadsIndex = normalized.lastIndexOf('/uploads/');
+	if (uploadsIndex >= 0) {
+		return normalized.slice(uploadsIndex + '/uploads/'.length);
+	}
+
+	if (normalized.startsWith('uploads/')) {
+		return normalized.slice('uploads/'.length);
+	}
+
+	return normalized;
+};
+
+export const buildUploadUrl = (relativePath: string): string => {
+	const normalizedRelativePath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+	const encodedPath = normalizedRelativePath
+		.split('/')
+		.filter(Boolean)
+		.map((segment) => encodeURIComponent(segment))
+		.join('/');
+	return `${getBaseUrl()}/uploads/${encodedPath}`;
+};
+
+export const getUploadedFileUrl = (file: Pick<Express.Multer.File, 'filename' | 'path' | 'originalname'> | null | undefined): string => {
+	if (!file) return '';
+
+	const relativePath = file.path
+		? path.relative(getUploadsDir(), file.path)
+		: String(file.filename || file.originalname || '').trim();
+
+	if (!relativePath) return '';
+	return buildUploadUrl(relativePath);
 };
 
 export const resolveLocalStoredPath = (storedPath: string | null | undefined): string | null => {
 	if (!storedPath) return null;
 
-	const direct = path.isAbsolute(storedPath) ? storedPath : path.resolve(process.cwd(), storedPath);
-	if (fs.existsSync(direct)) return direct;
+	const relativePath = normalizeStoredRelativePath(storedPath);
+	const candidate = path.resolve(getUploadsDir(), relativePath);
+	if (fs.existsSync(candidate)) return candidate;
 
-	const normalized = storedPath.replace(/\\/g, '/');
-	const uploadsIndex = normalized.lastIndexOf('/uploads/');
-	if (uploadsIndex >= 0) {
-		const relativeFromUploads = normalized.slice(uploadsIndex + 1);
-		const candidate = path.resolve(process.cwd(), relativeFromUploads);
-		if (fs.existsSync(candidate)) return candidate;
-	}
-
-	const fallbackByName = path.resolve(process.cwd(), 'uploads', path.basename(normalized));
+	const fallbackByName = path.resolve(getUploadsDir(), path.basename(relativePath));
 	if (fs.existsSync(fallbackByName)) return fallbackByName;
 
 	return null;
@@ -31,15 +79,7 @@ export const resolveLocalStoredPath = (storedPath: string | null | undefined): s
 export const getStoredFileExtension = (storedValue: string | null | undefined): string => {
 	if (!storedValue) return '';
 
-	if (isRemoteFileUrl(storedValue)) {
-		try {
-			return path.extname(new URL(storedValue).pathname);
-		} catch {
-			return '';
-		}
-	}
-
-	return path.extname(resolveLocalStoredPath(storedValue) || storedValue || '');
+	return path.extname(normalizeStoredRelativePath(storedValue) || '');
 };
 
 export const sendStoredFile = async (
@@ -48,19 +88,6 @@ export const sendStoredFile = async (
 	downloadName: string
 ): Promise<boolean> => {
 	if (!storedValue) return false;
-
-	if (isRemoteFileUrl(storedValue)) {
-		const response = await fetch(storedValue);
-		if (!response.ok || !response.body) {
-			throw new Error(`Unable to fetch remote file (${response.status})`);
-		}
-
-		res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
-		res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
-
-		await pipeline(Readable.fromWeb(response.body as any), res);
-		return true;
-	}
 
 	const resolvedPath = resolveLocalStoredPath(storedValue);
 	if (!resolvedPath) return false;

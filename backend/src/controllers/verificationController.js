@@ -95,7 +95,7 @@ const createVerificationRequest = (req, res) => __awaiter(void 0, void 0, void 0
         if (!templateFile) {
             return res.status(400).json({ message: 'Verification template file is required' });
         }
-        const templateUrl = String(templateFile.location || '');
+        const templateUrl = (0, fileStorage_1.getUploadedFileUrl)(templateFile);
         if (!templateUrl) {
             return res.status(500).json({ message: 'File upload failed' });
         }
@@ -342,7 +342,7 @@ const completeVerificationRequest = (req, res) => __awaiter(void 0, void 0, void
             const attachments = updated.completedFile
                 ? [{
                         filename: `${updated.requestId}-completed-file${(0, fileStorage_1.getStoredFileExtension)(updated.completedFile) || path_1.default.extname(updated.completedFile || '') || ''}`,
-                        path: updated.completedFile
+                        path: (0, fileStorage_1.resolveLocalStoredPath)(updated.completedFile) || updated.completedFile
                     }]
                 : undefined;
             void (0, email_1.sendEmail)(updated.companyEmail, 'Verification Completed – Global Academy of Technology', emailHtml, attachments).catch((emailErr) => {

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
 import path from 'path';
+import { ensureUploadsDir, getUploadsDir } from './utils/fileStorage';
 import authRoutes from './routes/authRoutes';
 import certificateRoutes from './routes/certificateRoutes';
 import verificationRoutes from './routes/verificationRoutes';
@@ -34,40 +35,9 @@ let server: ReturnType<typeof app.listen> | null = null;
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-const defaultAllowedOrigins = [
-    'http://localhost:3000',
-    'https://gat-verification-portal.vercel.app'
-];
+ensureUploadsDir();
 
-const vercelDeploymentOriginPattern = /^https:\/\/gat-verification-portal(?:-[a-z0-9-]+)?\.vercel\.app$/i;
-const allowHttpOrigins = (process.env.ALLOW_HTTP_ORIGINS || 'true').toLowerCase() === 'true';
-
-const allowedOrigins = Array.from(
-    new Set(
-        [
-            process.env.FRONTEND_URL,
-            ...(process.env.FRONTEND_URLS || '').split(','),
-            ...defaultAllowedOrigins
-        ]
-            .map((origin) => origin?.trim())
-            .filter((origin): origin is string => Boolean(origin))
-    )
-);
-
-app.use(cors({
-    origin: (origin, callback) => {
-        const isAllowedVercelDeployment = typeof origin === 'string' && vercelDeploymentOriginPattern.test(origin);
-        const isAllowedHttpOrigin = Boolean(origin && allowHttpOrigins && origin.startsWith('http://'));
-
-        if (!origin || allowedOrigins.includes(origin) || isAllowedVercelDeployment || isAllowedHttpOrigin) {
-            callback(null, true);
-            return;
-        }
-
-        callback(new Error(`Origin not allowed by CORS: ${origin}`));
-    },
-    credentials: true
-}));
+app.use(cors({ origin: '*' }));
 app.use(performanceMonitoring);
 app.use(requestContext);
 app.use((req, res, next) => {
@@ -87,7 +57,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(cookieParser());
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(getUploadsDir()));
 
 app.get('/api/health/live', (_req, res) => {
     res.status(200).json({

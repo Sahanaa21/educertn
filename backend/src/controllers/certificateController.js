@@ -76,7 +76,7 @@ const createCertificateRequest = (req, res) => __awaiter(void 0, void 0, void 0,
     try {
         const userId = req.user.id;
         const file = req.file;
-        const idProofUrl = file ? String(file.location || '') : '';
+        const idProofUrl = (0, fileStorage_1.getUploadedFileUrl)(file);
         if (file && !idProofUrl) {
             return res.status(500).json({ message: 'File upload failed' });
         }

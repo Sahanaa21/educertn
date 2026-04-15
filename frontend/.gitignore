@@ -34,8 +34,9 @@ build_output.txt
 tsc_errors.log
 tsc_output*.txt
 
-# env files (can opt-in for committing if needed)
+# env files (keep the example tracked)
 .env*
+!.env.example
 
 # vercel
 .vercel

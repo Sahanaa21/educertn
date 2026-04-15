@@ -12,8 +12,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
 const client_1 = require("@prisma/client");
 const logger_1 = require("../utils/logger");
+const buildDatabaseUrlFromEnv = () => {
+    const existingUrl = String(process.env.DATABASE_URL || '').trim();
+    if (existingUrl) {
+        return existingUrl;
+    }
+    const host = String(process.env.DB_HOST || '').trim();
+    const port = Number(process.env.DB_PORT || 5432);
+    const user = String(process.env.DB_USER || '').trim();
+    const password = String(process.env.DB_PASSWORD || '').trim();
+    const database = String(process.env.DB_NAME || '').trim();
+    if (!host || !user || !database) {
+        return null;
+    }
+    const encodedUser = encodeURIComponent(user);
+    const encodedPassword = encodeURIComponent(password);
+    const authPart = password ? `${encodedUser}:${encodedPassword}` : encodedUser;
+    const databaseUrl = `postgresql://${authPart}@${host}:${port}/${database}?schema=public`;
+    process.env.DATABASE_URL = databaseUrl;
+    return databaseUrl;
+};
 const getPrismaClient = () => {
     const isProduction = process.env.NODE_ENV === 'production';
+    buildDatabaseUrlFromEnv();
     const prismaClient = new client_1.PrismaClient({
         log: isProduction
             ? [] // No logs in production for performance

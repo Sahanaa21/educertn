@@ -12,52 +12,22 @@ The system is a web-based college portal to manage student records, examination 
 
 The application source code is approximately 10 MB. In production, growth will primarily come from database records and uploaded documents.
 
-## Current Limitation
-The system is currently deployed on Render, Vercel, and Supabase. This setup is suitable for development and testing, but not ideal for official college operations because of:
-
-- No strict uptime commitment on free tiers
-- Limited scalability during peak periods (for example, examination cycles)
-- Dependency on multiple third-party providers
-- Reduced long-term control and operational reliability
-
-## Option 1: Cost-Optimized Setup
+## Self-Hosted Deployment
+The target production state is a single college-managed server running the frontend, backend, PostgreSQL, and local file storage. This avoids external hosting and storage dependencies while keeping operational ownership inside the institution.
 
 ### Services
-- Frontend: Vercel or Cloudflare Pages
-- Backend: Render paid service or managed VPS
-- Database: Supabase or Neon (PostgreSQL)
-- Storage: Cloudinary or Amazon S3
-- Email: College SMTP relay or Amazon SES
+- Frontend: Next.js running on the college server
+- Backend: Node.js API running on port 5000
+- Database: Local PostgreSQL instance
+- Storage: Local `/uploads` directory on the same server
+- Email: College SMTP relay or another institutional SMTP server
 
-### Estimated Monthly Cost
-INR 4,000 to INR 8,000
-
-### Summary
-- Quick deployment with minimal architectural change
-- Lower monthly cost
-- Uses multiple service providers
-- Good as an interim production launch
-
-## Option 2: AWS-Based Setup (Recommended)
-
-### Services (Amazon Web Services)
-- Frontend: AWS Amplify Hosting or S3 plus CloudFront
-- Backend: AWS App Runner
-- Database: AWS RDS (PostgreSQL)
-- Storage: AWS S3
-- Email: AWS SES or college SMTP relay
-- Secrets and configuration: AWS Systems Manager Parameter Store or Secrets Manager
-- DNS and SSL: Route 53 plus ACM
-- Monitoring: CloudWatch logs and alerts
-
-### Estimated Monthly Cost
-INR 5,000 to INR 10,000
-
-### Summary
-- Single platform with stronger control and governance
-- Better scalability for academic peak workloads
-- Easier long-term maintenance for institutional use
-- Better auditability, monitoring, and ownership alignment
+### Operational Summary
+- One deployment target to manage
+- No dependency on third-party hosting platforms
+- Uploaded documents remain on the institution's server
+- Easier IT handover and backup planning
+- Suitable for internal network access or NGINX reverse proxy exposure
 
 ## Deployment and Maintenance Model
 - Source code remains in the official GitHub repository with controlled access.

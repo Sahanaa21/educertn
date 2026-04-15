@@ -4,7 +4,7 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
-import { sendStoredFile } from '../utils/fileStorage';
+import { getUploadedFileUrl, sendStoredFile } from '../utils/fileStorage';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -71,7 +71,7 @@ export const createCertificateRequest = async (req: Request, res: Response): Pro
         const userId = (req as any).user.id;
         const file = req.file;
 
-        const idProofUrl = file ? String((file as any).location || '') : '';
+        const idProofUrl = getUploadedFileUrl(file as any);
         if (file && !idProofUrl) {
             return res.status(500).json({ message: 'File upload failed' });
         }

@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateAcademicServiceSettingsAdmin = exports.getAcademicServiceSettingsAdmin = exports.uploadAcademicServiceAttachments = exports.updateAcademicServiceRequest = exports.getAllAcademicServiceRequests = exports.getStudentAcademicServiceRequests = exports.createAcademicServicePaymentOrder = exports.verifyAcademicServicePayment = exports.createAcademicServiceRequest = exports.getAcademicServicesAvailabilityStudent = exports.getAcademicServicesAvailabilityPublic = void 0;
 const prisma_1 = require("../config/prisma");
+const fileStorage_1 = require("../utils/fileStorage");
 const zwitch_1 = require("../config/zwitch");
 const PHOTOCOPY_FEE = 500;
 const REEVALUATION_FEE = 3000;
@@ -28,7 +29,7 @@ const getSettings = () => __awaiter(void 0, void 0, void 0, function* () {
         create: {
             id: 1,
             supportEmail: 'support@gat.ac.in',
-            frontendUrl: process.env.FRONTEND_URL || 'https://gat-verification-portal.vercel.app',
+            frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
             maintenanceMode: false,
             allowCompanySignup: true,
             smtpFromName: 'Global Academy of Technology',
@@ -421,7 +422,7 @@ const uploadAcademicServiceAttachments = (req, res) => __awaiter(void 0, void 0,
             return res.status(400).json({ message: 'Attachments cannot be updated for completed or rejected requests' });
         }
         const prev = Array.isArray(existing.attachmentUrls) ? existing.attachmentUrls : [];
-        const newUrls = validFiles.map((file) => String(file.location || ''));
+        const newUrls = validFiles.map((file) => (0, fileStorage_1.getUploadedFileUrl)(file));
         if (newUrls.some((url) => !url)) {
             return res.status(500).json({ message: 'File upload failed' });
         }
@@ -486,7 +487,7 @@ const updateAcademicServiceSettingsAdmin = (req, res) => __awaiter(void 0, void 
             create: {
                 id: 1,
                 supportEmail: 'support@gat.ac.in',
-                frontendUrl: process.env.FRONTEND_URL || 'https://gat-verification-portal.vercel.app',
+                frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
                 maintenanceMode: false,
                 allowCompanySignup: true,
                 smtpFromName: 'Global Academy of Technology',

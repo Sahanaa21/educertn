@@ -23,7 +23,7 @@ const mergeAllowlistWithDefaults = (allowlist: string[]) => {
 
 const defaultFrontendUrl = process.env.FRONTEND_URL?.trim()
     || process.env.FRONTEND_URLS?.split(',').map((url) => url.trim()).find(Boolean)
-    || 'https://gat-verification-portal.vercel.app';
+    || 'http://localhost:3000';
 
 const DEFAULT_SETTINGS = {
     id: 1,

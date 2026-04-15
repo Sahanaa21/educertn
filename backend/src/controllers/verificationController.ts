@@ -4,7 +4,7 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
-import { getStoredFileExtension, sendStoredFile } from '../utils/fileStorage';
+import { getStoredFileExtension, getUploadedFileUrl, resolveLocalStoredPath, sendStoredFile } from '../utils/fileStorage';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -90,7 +90,7 @@ export const createVerificationRequest = async (req: AuthRequest, res: Response)
             return res.status(400).json({ message: 'Verification template file is required' });
         }
 
-        const templateUrl = String((templateFile as any).location || '');
+        const templateUrl = getUploadedFileUrl(templateFile as any);
         if (!templateUrl) {
             return res.status(500).json({ message: 'File upload failed' });
         }
@@ -367,7 +367,7 @@ export const completeVerificationRequest = async (req: Request, res: Response): 
             const attachments = updated.completedFile
                 ? [{
                     filename: `${updated.requestId}-completed-file${getStoredFileExtension(updated.completedFile) || path.extname(updated.completedFile || '') || ''}`,
-                    path: updated.completedFile
+                    path: resolveLocalStoredPath(updated.completedFile) || updated.completedFile
                 }]
                 : undefined;
 

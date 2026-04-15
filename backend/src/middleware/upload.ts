@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
 import multer from 'multer';
-import multerS3 from 'multer-s3';
 import path from 'path';
-import { s3Client } from '../utils/s3';
+import { ensureUploadsDir, getUploadsDir } from '../utils/fileStorage';
 
 dotenv.config();
 
@@ -28,12 +28,15 @@ const createUpload = ({
 	allowedMimeTypes,
 	maxFileSizeBytes = DEFAULT_MAX_FILE_SIZE_BYTES,
 }: UploadConfig) => multer({
-	storage: multerS3({
-		s3: s3Client,
-		bucket: process.env.AWS_BUCKET_NAME || '',
-		contentType: multerS3.AUTO_CONTENT_TYPE,
-		key: (_req, file, cb) => {
-			cb(null, `${folder}/${sanitizeFileName(file.originalname || 'file')}`);
+	storage: multer.diskStorage({
+		destination: (_req, _file, cb) => {
+			ensureUploadsDir();
+			const destination = path.resolve(getUploadsDir(), folder);
+			fs.mkdirSync(destination, { recursive: true });
+			cb(null, destination);
+		},
+		filename: (_req, file, cb) => {
+			cb(null, sanitizeFileName(file.originalname || 'file'));
 		},
 	}),
 	limits: { fileSize: maxFileSizeBytes },

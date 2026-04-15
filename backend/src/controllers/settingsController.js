@@ -30,7 +30,7 @@ const mergeAllowlistWithDefaults = (allowlist) => {
 };
 const defaultFrontendUrl = ((_a = process.env.FRONTEND_URL) === null || _a === void 0 ? void 0 : _a.trim())
     || ((_b = process.env.FRONTEND_URLS) === null || _b === void 0 ? void 0 : _b.split(',').map((url) => url.trim()).find(Boolean))
-    || 'https://gat-verification-portal.vercel.app';
+    || 'http://localhost:3000';
 const DEFAULT_SETTINGS = {
     id: 1,
     supportEmail: 'support@gat.ac.in',

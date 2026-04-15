@@ -4,7 +4,7 @@ import path from 'path';
 import { prisma } from '../config/prisma';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
-import { getStoredFileExtension, isRemoteFileUrl, resolveLocalStoredPath, sendStoredFile } from '../utils/fileStorage';
+import { getStoredFileExtension, getUploadedFileUrl, resolveLocalStoredPath, sendStoredFile } from '../utils/fileStorage';
 
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
     if (!storedPath) return null;
@@ -160,7 +160,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
             pPosted = true;
         } else if (action === 'UPLOAD_SOFT_COPY' || req.file) {
             updateData.softCopyEmailed = true;
-            const issuedCertificateUrl = String((req.file as any)?.location || '');
+            const issuedCertificateUrl = getUploadedFileUrl(req.file as any);
             if (issuedCertificateUrl) {
                 updateData.issuedCertificateUrl = issuedCertificateUrl;
             }
@@ -226,7 +226,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
 
                 let attachments = [];
                 if (req.file) {
-                    attachments.push({ filename: req.file.originalname, path: String((req.file as any).location || req.file.path) });
+                    attachments.push({ filename: req.file.originalname, path: String(req.file.path || '') });
                 }
                 await sendEmail(updated.user.email, 'Certificate Soft Copy Delivery', emailHtml, attachments);
             }
@@ -262,7 +262,7 @@ export const updateCertificateStatus = async (req: Request, res: Response): Prom
             }
         }
 
-        res.json({ ...updated, fileUrl: String((req.file as any)?.location || req.file?.path || '') });
+        res.json({ ...updated, fileUrl: getUploadedFileUrl(req.file as any) });
     } catch (error) {
         console.error('Error updating certificate status:', error);
         res.status(500).json({ message: 'Internal server error', error: String(error), stack: (error as any).stack });
@@ -308,9 +308,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
             refundMarkedInitiated = true;
         }
 
-        const hasCompletedFile = Boolean(existing.completedFile) && (
-            isRemoteFileUrl(existing.completedFile) || Boolean(resolveLocalStoredPath(existing.completedFile))
-        );
+        const hasCompletedFile = Boolean(existing.completedFile) && Boolean(resolveLocalStoredPath(existing.completedFile));
 
         if (status === 'COMPLETED' && !hasCompletedFile) {
             return res.status(400).json({ message: 'Upload completed file before marking as completed' });
@@ -354,7 +352,7 @@ export const updateVerificationStatus = async (req: Request, res: Response): Pro
             const attachments = updated.completedFile
                 ? [{
                     filename: `${updated.requestId}-completed-file${getStoredFileExtension(updated.completedFile) || path.extname(updated.completedFile || '') || ''}`,
-                    path: updated.completedFile
+                    path: resolveLocalStoredPath(updated.completedFile) || updated.completedFile
                 }]
                 : undefined;
 
@@ -465,12 +463,12 @@ export const uploadVerificationCompletedFile = async (req: Request, res: Respons
         const updated = await prisma.verificationRequest.update({
             where: { id },
             data: {
-                completedFile: String((req.file as any).location || req.file.path),
+                completedFile: getUploadedFileUrl(req.file as any),
                 status: existing.status === 'PENDING' ? 'PROCESSING' : existing.status
             }
         });
 
-        return res.json({ ...updated, fileUrl: String((req.file as any).location || req.file.path) });
+        return res.json({ ...updated, fileUrl: getUploadedFileUrl(req.file as any) });
     } catch (error) {
         console.error('Error uploading completed verification file:', error);
         return res.status(500).json({ message: 'Internal server error' });
