@@ -78,7 +78,7 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mb-8 max-w-3xl text-base text-blue-100 sm:mb-10 sm:text-xl">
-            A single, secure platform for student certificate requests, company background verification, academic service applications, and request status tracking.
+            A single, secure platform for student certificate requests, company background verification, and academic service applications.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -130,7 +130,7 @@ export default function Home() {
                 </div>
                 <CardTitle className="text-xl">Company Verification</CardTitle>
                 <CardDescription className="text-base mt-2 leading-relaxed">
-                  Submit verification requests, upload required company templates, and track progress in one secure workflow.
+                  Submit verification requests and upload required company templates through a secure workflow.
                 </CardDescription>
               </CardHeader>
               <CardFooter className="mt-auto pt-6 border-t bg-slate-50">
