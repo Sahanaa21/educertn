@@ -166,6 +166,85 @@ pm2 save
 
 Use if PM2 is not allowed by policy. Register one process for backend and one for frontend, both with auto-start.
 
+## Public Hosting (Internet Accessible)
+
+This is the recommended production architecture to make Educert available publicly.
+
+### Target Architecture
+
+1. Public traffic enters on ports 80/443 to the college edge firewall.
+2. Firewall/NAT forwards traffic to the Windows host running Educert.
+3. Reverse proxy on Windows terminates HTTPS and routes:
+- `/` to frontend on `127.0.0.1:3000`
+- `/api` to backend on `127.0.0.1:5000`
+- `/uploads` to backend on `127.0.0.1:5000/uploads`
+
+### Step 1: Domain and DNS
+
+1. Reserve a domain/subdomain, for example `verify.college.edu`.
+2. Create DNS `A` record pointing to the college public IP.
+3. Wait for DNS propagation and verify with:
+
+```powershell
+nslookup verify.college.edu
+```
+
+### Step 2: Firewall and Network
+
+1. Allow inbound TCP 80 and 443 to the Windows host.
+2. Keep ports 3000 and 5000 private (localhost/internal only).
+3. If required by policy, restrict admin ports to VPN/internal IP ranges.
+
+### Step 3: Reverse Proxy and TLS
+
+Use one of these options.
+
+#### Option A: IIS (college-managed certificate)
+
+1. Enable IIS and URL Rewrite/ARR modules.
+2. Bind HTTPS site for `verify.college.edu` using a college-issued certificate.
+3. Configure reverse proxy rules:
+- `/` -> `http://127.0.0.1:3000`
+- `/api` -> `http://127.0.0.1:5000/api`
+- `/uploads` -> `http://127.0.0.1:5000/uploads`
+
+#### Option B: NGINX for Windows
+
+Use this only if college policy allows NGINX service on Windows. Configure the same 3 proxy routes and TLS certificate.
+
+### Step 4: Production Environment Values
+
+Before opening to public, set these values:
+
+In `backend/.env`:
+- `NODE_ENV=production`
+- `BASE_URL=https://verify.college.edu`
+- `BACKEND_PUBLIC_URL=https://verify.college.edu`
+- `BACKEND_URL=https://verify.college.edu`
+- `FRONTEND_URL=https://verify.college.edu`
+- `FRONTEND_URLS=https://verify.college.edu`
+
+In `frontend/.env.local`:
+- `NEXT_PUBLIC_API_BASE_URL=https://verify.college.edu`
+
+Then rebuild and restart backend/frontend services.
+
+### Step 5: Public Smoke Tests
+
+1. Open `https://verify.college.edu` from an external network (not only LAN).
+2. Verify health:
+- `https://verify.college.edu/api/health/live`
+- `https://verify.college.edu/api/health/ready`
+3. Upload and access a sample file via `https://verify.college.edu/uploads/...`
+4. Confirm browser shows valid HTTPS lock (no certificate warnings).
+
+### Step 6: Go-Live Controls
+
+1. Enable scheduled PostgreSQL and uploads backups.
+2. Keep `.env` and `.env.local` readable only by service account/admins.
+3. Keep Windows Update and Node.js LTS patching schedule.
+4. Keep rollback plan ready (previous build + previous env snapshot).
+
 ## Hardening Notes
 
 1. Keep `.env` and `.env.local` out of Git.
