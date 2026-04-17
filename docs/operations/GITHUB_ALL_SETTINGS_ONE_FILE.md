@@ -108,13 +108,12 @@ GitHub path:
 ### Variables
 1. `DEPLOY_ENABLED=false` for demo stage.
 2. `DEPLOY_PATH=<absolute path on server>`.
-3. `HEALTH_BASE_URL=https://<public-domain>` (or put this in secret if preferred).
+3. `HEALTH_BASE_URL=https://<public-domain>`.
 
 ### Secrets
 1. `DEPLOY_HOST`
 2. `DEPLOY_USER`
 3. `DEPLOY_SSH_KEY`
-4. `HEALTH_BASE_URL` (optional if not stored as variable)
 
 Policy:
 - Keep `DEPLOY_ENABLED=false` until demo sign-off and production server validation.

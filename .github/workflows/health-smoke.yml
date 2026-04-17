@@ -5,12 +5,15 @@ on:
   schedule:
     - cron: "*/15 * * * *"
 
+permissions:
+  contents: read
+
 jobs:
   smoke:
     name: API Health Smoke
     runs-on: ubuntu-latest
     env:
-      HEALTH_BASE_URL: ${{ vars.HEALTH_BASE_URL || secrets.HEALTH_BASE_URL }}
+      HEALTH_BASE_URL: ${{ vars.HEALTH_BASE_URL }}
     defaults:
       run:
         working-directory: backend
