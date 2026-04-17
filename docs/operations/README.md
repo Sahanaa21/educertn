@@ -7,6 +7,7 @@ This folder contains the active operational and governance documents for the sel
 - [Deployment Proposal](FINAL_DEPLOYMENT_PROPOSAL.md)
 - [Go-Live Checklist](FINAL_GO_LIVE_EXECUTION_CHECKLIST.md)
 - [GitHub All Settings (Single-File Checklist)](GITHUB_ALL_SETTINGS_ONE_FILE.md)
+- [Dependabot Management](DEPENDABOT_MANAGEMENT.md)
 - [Incident Rollback Playbook](INCIDENT_ROLLBACK_PLAYBOOK.md)
 - [Implementation Status](IMPLEMENTATION_STATUS.md)
 - [Operations Runbook](OPERATIONS_RUNBOOK.md)

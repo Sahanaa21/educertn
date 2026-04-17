@@ -143,6 +143,7 @@ If the college IT team only has GitHub access, they can keep the server synchron
 
 - Professional roadmap: `docs/operations/PROFESSIONALIZATION_ROADMAP.md`
 - GitHub settings (single file): `docs/operations/GITHUB_ALL_SETTINGS_ONE_FILE.md`
+- Dependabot management: `docs/operations/DEPENDABOT_MANAGEMENT.md`
 - Auto-deploy and manual fallback: `docs/operations/SELF_HOSTED_AUTO_DEPLOY.md`
 - Windows demo -> production install: `docs/operations/WINDOWS_SERVER_DEMO_TO_PRODUCTION_GUIDE.md`
 - College handover checklist: `docs/operations/COLLEGE_HANDOVER_BUNDLE_CHECKLIST.md`
