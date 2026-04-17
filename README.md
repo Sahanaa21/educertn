@@ -35,7 +35,8 @@ createdb educert
 4. Configure the environment files:
    - Copy `backend/.env.example` to `backend/.env`.
    - Copy `frontend/.env.example` to `frontend/.env.local`.
-5. Update the database credentials, JWT secret, SMTP settings, and payment provider credentials in `backend/.env`.
+5. For demo, keep safe/demo values first. For go-live, replace only values (keep keys unchanged).
+6. Update the database credentials, JWT secret, SMTP settings, and payment provider credentials in `backend/.env`.
 6. If you want the public file URLs to use a real server IP or domain, set `BASE_URL` to that value.
 
 ## Backend
@@ -119,6 +120,7 @@ Frontend `frontend/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
+NEXT_PUBLIC_SENTRY_DSN=
 ```
 
 ## Database Schema
@@ -141,6 +143,7 @@ If the college IT team only has GitHub access, they can keep the server synchron
 
 - Professional roadmap: `docs/operations/PROFESSIONALIZATION_ROADMAP.md`
 - Auto-deploy and manual fallback: `docs/operations/SELF_HOSTED_AUTO_DEPLOY.md`
+- Windows demo -> production install: `docs/operations/WINDOWS_SERVER_DEMO_TO_PRODUCTION_GUIDE.md`
 - Release policy: `docs/operations/RELEASE_POLICY.md`
 - Restore drill log: `docs/operations/RESTORE_DRILL_LOG.md`
 - Implementation status tracker: `docs/operations/IMPLEMENTATION_STATUS.md`
