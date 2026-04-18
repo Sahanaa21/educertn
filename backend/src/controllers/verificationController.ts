@@ -11,6 +11,7 @@ import {
     verifyZwitchOrderPaid
 } from '../config/zwitch';
 import { generateVerificationRequestId } from '../utils/generateId';
+import { generateAcknowledgementHtml } from '../utils/acknowledgement';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 const VERIFICATION_FEE = 5000;
@@ -34,23 +35,53 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
     const safeStudentName = escapeHtml(request.studentName);
     const safeUsn = escapeHtml(request.usn);
 
+    // Generate professional acknowledgement
+    const ackHtml = generateAcknowledgementHtml({
+        requestId: request.requestId,
+        requestType: 'VERIFICATION',
+        name: request.companyName,
+        companyEmail: request.companyEmail || '',
+        details: {
+            'Student Name': request.studentName,
+            'USN': request.usn,
+            'Company': request.companyName,
+            'Contact Person': request.contactPerson || 'N/A',
+            'Request Type': 'Student Verification'
+        },
+        amount: VERIFICATION_FEE,
+        paymentOrderId: request.paymentOrderId || 'Pending',
+        createdAt: request.createdAt
+    });
+
+    const ackBuffer = Buffer.from(ackHtml, 'utf-8');
+    const attachments = [
+        {
+            filename: `${request.requestId}-acknowledgement.html`,
+            content: ackBuffer,
+            contentType: 'text/html'
+        }
+    ];
+
     if (request.companyEmail) {
         const companyHtml = `
-            <h2>Verification Request Received</h2>
+            <h2>Verification Request Received ✓</h2>
             <p>Hello ${safeContactPerson},</p>
-            <p>Your verification request has been received by the admin team and is now in processing queue.</p>
+            <p>Your verification request has been successfully received and payment confirmed by our admin team.</p>
             <p><strong>Request ID:</strong> ${safeRequestId}</p>
             <p><strong>Student Name:</strong> ${safeStudentName}</p>
             <p><strong>USN:</strong> ${safeUsn}</p>
-            <p><strong>Payment Status:</strong> Paid</p>
-            <p>We will process your request soon. You can track status in the portal and download acknowledgement from your requests page.</p>
-            <p>Thank you,<br/>Global Academy of Technology</p>
+            <p><strong>Payment Status:</strong> <span style="color: green; font-weight: bold;">✓ PAID</span></p>
+            <p>Your request is now in the processing queue. You can track the status in your portal dashboard and download your official acknowledgement from "My Requests".</p>
+            <p><strong>Attached:</strong> Official acknowledgement document for your records.</p>
+            <p style="margin-top: 20px; color: #666;">We will process your request soon. Thank you for your patience!</p>
+            <p>Best regards,<br/><strong>Global Academy of Technology</strong><br/>Verification Services</p>
         `;
 
         void sendEmail(
             request.companyEmail,
-            `Verification Request Received - ${request.requestId}`,
-            companyHtml
+            `Verification Request Confirmation - ${request.requestId}`,
+            companyHtml,
+            attachments
         ).catch((emailErr) => {
             console.error('Failed to send verification confirmation email to company:', emailErr);
         });
@@ -58,13 +89,18 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
 
     if (adminEmail) {
         const adminHtml = `
-            <h2>New Paid Verification Request</h2>
-            <p>A new verification request has been successfully submitted and paid.</p>
+            <h2>New Paid Verification Request Received</h2>
+            <p>A new verification request has been successfully submitted and payment confirmed.</p>
             <p><strong>Request ID:</strong> ${safeRequestId}</p>
             <p><strong>Company:</strong> ${safeCompanyName}</p>
             <p><strong>Contact Person:</strong> ${safeContactPerson}</p>
             <p><strong>Student:</strong> ${safeStudentName} (${safeUsn})</p>
-            <p><strong>Amount:</strong> INR ${VERIFICATION_FEE.toFixed(2)}</p>
+            <p><strong>Company Email:</strong> ${escapeHtml(request.companyEmail || 'N/A')}</p>
+            <p><strong>Amount Paid:</strong> ₹ ${VERIFICATION_FEE.toFixed(2)}</p>
+            <p><strong>Payment Order ID:</strong> ${escapeHtml(String(request.paymentOrderId || 'N/A'))}</p>
+            <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
+                <strong>Action Required:</strong> Please review and process this request in the admin dashboard.
+            </p>
         `;
 
         void sendEmail(
@@ -449,51 +485,23 @@ export const downloadVerificationAcknowledgement = async (req: AuthRequest, res:
                         return res.status(400).json({ message: 'Acknowledgement is available after successful payment' });
                 }
 
-                const safeRequestId = escapeHtml(request.requestId);
-                const safeCompany = escapeHtml(request.companyName);
-                const safeContact = escapeHtml(request.contactPerson || 'N/A');
-                const safeStudentName = escapeHtml(request.studentName);
-                const safeUsn = escapeHtml(request.usn);
-                const safeStatus = escapeHtml(formatEnumValue(request.status));
-                const safePaymentOrderId = escapeHtml(String(request.paymentOrderId || 'N/A'));
-
-                const html = `<!doctype html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Verification Request Acknowledgement - ${safeRequestId}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
-        .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px; max-width: 800px; }
-        .title { font-size: 22px; margin: 0 0 8px; }
-        .sub { color: #475569; margin: 0 0 16px; }
-        .row { margin: 8px 0; }
-        .label { display: inline-block; min-width: 220px; color: #334155; font-weight: 600; }
-        .note { margin-top: 18px; padding: 12px; background: #f8fafc; border-radius: 8px; color: #334155; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1 class="title">Verification Request Acknowledgement</h1>
-        <p class="sub">Global Academy of Technology</p>
-        <div class="row"><span class="label">Request ID:</span>${safeRequestId}</div>
-        <div class="row"><span class="label">Company Name:</span>${safeCompany}</div>
-        <div class="row"><span class="label">Contact Person:</span>${safeContact}</div>
-        <div class="row"><span class="label">Student Name:</span>${safeStudentName}</div>
-        <div class="row"><span class="label">USN:</span>${safeUsn}</div>
-        <div class="row"><span class="label">Amount Paid:</span>INR ${VERIFICATION_FEE.toFixed(2)}</div>
-        <div class="row"><span class="label">Payment Status:</span>Paid</div>
-        <div class="row"><span class="label">Payment Order ID:</span>${safePaymentOrderId}</div>
-        <div class="row"><span class="label">Current Status:</span>${safeStatus}</div>
-        <div class="row"><span class="label">Submitted At:</span>${new Date(request.createdAt).toLocaleString('en-IN')}</div>
-        <div class="row"><span class="label">Generated At:</span>${new Date().toLocaleString('en-IN')}</div>
-        <div class="note">
-            This acknowledgement confirms that your paid verification request has been received by the admin and is queued for processing.
-            Keep this document as proof of successful application submission.
-        </div>
-    </div>
-</body>
-</html>`;
+                const html = generateAcknowledgementHtml({
+                        requestId: request.requestId,
+                        requestType: 'VERIFICATION',
+                        name: request.companyName,
+                        companyName: request.companyName,
+                        companyEmail: request.companyEmail || '',
+                        details: {
+                                'Student Name': request.studentName,
+                                'USN': request.usn,
+                                'Contact Person': request.contactPerson || 'N/A',
+                                'Request Type': 'Student Verification',
+                                'Request Status': formatEnumValue(request.status)
+                        },
+                        amount: VERIFICATION_FEE,
+                        paymentOrderId: String(request.paymentOrderId || 'Pending'),
+                        createdAt: request.createdAt
+                });
 
                 res.setHeader('Content-Type', 'text/html; charset=utf-8');
                 res.setHeader('Content-Disposition', `attachment; filename="${request.requestId}-acknowledgement.html"`);

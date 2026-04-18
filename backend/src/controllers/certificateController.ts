@@ -11,6 +11,7 @@ import {
     verifyZwitchOrderPaid
 } from '../config/zwitch';
 import { generateRequestId } from '../utils/generateId';
+import { generateAcknowledgementHtml } from '../utils/acknowledgement';
 
 const formatEnumValue = (value: string | null | undefined) => {
     return String(value || '')
@@ -41,23 +42,54 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
     const safeType = escapeHtml(formatEnumValue(request.certificateType));
     const safeCopyType = escapeHtml(formatEnumValue(request.copyType));
 
+    // Generate professional acknowledgement
+    const ackHtml = generateAcknowledgementHtml({
+        requestId: request.id,
+        requestType: 'CERTIFICATE',
+        name: request.studentName || request.user?.name || 'Student',
+        usn: request.usn,
+        email: request.user?.email || '',
+        details: {
+            'Certificate Type': formatEnumValue(request.certificateType),
+            'Delivery Mode': formatEnumValue(request.copyType),
+            'Branch': request.branch,
+            'Year of Passing': String(request.yearOfPassing),
+            'Reason': request.reason || 'N/A'
+        },
+        amount: Number(request.amount || 0),
+        paymentOrderId: request.paymentOrderId || 'Pending',
+        createdAt: request.createdAt
+    });
+
+    const ackBuffer = Buffer.from(ackHtml, 'utf-8');
+    const attachments = [
+        {
+            filename: `${request.id}-acknowledgement.html`,
+            content: ackBuffer,
+            contentType: 'text/html'
+        }
+    ];
+
     if (request.user?.email) {
         const studentHtml = `
-            <h2>Certificate Request Received</h2>
+            <h2>Certificate Request Received ✓</h2>
             <p>Hello ${safeStudentName},</p>
-            <p>Your certificate request has been received by the admin team and is now in processing queue.</p>
+            <p>Your certificate request has been successfully received and payment confirmed by our admin team.</p>
             <p><strong>Request ID:</strong> ${safeRequestId}</p>
             <p><strong>Certificate Type:</strong> ${safeType}</p>
             <p><strong>Delivery Mode:</strong> ${safeCopyType}</p>
-            <p><strong>Payment Status:</strong> Paid</p>
-            <p>We will process your request soon. You can track status in the portal and download your acknowledgement document from My Requests.</p>
-            <p>Thank you,<br/>Global Academy of Technology</p>
+            <p><strong>Payment Status:</strong> <span style="color: green; font-weight: bold;">✓ PAID</span></p>
+            <p>Your request is now in the processing queue. You can track the status in your portal dashboard and download your official acknowledgement from "My Requests".</p>
+            <p><strong>Attached:</strong> Official acknowledgement document for your records.</p>
+            <p style="margin-top: 20px; color: #666;">We will process your request soon. Thank you for your patience!</p>
+            <p>Best regards,<br/><strong>Global Academy of Technology</strong><br/>Academic Services</p>
         `;
 
         void sendEmail(
             request.user.email,
-            `Request Received - ${request.id}`,
-            studentHtml
+            `Certificate Request Confirmation - ${request.id}`,
+            studentHtml,
+            attachments
         ).catch((emailErr) => {
             console.error('Failed to send certificate confirmation email to student:', emailErr);
         });
@@ -65,18 +97,24 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
 
     if (adminEmail) {
         const adminHtml = `
-            <h2>New Paid Certificate Request</h2>
-            <p>A new certificate request has been successfully submitted and paid.</p>
+            <h2>New Paid Certificate Request Received</h2>
+            <p>A new certificate request has been successfully submitted and payment confirmed.</p>
             <p><strong>Request ID:</strong> ${safeRequestId}</p>
             <p><strong>Student:</strong> ${safeStudentName}</p>
+            <p><strong>USN:</strong> ${escapeHtml(request.usn)}</p>
             <p><strong>Certificate Type:</strong> ${safeType}</p>
             <p><strong>Delivery Mode:</strong> ${safeCopyType}</p>
-            <p><strong>Amount:</strong> INR ${Number(request.amount || 0).toFixed(2)}</p>
+            <p><strong>Amount Paid:</strong> ₹ ${Number(request.amount || 0).toFixed(2)}</p>
+            <p><strong>Payment Order ID:</strong> ${escapeHtml(String(request.paymentOrderId || 'N/A'))}</p>
+            <p><strong>Student Email:</strong> ${escapeHtml(request.user?.email || 'N/A')}</p>
+            <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
+                <strong>Action Required:</strong> Please review and process this request in the admin dashboard.
+            </p>
         `;
 
         void sendEmail(
             adminEmail,
-            `New Certificate Request - ${request.id}`,
+            `New Paid Certificate Request - ${request.id}`,
             adminHtml
         ).catch((emailErr) => {
             console.error('Failed to send certificate confirmation email to admin:', emailErr);
@@ -506,11 +544,20 @@ export const downloadCertificateAcknowledgement = async (req: Request, res: Resp
                                 usn: true,
                                 certificateType: true,
                                 copyType: true,
+                                branch: true,
+                                yearOfPassing: true,
+                                reason: true,
                                 amount: true,
                                 paymentStatus: true,
                                 status: true,
                                 createdAt: true,
-                                paymentOrderId: true
+                                paymentOrderId: true,
+                                user: {
+                                        select: {
+                                                email: true,
+                                                name: true
+                                        }
+                                }
                         }
                 });
 
@@ -522,51 +569,24 @@ export const downloadCertificateAcknowledgement = async (req: Request, res: Resp
                         return res.status(400).json({ message: 'Acknowledgement is available after successful payment' });
                 }
 
-                const safeRequestId = escapeHtml(request.id);
-                const safeName = escapeHtml(request.studentName);
-                const safeUsn = escapeHtml(request.usn);
-                const safeType = escapeHtml(formatEnumValue(request.certificateType));
-                const safeCopy = escapeHtml(formatEnumValue(request.copyType));
-                const safeStatus = escapeHtml(formatEnumValue(request.status));
-                const safePaymentOrderId = escapeHtml(String(request.paymentOrderId || 'N/A'));
-
-                const html = `<!doctype html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Certificate Request Acknowledgement - ${safeRequestId}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
-        .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px; max-width: 800px; }
-        .title { font-size: 22px; margin: 0 0 8px; }
-        .sub { color: #475569; margin: 0 0 16px; }
-        .row { margin: 8px 0; }
-        .label { display: inline-block; min-width: 220px; color: #334155; font-weight: 600; }
-        .note { margin-top: 18px; padding: 12px; background: #f8fafc; border-radius: 8px; color: #334155; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1 class="title">Certificate Request Acknowledgement</h1>
-        <p class="sub">Global Academy of Technology</p>
-        <div class="row"><span class="label">Request ID:</span>${safeRequestId}</div>
-        <div class="row"><span class="label">Student Name:</span>${safeName}</div>
-        <div class="row"><span class="label">USN:</span>${safeUsn}</div>
-        <div class="row"><span class="label">Certificate Type:</span>${safeType}</div>
-        <div class="row"><span class="label">Delivery Mode:</span>${safeCopy}</div>
-        <div class="row"><span class="label">Amount Paid:</span>INR ${Number(request.amount || 0).toFixed(2)}</div>
-        <div class="row"><span class="label">Payment Status:</span>Paid</div>
-        <div class="row"><span class="label">Payment Order ID:</span>${safePaymentOrderId}</div>
-        <div class="row"><span class="label">Current Status:</span>${safeStatus}</div>
-        <div class="row"><span class="label">Submitted At:</span>${new Date(request.createdAt).toLocaleString('en-IN')}</div>
-        <div class="row"><span class="label">Generated At:</span>${new Date().toLocaleString('en-IN')}</div>
-        <div class="note">
-            This acknowledgement confirms that your paid request has been received by the admin and is queued for processing.
-            Keep this document as proof of successful application submission.
-        </div>
-    </div>
-</body>
-</html>`;
+                const html = generateAcknowledgementHtml({
+                        requestId: request.id,
+                        requestType: 'CERTIFICATE',
+                        name: request.studentName || request.user?.name || 'Student',
+                        usn: request.usn,
+                        email: request.user?.email || '',
+                        details: {
+                                'Certificate Type': formatEnumValue(request.certificateType),
+                                'Delivery Mode': formatEnumValue(request.copyType),
+                                'Branch': request.branch,
+                                'Year of Passing': String(request.yearOfPassing),
+                                'Reason': request.reason || 'N/A',
+                                'Request Status': formatEnumValue(request.status)
+                        },
+                        amount: Number(request.amount || 0),
+                        paymentOrderId: String(request.paymentOrderId || 'Pending'),
+                        createdAt: request.createdAt
+                });
 
                 res.setHeader('Content-Type', 'text/html; charset=utf-8');
                 res.setHeader('Content-Disposition', `attachment; filename="${request.id}-acknowledgement.html"`);
