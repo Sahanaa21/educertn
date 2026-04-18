@@ -11,8 +11,6 @@
     "db:ping": "node scripts/db_ping.js",
     "db:push": "prisma db push",
     "ops:health-smoke": "node scripts/smoke_health_check.js",
-    "ops:backup:db": "bash scripts/backup_postgres.sh",
-    "ops:restore:db": "bash scripts/restore_postgres.sh",
     "ops:backup:uploads": "bash scripts/backup_uploads.sh",
     "migrate:upload-extensions": "node scripts/migrate_upload_extensions.js",
     "cleanup:orphan-files": "node scripts/cleanup_orphan_file_refs.js"
@@ -31,8 +29,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.1",
-    "pg": "^8.20.0"
+    "nodemailer": "^8.0.1"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

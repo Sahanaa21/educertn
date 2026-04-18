@@ -3,8 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
-import path from 'path';
-import { ensureUploadsDir, getUploadsDir } from './utils/fileStorage';
+import { ensureUploadsDir } from './utils/fileStorage';
 import authRoutes from './routes/authRoutes';
 import certificateRoutes from './routes/certificateRoutes';
 import verificationRoutes from './routes/verificationRoutes';
@@ -57,7 +56,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(cookieParser());
-app.use('/uploads', express.static(getUploadsDir()));
+app.use('/uploads', express.static('uploads'));
 
 app.get('/api/health/live', (_req, res) => {
     res.status(200).json({
@@ -159,7 +158,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 const startServer = () => {
     if (server) return server;
-    server = app.listen(port, () => {
+    server = app.listen(Number(port), '0.0.0.0', () => {
         logger.info('server_started', { port: Number(port) });
     });
     return server;

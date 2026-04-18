@@ -7,7 +7,7 @@ Next.js frontend for the self-hosted Educert system.
 Create `frontend/.env.local` (or copy from `frontend/.env.example`):
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
 ## Development
@@ -27,4 +27,4 @@ npm run build
 npm start
 ```
 
-The frontend expects the backend API at `NEXT_PUBLIC_API_BASE_URL`.
+The frontend expects the backend API at `NEXT_PUBLIC_API_URL`.

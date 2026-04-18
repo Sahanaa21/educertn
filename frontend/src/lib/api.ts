@@ -1,5 +1,4 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
-	|| 'http://localhost:5000';
+export const API_BASE = String(process.env.NEXT_PUBLIC_API_URL || '').trim();
 
 type ApiFetchOptions = {
 	timeoutMs?: number;
@@ -19,6 +18,10 @@ export async function apiFetch(
 		retries = 1,
 		retryDelayMs = 300,
 	} = options;
+
+	if (!API_BASE && !path.startsWith('http')) {
+		throw new Error('NEXT_PUBLIC_API_URL is not configured');
+	}
 
 	const target = path.startsWith('http') ? path : apiUrl(path);
 	let attempt = 0;

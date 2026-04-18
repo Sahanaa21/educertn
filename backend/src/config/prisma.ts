@@ -1,5 +1,8 @@
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
+
+dotenv.config();
 
 const buildDatabaseUrlFromEnv = (): string | null => {
     const existingUrl = String(process.env.DATABASE_URL || '').trim();
@@ -8,7 +11,7 @@ const buildDatabaseUrlFromEnv = (): string | null => {
     }
 
     const host = String(process.env.DB_HOST || '').trim();
-    const port = Number(process.env.DB_PORT || 5432);
+    const port = Number(process.env.DB_PORT || 3306);
     const user = String(process.env.DB_USER || '').trim();
     const password = String(process.env.DB_PASSWORD || '').trim();
     const database = String(process.env.DB_NAME || '').trim();
@@ -20,7 +23,7 @@ const buildDatabaseUrlFromEnv = (): string | null => {
     const encodedUser = encodeURIComponent(user);
     const encodedPassword = encodeURIComponent(password);
     const authPart = password ? `${encodedUser}:${encodedPassword}` : encodedUser;
-    const databaseUrl = `postgresql://${authPart}@${host}:${port}/${database}?schema=public`;
+    const databaseUrl = `mysql://${authPart}@${host}:${port}/${database}`;
     process.env.DATABASE_URL = databaseUrl;
     return databaseUrl;
 };

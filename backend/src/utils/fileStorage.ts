@@ -2,8 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import type { Response } from 'express';
 
-const DEFAULT_BASE_URL = 'http://localhost:5000';
-
 export const getUploadsDir = (): string => path.resolve(process.cwd(), 'uploads');
 
 export const ensureUploadsDir = (): void => {
@@ -11,7 +9,7 @@ export const ensureUploadsDir = (): void => {
 };
 
 const getBaseUrl = (): string => {
-	return String(process.env.BASE_URL || process.env.BACKEND_PUBLIC_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
+	return String(process.env.BASE_URL || process.env.BACKEND_PUBLIC_URL || process.env.BACKEND_URL || '').replace(/\/$/, '');
 };
 
 const normalizeStoredRelativePath = (storedValue: string): string => {
@@ -49,7 +47,11 @@ export const buildUploadUrl = (relativePath: string): string => {
 		.filter(Boolean)
 		.map((segment) => encodeURIComponent(segment))
 		.join('/');
-	return `${getBaseUrl()}/uploads/${encodedPath}`;
+	const baseUrl = getBaseUrl();
+	if (!baseUrl) {
+		return `/uploads/${encodedPath}`;
+	}
+	return `${baseUrl}/uploads/${encodedPath}`;
 };
 
 export const getUploadedFileUrl = (file: Pick<Express.Multer.File, 'filename' | 'path' | 'originalname'> | null | undefined): string => {
