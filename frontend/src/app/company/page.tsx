@@ -357,6 +357,39 @@ export default function CompanyVerification() {
         }
     };
 
+    const handleDownloadAcknowledgement = async (id: string, requestId: string) => {
+        const token = sessionStorage.getItem('companyToken');
+        if (!token) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/company/verifications/${id}/acknowledgement`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                if (res.status === 401 || res.status === 403) {
+                    handleUnauthorized();
+                    return;
+                }
+                const data = await res.json().catch(() => null);
+                toast.error(data?.message || 'Acknowledgement not available');
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-acknowledgement.html`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            toast.error('Acknowledgement download failed');
+        }
+    };
+
     const retryVerificationPayment = async (request: VerificationRequest) => {
         const token = sessionStorage.getItem('companyToken');
         if (!token) {
@@ -719,15 +752,27 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleDownloadResponse(req.id, req.requestId)}
-                                                        >
-                                                            Download
-                                                        </Button>
+                                                    {req.paymentStatus === 'PAID' ? (
+                                                        <div className="inline-flex items-center gap-2">
+                                                            {req.status === 'COMPLETED' ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleDownloadResponse(req.id, req.requestId)}
+                                                                >
+                                                                    Download
+                                                                </Button>
+                                                            ) : null}
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDownloadAcknowledgement(req.id, req.requestId)}
+                                                            >
+                                                                Ack
+                                                            </Button>
+                                                        </div>
                                                     ) : canPayVerification(req) ? (
                                                         <Button
                                                             type="button"
@@ -870,15 +915,27 @@ export default function CompanyVerification() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {req.status === 'COMPLETED' && req.paymentStatus === 'PAID' ? (
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleDownloadResponse(req.id, req.requestId)}
-                                                        >
-                                                            Download
-                                                        </Button>
+                                                    {req.paymentStatus === 'PAID' ? (
+                                                        <div className="inline-flex items-center gap-2">
+                                                            {req.status === 'COMPLETED' ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleDownloadResponse(req.id, req.requestId)}
+                                                                >
+                                                                    Download
+                                                                </Button>
+                                                            ) : null}
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDownloadAcknowledgement(req.id, req.requestId)}
+                                                            >
+                                                                Ack
+                                                            </Button>
+                                                        </div>
                                                     ) : canPayVerification(req) ? (
                                                         <Button
                                                             type="button"

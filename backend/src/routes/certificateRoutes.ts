@@ -4,6 +4,7 @@ import {
 	getStudentRequests,
 	completeCertificateRequest,
 	downloadStudentIssuedCertificate,
+	downloadCertificateAcknowledgement,
 	verifyCertificatePayment,
 	createCertificatePaymentOrder,
 	cancelStudentCertificateRequest,
@@ -29,6 +30,7 @@ const certificateUploadHandler = (req: any, res: any, next: any) => {
 router.post('/student/certificates', authenticate, certificateUploadHandler, createCertificateRequest);
 router.get('/student/certificates', authenticate, getStudentRequests);
 router.get('/student/certificates/:id/download', authenticate, downloadStudentIssuedCertificate);
+router.get('/student/certificates/:id/acknowledgement', authenticate, downloadCertificateAcknowledgement);
 router.post('/student/certificates/:id/verify-payment', authenticate, verifyCertificatePayment);
 router.post('/student/certificates/:id/create-payment-order', authenticate, createCertificatePaymentOrder);
 router.post('/student/certificates/:id/mark-payment-failed', authenticate, markStudentCertificatePaymentFailed);

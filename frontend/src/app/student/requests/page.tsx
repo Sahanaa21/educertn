@@ -100,6 +100,41 @@ export default function StudentRequests() {
         }
     };
 
+    const downloadAcknowledgement = async (requestId: string) => {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+            router.push('/student/login');
+            return;
+        }
+
+        setDownloadingId(requestId);
+        try {
+            const res = await fetch(`${API_BASE}/api/student/certificates/${requestId}/acknowledgement`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                toast.error(data?.message || 'Unable to download acknowledgement');
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-acknowledgement.html`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch {
+            toast.error('Acknowledgement download failed. Please try again.');
+        } finally {
+            setDownloadingId(null);
+        }
+    };
+
     const retryPayment = async (req: any) => {
         const token = sessionStorage.getItem('token');
         if (!token) {
@@ -386,16 +421,29 @@ export default function StudentRequests() {
                                             >
                                                 {payingId === req.id ? 'Processing...' : 'Pay Now'}
                                             </Button>
-                                        ) : req.issuedCertificateUrl && (req.copyType === 'SOFT_COPY' || req.copyType === 'BOTH') ? (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="inline-flex text-blue-600 border-blue-200"
-                                                onClick={() => downloadCertificate(req.id)}
-                                                disabled={downloadingId === req.id}
-                                            >
-                                                <Download className="h-4 w-4 mr-2" /> Download
-                                            </Button>
+                                        ) : req.paymentStatus === 'PAID' ? (
+                                            <div className="inline-flex items-center gap-2">
+                                                {req.issuedCertificateUrl && (req.copyType === 'SOFT_COPY' || req.copyType === 'BOTH') ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="inline-flex text-blue-600 border-blue-200"
+                                                        onClick={() => downloadCertificate(req.id)}
+                                                        disabled={downloadingId === req.id}
+                                                    >
+                                                        <Download className="h-4 w-4 mr-2" /> Certificate
+                                                    </Button>
+                                                ) : null}
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="inline-flex text-slate-700 border-slate-300"
+                                                    onClick={() => downloadAcknowledgement(req.id)}
+                                                    disabled={downloadingId === req.id}
+                                                >
+                                                    <FileText className="h-4 w-4 mr-2" /> Acknowledgement
+                                                </Button>
+                                            </div>
                                         ) : (
                                             <Dialog>
                                                 <DialogTrigger className="h-8 px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors">

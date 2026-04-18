@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
 	createVerificationRequest,
 	downloadCompanyCompletedFile,
+	downloadVerificationAcknowledgement,
 	getCompanyVerifications,
 	verifyVerificationPayment,
 	createVerificationPaymentOrder,
@@ -28,6 +29,7 @@ const verificationTemplateUploadHandler = (req: any, res: any, next: any) => {
 router.post('/company/verifications', authenticate, verificationTemplateUploadHandler, createVerificationRequest);
 router.get('/company/verifications', authenticate, getCompanyVerifications);
 router.get('/company/verifications/:id/response', authenticate, downloadCompanyCompletedFile);
+router.get('/company/verifications/:id/acknowledgement', authenticate, downloadVerificationAcknowledgement);
 router.post('/company/verifications/:id/verify-payment', authenticate, verifyVerificationPayment);
 router.post('/company/verifications/:id/create-payment-order', authenticate, createVerificationPaymentOrder);
 router.post('/company/verifications/:id/mark-payment-failed', authenticate, markCompanyVerificationPaymentFailed);

@@ -15,6 +15,68 @@ import { AuthRequest } from '../middleware/authMiddleware';
 
 const VERIFICATION_FEE = 5000;
 
+const formatEnumValue = (value: string | null | undefined) => {
+    return String(value || '')
+        .split('_')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+};
+
+const sendVerificationConfirmationEmails = async (requestDbId: string) => {
+    const request = await prisma.verificationRequest.findUnique({ where: { id: requestDbId } });
+    if (!request) return;
+
+    const adminEmail = String(process.env.ADMIN_ALERT_EMAIL || '').trim();
+    const safeRequestId = escapeHtml(request.requestId);
+    const safeCompanyName = escapeHtml(request.companyName);
+    const safeContactPerson = escapeHtml(request.contactPerson || 'there');
+    const safeStudentName = escapeHtml(request.studentName);
+    const safeUsn = escapeHtml(request.usn);
+
+    if (request.companyEmail) {
+        const companyHtml = `
+            <h2>Verification Request Received</h2>
+            <p>Hello ${safeContactPerson},</p>
+            <p>Your verification request has been received by the admin team and is now in processing queue.</p>
+            <p><strong>Request ID:</strong> ${safeRequestId}</p>
+            <p><strong>Student Name:</strong> ${safeStudentName}</p>
+            <p><strong>USN:</strong> ${safeUsn}</p>
+            <p><strong>Payment Status:</strong> Paid</p>
+            <p>We will process your request soon. You can track status in the portal and download acknowledgement from your requests page.</p>
+            <p>Thank you,<br/>Global Academy of Technology</p>
+        `;
+
+        void sendEmail(
+            request.companyEmail,
+            `Verification Request Received - ${request.requestId}`,
+            companyHtml
+        ).catch((emailErr) => {
+            console.error('Failed to send verification confirmation email to company:', emailErr);
+        });
+    }
+
+    if (adminEmail) {
+        const adminHtml = `
+            <h2>New Paid Verification Request</h2>
+            <p>A new verification request has been successfully submitted and paid.</p>
+            <p><strong>Request ID:</strong> ${safeRequestId}</p>
+            <p><strong>Company:</strong> ${safeCompanyName}</p>
+            <p><strong>Contact Person:</strong> ${safeContactPerson}</p>
+            <p><strong>Student:</strong> ${safeStudentName} (${safeUsn})</p>
+            <p><strong>Amount:</strong> INR ${VERIFICATION_FEE.toFixed(2)}</p>
+        `;
+
+        void sendEmail(
+            adminEmail,
+            `New Verification Request - ${request.requestId}`,
+            adminHtml
+        ).catch((emailErr) => {
+            console.error('Failed to send verification confirmation email to admin:', emailErr);
+        });
+    }
+};
+
 const resolveStoredFilePath = (storedPath: string | null | undefined): string | null => {
     if (!storedPath) return null;
 
@@ -220,6 +282,8 @@ export const verifyVerificationPayment = async (req: AuthRequest, res: Response)
             }
         });
 
+        await sendVerificationConfirmationEmails(id);
+
         return res.json({ message: 'Payment verified successfully', request: updated });
     } catch (error) {
         console.error('Error verifying verification payment:', error);
@@ -346,6 +410,98 @@ export const downloadCompanyCompletedFile = async (req: AuthRequest, res: Respon
         console.error('Error downloading completed verification file:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
+};
+
+export const downloadVerificationAcknowledgement = async (req: AuthRequest, res: Response): Promise<any> => {
+        try {
+                const companyEmail = await getAuthenticatedCompanyEmail(req);
+                if (!companyEmail) {
+                        return res.status(401).json({ message: 'Unauthorized' });
+                }
+
+                const id = String(req.params.id || '');
+                if (!id) {
+                        return res.status(400).json({ message: 'Invalid request' });
+                }
+
+                const request = await prisma.verificationRequest.findUnique({
+                        where: { id },
+                        select: {
+                                id: true,
+                                requestId: true,
+                                companyName: true,
+                                companyEmail: true,
+                                contactPerson: true,
+                                studentName: true,
+                                usn: true,
+                                paymentStatus: true,
+                                paymentOrderId: true,
+                                status: true,
+                                createdAt: true
+                        }
+                });
+
+                if (!request || request.companyEmail.toLowerCase() !== companyEmail.toLowerCase()) {
+                        return res.status(404).json({ message: 'Request not found' });
+                }
+
+                if (request.paymentStatus !== 'PAID') {
+                        return res.status(400).json({ message: 'Acknowledgement is available after successful payment' });
+                }
+
+                const safeRequestId = escapeHtml(request.requestId);
+                const safeCompany = escapeHtml(request.companyName);
+                const safeContact = escapeHtml(request.contactPerson || 'N/A');
+                const safeStudentName = escapeHtml(request.studentName);
+                const safeUsn = escapeHtml(request.usn);
+                const safeStatus = escapeHtml(formatEnumValue(request.status));
+                const safePaymentOrderId = escapeHtml(String(request.paymentOrderId || 'N/A'));
+
+                const html = `<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Verification Request Acknowledgement - ${safeRequestId}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+        .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px; max-width: 800px; }
+        .title { font-size: 22px; margin: 0 0 8px; }
+        .sub { color: #475569; margin: 0 0 16px; }
+        .row { margin: 8px 0; }
+        .label { display: inline-block; min-width: 220px; color: #334155; font-weight: 600; }
+        .note { margin-top: 18px; padding: 12px; background: #f8fafc; border-radius: 8px; color: #334155; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 class="title">Verification Request Acknowledgement</h1>
+        <p class="sub">Global Academy of Technology</p>
+        <div class="row"><span class="label">Request ID:</span>${safeRequestId}</div>
+        <div class="row"><span class="label">Company Name:</span>${safeCompany}</div>
+        <div class="row"><span class="label">Contact Person:</span>${safeContact}</div>
+        <div class="row"><span class="label">Student Name:</span>${safeStudentName}</div>
+        <div class="row"><span class="label">USN:</span>${safeUsn}</div>
+        <div class="row"><span class="label">Amount Paid:</span>INR ${VERIFICATION_FEE.toFixed(2)}</div>
+        <div class="row"><span class="label">Payment Status:</span>Paid</div>
+        <div class="row"><span class="label">Payment Order ID:</span>${safePaymentOrderId}</div>
+        <div class="row"><span class="label">Current Status:</span>${safeStatus}</div>
+        <div class="row"><span class="label">Submitted At:</span>${new Date(request.createdAt).toLocaleString('en-IN')}</div>
+        <div class="row"><span class="label">Generated At:</span>${new Date().toLocaleString('en-IN')}</div>
+        <div class="note">
+            This acknowledgement confirms that your paid verification request has been received by the admin and is queued for processing.
+            Keep this document as proof of successful application submission.
+        </div>
+    </div>
+</body>
+</html>`;
+
+                res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                res.setHeader('Content-Disposition', `attachment; filename="${request.requestId}-acknowledgement.html"`);
+                return res.status(200).send(html);
+        } catch (error) {
+                console.error('Error downloading verification acknowledgement:', error);
+                return res.status(500).json({ message: 'Internal server error' });
+        }
 };
 
 export const completeVerificationRequest = async (req: Request, res: Response): Promise<any> => {
