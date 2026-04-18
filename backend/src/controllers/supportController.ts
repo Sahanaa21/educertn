@@ -272,6 +272,21 @@ export const createIssueReport = async (req: Request, res: Response): Promise<an
                     `;
                     await sendEmail(notifyEmail, `[GAT Portal] ${classification.priority} Issue Report`, html);
 
+                    const reporterEmail = String(issue.reportedByEmail || '').trim();
+                    if (reporterEmail) {
+                        const confirmationHtml = `
+                            <h2>We received your support request</h2>
+                            <p>Hi ${safeReportedByName},</p>
+                            <p>Your issue has been successfully submitted and shared with our admin team.</p>
+                            <p><strong>Request ID:</strong> ${escapeHtml(issue.id)}</p>
+                            <p><strong>Title:</strong> ${safeTitle}</p>
+                            <p><strong>Category:</strong> ${safeCategory}</p>
+                            <p><strong>Status:</strong> ${safeStatus}</p>
+                            <p>Our team will review it and get back to you if more details are needed.</p>
+                        `;
+                        await sendEmail(reporterEmail, '[GAT Portal] Support request received', confirmationHtml);
+                    }
+
                     const shouldEscalate = classification.priority === 'HIGH' || classification.priority === 'CRITICAL';
                     if (shouldEscalate) {
                         const escalationHtml = `
