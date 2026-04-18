@@ -30,6 +30,10 @@ if (!configuredFrom && !smtpUser) {
 const configuredPrimaryPort = Number(process.env.SMTP_PORT) || 587;
 const smtpPorts = Array.from(new Set([configuredPrimaryPort, 2525, 465]));
 
+const isLocalhost = smtpHost.toLowerCase() === 'localhost' || smtpHost === '127.0.0.1';
+const isDevelopment = String(process.env.NODE_ENV || '').toLowerCase() === 'development';
+const shouldMockEmail = isLocalhost && isDevelopment;
+
 let cachedSmtpIpv4List: string[] | null = null;
 
 const resolveSmtpHosts = async () => {
@@ -54,6 +58,20 @@ const resolveSmtpHosts = async () => {
 };
 
 export const sendEmail = async (to: string, subject: string, html: string, attachments?: any[]) => {
+    // Mock email sending in development with localhost SMTP
+    if (shouldMockEmail) {
+        console.log(`[MOCK EMAIL - Development Mode] Email sent to ${to}:`, {
+            from: `"${fromName}" <${fromAddress}>`,
+            to,
+            subject,
+            html: html.substring(0, 200) + '...',
+        });
+        return {
+            messageId: `mock-${Date.now()}-${Math.random().toString(36).substring(7)}@localhost`,
+            accepted: [to],
+        };
+    }
+
     const smtpHosts = await resolveSmtpHosts();
     let lastError: unknown = null;
 
