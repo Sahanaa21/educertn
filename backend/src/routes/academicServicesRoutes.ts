@@ -4,6 +4,7 @@ import { academicServiceAttachmentUpload } from '../middleware/upload';
 import {
     createAcademicServicePaymentOrder,
     createAcademicServiceRequest,
+    downloadAcademicServiceAcknowledgement,
     getAcademicServicesAvailabilityPublic,
     getAcademicServicesAvailabilityStudent,
     getAcademicServiceSettingsAdmin,
@@ -23,6 +24,7 @@ router.get('/academic-services/availability', getAcademicServicesAvailabilityPub
 router.get('/student/academic-services/availability', authenticate, requireRole('STUDENT'), getAcademicServicesAvailabilityStudent);
 router.post('/student/academic-services', authenticate, requireRole('STUDENT'), createAcademicServiceRequest);
 router.get('/student/academic-services', authenticate, requireRole('STUDENT'), getStudentAcademicServiceRequests);
+router.get('/student/academic-services/:id/acknowledgement', authenticate, requireRole('STUDENT'), downloadAcademicServiceAcknowledgement);
 router.post('/student/academic-services/:id/create-payment-order', authenticate, requireRole('STUDENT'), createAcademicServicePaymentOrder);
 router.post('/student/academic-services/:id/verify-payment', authenticate, requireRole('STUDENT'), verifyAcademicServicePayment);
 router.post('/student/academic-services/:id/mark-payment-failed', authenticate, requireRole('STUDENT'), markAcademicServicePaymentFailed);

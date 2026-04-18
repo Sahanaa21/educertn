@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Download } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { openZwitchCheckout } from '@/lib/zwitch';
 import { verifyAcademicServicePaymentWithRetry } from '@/lib/payment';
@@ -250,6 +251,43 @@ export default function StudentAcademicServicesPage() {
             }
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const extractDownloadName = (contentDisposition: string | null, fallbackName: string) => {
+        if (!contentDisposition) return fallbackName;
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1]);
+        const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+        return plainMatch?.[1] || fallbackName;
+    };
+
+    const downloadAcknowledgement = async (requestId: string) => {
+        const token = getStudentToken();
+        if (!token) return;
+
+        try {
+            const res = await apiFetch(`/api/student/academic-services/${requestId}/acknowledgement`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                toast.error(data?.message || 'Unable to download acknowledgement');
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-acknowledgement.html`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            toast.error('Acknowledgement download failed');
         }
     };
 
@@ -514,19 +552,32 @@ export default function StudentAcademicServicesPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {canPayNow ? (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                                                        onClick={() => retryPayment(request)}
-                                                        disabled={payingId === request.id || isWindowClosed}
-                                                    >
-                                                        {payingId === request.id ? 'Processing...' : 'Pay Now'}
-                                                    </Button>
-                                                ) : (
-                                                    <span className="text-xs text-slate-500">-</span>
-                                                )}
+                                                <div className="inline-flex items-center gap-2">
+                                                    {canPayNow ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                                                            onClick={() => retryPayment(request)}
+                                                            disabled={payingId === request.id || isWindowClosed}
+                                                        >
+                                                            {payingId === request.id ? 'Processing...' : 'Pay Now'}
+                                                        </Button>
+                                                    ) : null}
+                                                    {request.paymentStatus === 'PAID' ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                                                            onClick={() => downloadAcknowledgement(request.id)}
+                                                        >
+                                                            <Download className="mr-2 h-4 w-4" /> Ack
+                                                        </Button>
+                                                    ) : null}
+                                                    {!canPayNow && request.paymentStatus !== 'PAID' ? (
+                                                        <span className="text-xs text-slate-500">-</span>
+                                                    ) : null}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     );

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import path from 'path';
 import { prisma } from '../config/prisma';
 import { getUploadedFileUrl } from '../utils/fileStorage';
+import { sendEmail } from '../utils/email';
+import { escapeHtml } from '../utils/html';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -89,6 +90,73 @@ const generateServiceRequestId = (serviceType: string) => {
     const stamp = Date.now().toString().slice(-8);
     const rand = Math.floor(Math.random() * 9000 + 1000);
     return `${prefix}${stamp}${rand}`;
+};
+
+const formatEnumValue = (value: string | null | undefined) => {
+    return String(value || '')
+        .split('_')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+};
+
+const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
+    const request = await (prisma as any).academicServiceRequest.findUnique({
+        where: { id: requestId },
+        include: {
+            user: { select: { email: true, name: true } }
+        }
+    });
+
+    if (!request) return;
+
+    const adminEmail = String(process.env.ADMIN_ALERT_EMAIL || '').trim();
+    const safeRequestId = escapeHtml(String(request.requestId || request.id || ''));
+    const safeServiceType = escapeHtml(formatEnumValue(request.serviceType));
+    const safeSemester = escapeHtml(String(request.semester || 'N/A'));
+    const safeStudentName = escapeHtml(String(request.user?.name || 'Student'));
+
+    if (request.user?.email) {
+        const studentHtml = `
+            <h2>Academic Service Request Received</h2>
+            <p>Hello ${safeStudentName},</p>
+            <p>Your request has been received by admin and will be processed soon.</p>
+            <p><strong>Request ID:</strong> ${safeRequestId}</p>
+            <p><strong>Service Type:</strong> ${safeServiceType}</p>
+            <p><strong>Semester:</strong> ${safeSemester}</p>
+            <p><strong>Payment Status:</strong> Paid</p>
+            <p>You can track the request in the portal and download acknowledgement as proof of successful submission.</p>
+            <p>Thank you,<br/>Global Academy of Technology</p>
+        `;
+
+        void sendEmail(
+            request.user.email,
+            `Academic Service Request Received - ${request.requestId}`,
+            studentHtml
+        ).catch((emailErr) => {
+            console.error('Failed to send academic service confirmation email to student:', emailErr);
+        });
+    }
+
+    if (adminEmail) {
+        const adminHtml = `
+            <h2>New Paid Academic Service Request</h2>
+            <p>A student request has been successfully submitted and paid.</p>
+            <p><strong>Request ID:</strong> ${safeRequestId}</p>
+            <p><strong>Student:</strong> ${safeStudentName}</p>
+            <p><strong>Service Type:</strong> ${safeServiceType}</p>
+            <p><strong>Semester:</strong> ${safeSemester}</p>
+            <p><strong>Amount:</strong> INR ${Number(request.amount || 0).toFixed(2)}</p>
+        `;
+
+        void sendEmail(
+            adminEmail,
+            `New Academic Service Request - ${request.requestId}`,
+            adminHtml
+        ).catch((emailErr) => {
+            console.error('Failed to send academic service confirmation email to admin:', emailErr);
+        });
+    }
 };
 
 export const getAcademicServicesAvailabilityPublic = async (_req: Request, res: Response): Promise<any> => {
@@ -274,6 +342,8 @@ export const verifyAcademicServicePayment = async (req: Request, res: Response):
             }
         });
 
+        await sendAcademicServiceConfirmationEmails(id);
+
         return res.json({ message: 'Payment verified successfully', request: updated });
     } catch (error) {
         console.error('Failed to verify academic service payment:', error);
@@ -380,6 +450,97 @@ export const getStudentAcademicServiceRequests = async (req: Request, res: Respo
         return res.json(requests);
     } catch (error) {
         console.error('Failed to fetch student academic service requests:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const downloadAcademicServiceAcknowledgement = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String((req as any).user?.id || '');
+        const id = String(req.params.id || '');
+
+        if (!userId || !id) {
+            return res.status(400).json({ message: 'Invalid request' });
+        }
+
+        const request = await (prisma as any).academicServiceRequest.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                requestId: true,
+                userId: true,
+                serviceType: true,
+                semester: true,
+                courseCount: true,
+                courseNames: true,
+                amount: true,
+                paymentStatus: true,
+                paymentOrderId: true,
+                status: true,
+                createdAt: true,
+            }
+        });
+
+        if (!request || request.userId !== userId) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        if (request.paymentStatus !== 'PAID') {
+            return res.status(400).json({ message: 'Acknowledgement is available after successful payment' });
+        }
+
+        const safeRequestId = escapeHtml(String(request.requestId || request.id || ''));
+        const safeType = escapeHtml(formatEnumValue(request.serviceType));
+        const safeSemester = escapeHtml(String(request.semester || 'N/A'));
+        const safeStatus = escapeHtml(formatEnumValue(request.status));
+        const safePaymentOrderId = escapeHtml(String(request.paymentOrderId || 'N/A'));
+        const safeCourseNames = Array.isArray(request.courseNames)
+            ? request.courseNames.map((name: unknown) => escapeHtml(String(name || ''))).filter(Boolean).join(', ')
+            : 'N/A';
+
+        const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Academic Service Acknowledgement - ${safeRequestId}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+    .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 20px; max-width: 800px; }
+    .title { font-size: 22px; margin: 0 0 8px; }
+    .sub { color: #475569; margin: 0 0 16px; }
+    .row { margin: 8px 0; }
+    .label { display: inline-block; min-width: 220px; color: #334155; font-weight: 600; }
+    .note { margin-top: 18px; padding: 12px; background: #f8fafc; border-radius: 8px; color: #334155; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 class="title">Academic Service Request Acknowledgement</h1>
+    <p class="sub">Global Academy of Technology</p>
+    <div class="row"><span class="label">Request ID:</span>${safeRequestId}</div>
+    <div class="row"><span class="label">Service Type:</span>${safeType}</div>
+    <div class="row"><span class="label">Semester:</span>${safeSemester}</div>
+    <div class="row"><span class="label">Courses Count:</span>${Number(request.courseCount || 0)}</div>
+    <div class="row"><span class="label">Course Names:</span>${safeCourseNames || 'N/A'}</div>
+    <div class="row"><span class="label">Amount Paid:</span>INR ${Number(request.amount || 0).toFixed(2)}</div>
+    <div class="row"><span class="label">Payment Status:</span>Paid</div>
+    <div class="row"><span class="label">Payment Order ID:</span>${safePaymentOrderId}</div>
+    <div class="row"><span class="label">Current Status:</span>${safeStatus}</div>
+    <div class="row"><span class="label">Submitted At:</span>${new Date(request.createdAt).toLocaleString('en-IN')}</div>
+    <div class="row"><span class="label">Generated At:</span>${new Date().toLocaleString('en-IN')}</div>
+    <div class="note">
+      This acknowledgement confirms that your paid academic service request has been received by admin and is queued for processing.
+      Keep this document as proof of successful application submission.
+    </div>
+  </div>
+</body>
+</html>`;
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${String(request.requestId || request.id)}-acknowledgement.html"`);
+        return res.status(200).send(html);
+    } catch (error) {
+        console.error('Failed to download academic service acknowledgement:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
