@@ -3,7 +3,7 @@ import { prisma } from '../config/prisma';
 import { getUploadedFileUrl } from '../utils/fileStorage';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
-import type { AcknowledgementData } from '../utils/acknowledgement';
+import type { AcknowledgementData } from '../utils/acknowledgementTypes';
 import { generateAcknowledgementPdf } from '../utils/acknowledgementPdf';
 import { buildEmailBrandShell } from '../utils/emailBranding';
 import {

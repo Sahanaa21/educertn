@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { PDFDocument as PDFLibDocument } from 'pdf-lib';
-import { AcknowledgementData } from './acknowledgement';
+import { AcknowledgementData } from './acknowledgementTypes';
 import { getAcknowledgementLogoPath } from './acknowledgementAssets';
 
 const formatDate = (date: Date): string => {
