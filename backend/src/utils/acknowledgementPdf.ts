@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { AcknowledgementData } from './acknowledgement';
+import { getAcknowledgementLogoPath } from './acknowledgementAssets';
 
 const formatDate = (date: Date): string => {
     return date.toLocaleDateString('en-IN', {
@@ -58,15 +59,24 @@ export const generateAcknowledgementPdf = async (data: AcknowledgementData): Pro
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
 
+        const logoPath = getAcknowledgementLogoPath();
+
         doc.rect(0, 0, doc.page.width, 96).fill('#1e3a8a');
-        doc.fillColor('white').font('Helvetica-Bold').fontSize(22).text('GLOBAL ACADEMY OF TECHNOLOGY', 45, 24, {
+        if (logoPath) {
+            try {
+                doc.image(logoPath, 52, 18, { fit: [58, 58] });
+            } catch {
+                doc.fillColor('white').font('Helvetica-Bold').fontSize(22).text('GAT', 52, 36, { width: 58, align: 'center' });
+            }
+        } else {
+            doc.fillColor('white').font('Helvetica-Bold').fontSize(22).text('GAT', 52, 36, { width: 58, align: 'center' });
+        }
+
+        doc.fillColor('white').font('Helvetica-Bold').fontSize(20).text('GLOBAL ACADEMY OF TECHNOLOGY', 122, 28, {
             align: 'left',
         });
-        doc.fillColor('#dbeafe').font('Helvetica').fontSize(10).text('Academic and Student Services Division', 45, 58);
-        doc.fillColor('#dbeafe').font('Helvetica-Bold').fontSize(14).text('GAT', doc.page.width - 95, 34, {
-            width: 50,
-            align: 'right',
-        });
+        doc.fillColor('#dbeafe').font('Helvetica').fontSize(10).text('Academic and Student Services Division', 122, 54);
+        doc.fillColor('#dbeafe').font('Helvetica-Bold').fontSize(12).text('Autonomous Institute, Affiliated to VTU', 122, 68);
 
         doc.y = 116;
         doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(18).text(`${getRequestTypeLabel(data.requestType)} Acknowledgement`, {

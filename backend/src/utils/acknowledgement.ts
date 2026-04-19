@@ -1,4 +1,5 @@
 import { escapeHtml } from './html';
+import { getAcknowledgementLogoDataUri } from './acknowledgementAssets';
 
 export interface AcknowledgementData {
     requestId: string;
@@ -43,6 +44,7 @@ export const generateAcknowledgementHtml = (data: AcknowledgementData): string =
     const safeCompanyName = escapeHtml(data.companyName || 'N/A');
     const safePaymentOrderId = escapeHtml(data.paymentOrderId);
     const requestTypeLabel = getRequestTypeLabel(data.requestType);
+    const logoDataUri = getAcknowledgementLogoDataUri();
 
     const detailsHtml = Object.entries(data.details)
         .map(([key, value]) => `
@@ -82,20 +84,31 @@ export const generateAcknowledgementHtml = (data: AcknowledgementData): string =
         .header {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             color: white;
-            padding: 40px 30px;
+            padding: 34px 30px 30px;
             text-align: center;
             border-bottom: 5px solid #1e3a8a;
         }
-        .logo-area {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
+        .logo-image {
+            width: 82px;
+            height: 82px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 12px;
+            background: rgba(255,255,255,0.12);
+            padding: 6px;
+            border-radius: 50%;
         }
         .org-name {
-            font-size: 14px;
-            opacity: 0.95;
-            font-weight: 300;
+            font-size: 15px;
+            opacity: 0.98;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+        }
+        .tagline {
+            font-size: 11px;
+            margin-top: 4px;
+            opacity: 0.92;
+            font-weight: 400;
         }
         .content {
             padding: 40px 30px;
@@ -242,8 +255,9 @@ export const generateAcknowledgementHtml = (data: AcknowledgementData): string =
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="logo-area">🎓 GAT</div>
+            ${logoDataUri ? `<img class="logo-image" src="${logoDataUri}" alt="Global Academy of Technology logo" />` : '<div class="logo-area">GAT</div>'}
             <div class="org-name">Global Academy of Technology</div>
+            <div class="tagline">Autonomous Institute, Affiliated to VTU</div>
         </div>
 
         <!-- Content -->
