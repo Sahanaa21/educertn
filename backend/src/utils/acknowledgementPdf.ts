@@ -36,10 +36,19 @@ const drawSectionTitle = (doc: PDFKit.PDFDocument, title: string) => {
     doc.moveDown(0.4);
 };
 
-const drawKeyValue = (doc: PDFKit.PDFDocument, label: string, value: string, contentLeft: number, contentWidth: number) => {
+const drawSectionTitleAt = (doc: PDFKit.PDFDocument, title: string, left: number, width: number, top: number): number => {
+    const textHeight = doc.heightOfString(title.toUpperCase(), { width });
+    doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(12).text(title.toUpperCase(), left, top, {
+        width,
+        underline: true,
+    });
+    return top + textHeight + 10;
+};
+
+const drawKeyValueAt = (doc: PDFKit.PDFDocument, label: string, value: string, contentLeft: number, contentWidth: number, top: number): number => {
     const labelWidth = 155;
     const valueX = contentLeft + labelWidth;
-    const rowY = doc.y;
+    const rowY = top;
     const valueWidth = Math.max(180, contentWidth - labelWidth);
 
     doc.fillColor('#334155').font('Helvetica-Bold').fontSize(10).text(`${label}:`, contentLeft, rowY, {
@@ -51,7 +60,7 @@ const drawKeyValue = (doc: PDFKit.PDFDocument, label: string, value: string, con
 
     const labelHeight = doc.heightOfString(`${label}:`, { width: labelWidth - 10 });
     const valueHeight = doc.heightOfString(value, { width: valueWidth });
-    doc.y = rowY + Math.max(labelHeight, valueHeight) + 4;
+    return rowY + Math.max(labelHeight, valueHeight) + 6;
 };
 
 export const generateAcknowledgementPdf = async (data: AcknowledgementData): Promise<Buffer> => {
@@ -93,64 +102,72 @@ export const generateAcknowledgementPdf = async (data: AcknowledgementData): Pro
         doc.fillColor('#dbeafe').font('Helvetica').fontSize(10).text('Academic and Student Services Division', 122, 54);
         doc.fillColor('#dbeafe').font('Helvetica-Bold').fontSize(12).text('Autonomous Institute, Affiliated to VTU', 122, 68);
 
-        let cursorY = 116;
-        doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(18).text(`${getRequestTypeLabel(data.requestType)} Acknowledgement`, contentLeft, cursorY, {
+        const titleText = `${getRequestTypeLabel(data.requestType)} Acknowledgement`;
+        const titleTop = 118;
+        const titleHeight = doc.heightOfString(titleText, { width: contentWidth, align: 'center' });
+        doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(16).text(titleText, contentLeft, titleTop, {
             width: contentWidth,
-            align: 'left',
+            align: 'center',
         });
-        cursorY = doc.y + 6;
-        doc.fillColor('#475569').font('Helvetica').fontSize(10).text('Official receipt of request submission and payment confirmation.', contentLeft, cursorY, {
-            width: contentWidth,
-        });
-        cursorY = doc.y + 14;
 
-        const referenceTop = cursorY;
-        doc.roundedRect(contentLeft, referenceTop, contentWidth, 56, 6).fill('#f1f5f9');
+        const subtitleTop = titleTop + titleHeight + 6;
+        const subtitleText = 'Official receipt of request submission and payment confirmation.';
+        const subtitleHeight = doc.heightOfString(subtitleText, { width: contentWidth, align: 'center' });
+        doc.fillColor('#475569').font('Helvetica').fontSize(10).text(subtitleText, contentLeft, subtitleTop, {
+            width: contentWidth,
+            align: 'center',
+        });
+
+        const referenceTop = subtitleTop + subtitleHeight + 16;
+        const referenceHeight = 58;
+        doc.roundedRect(contentLeft, referenceTop, contentWidth, referenceHeight, 6).fill('#f1f5f9');
         doc.fillColor('#334155').font('Helvetica-Bold').fontSize(9).text('REFERENCE NUMBER', contentLeft + 10, referenceTop + 10, {
             width: contentWidth - 20,
         });
-        doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(14).text(cleanText(data.requestId), contentLeft + 10, referenceTop + 24, {
+        doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(14).text(cleanText(data.requestId), contentLeft + 10, referenceTop + 26, {
             width: contentWidth - 20,
         });
-        cursorY = referenceTop + 72;
 
-        doc.y = cursorY;
+        let cursorY = referenceTop + referenceHeight + 16;
 
-        drawSectionTitle(doc, 'Applicant Information');
-        drawKeyValue(doc, 'Name', cleanText(data.name) || 'N/A', contentLeft, contentWidth);
-        drawKeyValue(doc, 'Email', cleanText(data.email || data.companyEmail) || 'N/A', contentLeft, contentWidth);
+        cursorY = drawSectionTitleAt(doc, 'Applicant Information', contentLeft, contentWidth, cursorY);
+        cursorY = drawKeyValueAt(doc, 'Name', cleanText(data.name) || 'N/A', contentLeft, contentWidth, cursorY);
+        cursorY = drawKeyValueAt(doc, 'Email', cleanText(data.email || data.companyEmail) || 'N/A', contentLeft, contentWidth, cursorY);
         if (data.usn) {
-            drawKeyValue(doc, 'USN / ID', cleanText(data.usn) || 'N/A', contentLeft, contentWidth);
+            cursorY = drawKeyValueAt(doc, 'USN / ID', cleanText(data.usn) || 'N/A', contentLeft, contentWidth, cursorY);
         }
         if (data.companyName) {
-            drawKeyValue(doc, 'Company', cleanText(data.companyName) || 'N/A', contentLeft, contentWidth);
+            cursorY = drawKeyValueAt(doc, 'Company', cleanText(data.companyName) || 'N/A', contentLeft, contentWidth, cursorY);
         }
 
-        drawSectionTitle(doc, 'Request Details');
+        cursorY = drawSectionTitleAt(doc, 'Request Details', contentLeft, contentWidth, cursorY + 4);
         for (const [key, value] of Object.entries(data.details)) {
-            drawKeyValue(doc, cleanText(key), cleanText(value) || 'N/A', contentLeft, contentWidth);
+            cursorY = drawKeyValueAt(doc, cleanText(key), cleanText(value) || 'N/A', contentLeft, contentWidth, cursorY);
         }
 
-        drawSectionTitle(doc, 'Payment Information');
-        drawKeyValue(doc, 'Amount Paid', `INR ${Number(data.amount || 0).toFixed(2)}`, contentLeft, contentWidth);
-        drawKeyValue(doc, 'Payment Status', 'PAID', contentLeft, contentWidth);
-        drawKeyValue(doc, 'Payment Order ID', cleanText(data.paymentOrderId) || 'N/A', contentLeft, contentWidth);
-        drawKeyValue(doc, 'Submitted At', formatDate(new Date(data.createdAt)), contentLeft, contentWidth);
-        drawKeyValue(doc, 'Generated At', formatDate(new Date()), contentLeft, contentWidth);
+        cursorY = drawSectionTitleAt(doc, 'Payment Information', contentLeft, contentWidth, cursorY + 4);
+        cursorY = drawKeyValueAt(doc, 'Amount Paid', `INR ${Number(data.amount || 0).toFixed(2)}`, contentLeft, contentWidth, cursorY);
+        cursorY = drawKeyValueAt(doc, 'Payment Status', 'PAID', contentLeft, contentWidth, cursorY);
+        cursorY = drawKeyValueAt(doc, 'Payment Order ID', cleanText(data.paymentOrderId) || 'N/A', contentLeft, contentWidth, cursorY);
+        cursorY = drawKeyValueAt(doc, 'Submitted At', formatDate(new Date(data.createdAt)), contentLeft, contentWidth, cursorY);
+        cursorY = drawKeyValueAt(doc, 'Generated At', formatDate(new Date()), contentLeft, contentWidth, cursorY);
 
-        cursorY = doc.y + 8;
-        const noticeHeight = 86;
-        doc.roundedRect(contentLeft, cursorY, contentWidth, noticeHeight, 6).fill('#eff6ff');
+        cursorY += 10;
+        const noticeHeight = 92;
+        const noticeText = 'This acknowledgement confirms that your paid request has been received by the institution and queued for processing. Keep this document as proof of successful application submission.';
+        const noticeBodyHeight = doc.heightOfString(noticeText, { width: contentWidth - 20, align: 'left' });
+        const requiredNoticeHeight = Math.max(noticeHeight, noticeBodyHeight + 42);
+        doc.roundedRect(contentLeft, cursorY, contentWidth, requiredNoticeHeight, 6).fill('#eff6ff');
         doc.fillColor('#1e40af').font('Helvetica-Bold').fontSize(10).text('IMPORTANT NOTICE', contentLeft + 10, cursorY + 10, {
             width: contentWidth - 20,
         });
         doc.fillColor('#1e3a8a').font('Helvetica').fontSize(9).text(
-            'This acknowledgement confirms that your paid request has been received by the institution and queued for processing. Keep this document as proof of successful application submission.',
+            noticeText,
             contentLeft + 10,
             cursorY + 28,
             { width: contentWidth - 20, align: 'left' }
         );
-        doc.y = cursorY + noticeHeight + 14;
+        cursorY += requiredNoticeHeight + 14;
 
         const footerY = doc.page.height - 62;
         doc.rect(0, footerY, doc.page.width, 62).fill('#f8fafc');
