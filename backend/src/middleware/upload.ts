@@ -49,8 +49,11 @@ const createUpload = ({
 		const ext = path.extname(file.originalname || '').toLowerCase();
 		const isValidExt = !allowedExtensions?.length || allowedExtensions.includes(ext);
 		const isValidMime = !allowedMimeTypes?.length || allowedMimeTypes.includes(file.mimetype);
+		const requiresExt = Boolean(allowedExtensions?.length);
+		const requiresMime = Boolean(allowedMimeTypes?.length);
+		const isAllowed = (requiresExt ? isValidExt : true) && (requiresMime ? isValidMime : true);
 
-		if (isValidExt || isValidMime) {
+		if (isAllowed) {
 			cb(null, true);
 			return;
 		}
@@ -97,4 +100,12 @@ export const certificateIssuedFileUpload = createUpload({
 
 export const academicServiceAttachmentUpload = createUpload({
 	folder: 'academic-services/attachments',
+	allowedExtensions: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'],
+	allowedMimeTypes: [
+		'application/pdf',
+		'application/msword',
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		'image/jpeg',
+		'image/png'
+	],
 });

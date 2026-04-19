@@ -31,12 +31,45 @@ const app = express();
 const port = process.env.PORT || 5000;
 let server: ReturnType<typeof app.listen> | null = null;
 
+const parseAllowedOrigins = (): string[] => {
+    const configuredOrigins = String(process.env.FRONTEND_URLS || '')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+    const singleOrigin = String(process.env.FRONTEND_URL || '').trim();
+    const devOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+    return Array.from(new Set([...configuredOrigins, singleOrigin, ...devOrigins].filter(Boolean)));
+};
+
+const allowedOrigins = parseAllowedOrigins();
+
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 ensureUploadsDir();
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin) {
+            callback(null, true);
+            return;
+        }
+
+        if (String(process.env.CORS_ALLOW_ALL_ORIGINS || '').toLowerCase() === 'true') {
+            callback(null, true);
+            return;
+        }
+
+        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+        }
+
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+}));
 app.use(performanceMonitoring);
 app.use(requestContext);
 app.use((req, res, next) => {

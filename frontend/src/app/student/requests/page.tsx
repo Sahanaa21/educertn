@@ -123,7 +123,7 @@ export default function StudentRequests() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-acknowledgement.html`);
+            link.download = extractDownloadName(res.headers.get('content-disposition'), `${requestId}-acknowledgement.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();

@@ -40,3 +40,6 @@ Thumbs.db
 dist/
 build/
 frontend/out/
+
+# Runtime uploads
+uploads/
