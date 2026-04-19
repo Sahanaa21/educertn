@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { PDFDocument as PDFLibDocument } from 'pdf-lib';
 import { AcknowledgementData } from './acknowledgement';
 import { getAcknowledgementLogoPath } from './acknowledgementAssets';
 
@@ -71,6 +72,20 @@ const drawKeyValueAt = (
     return top + 13;
 };
 
+const ensureSinglePagePdf = async (buffer: Buffer): Promise<Buffer> => {
+    const source = await PDFLibDocument.load(buffer);
+    if (source.getPageCount() <= 1) {
+        return buffer;
+    }
+
+    const single = await PDFLibDocument.create();
+    const [firstPage] = await single.copyPages(source, [0]);
+    single.addPage(firstPage);
+
+    const bytes = await single.save();
+    return Buffer.from(bytes);
+};
+
 export const generateAcknowledgementPdf = async (data: AcknowledgementData): Promise<Buffer> => {
     return await new Promise<Buffer>((resolve, reject) => {
         const doc = new PDFDocument({
@@ -86,7 +101,15 @@ export const generateAcknowledgementPdf = async (data: AcknowledgementData): Pro
         const chunks: Buffer[] = [];
 
         doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('end', async () => {
+            try {
+                const raw = Buffer.concat(chunks);
+                const singlePage = await ensureSinglePagePdf(raw);
+                resolve(singlePage);
+            } catch (error) {
+                reject(error);
+            }
+        });
         doc.on('error', reject);
 
         const logoPath = getAcknowledgementLogoPath();
