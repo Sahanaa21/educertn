@@ -30,37 +30,45 @@ const cleanText = (value: string | null | undefined): string => {
         .trim();
 };
 
-const drawSectionTitle = (doc: PDFKit.PDFDocument, title: string) => {
-    doc.moveDown(0.7);
-    doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(12).text(title.toUpperCase(), { underline: true });
-    doc.moveDown(0.4);
+const fitText = (doc: PDFKit.PDFDocument, text: string, maxWidth: number): string => {
+    const safe = cleanText(text) || 'N/A';
+    if (doc.widthOfString(safe) <= maxWidth) return safe;
+
+    let out = safe;
+    while (out.length > 1 && doc.widthOfString(`${out}...`) > maxWidth) {
+        out = out.slice(0, -1);
+    }
+
+    return `${out}...`;
 };
 
-const drawSectionTitleAt = (doc: PDFKit.PDFDocument, title: string, left: number, width: number, top: number): number => {
-    const textHeight = doc.heightOfString(title.toUpperCase(), { width });
-    doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(12).text(title.toUpperCase(), left, top, {
-        width,
-        underline: true,
-    });
-    return top + textHeight + 10;
+const drawSectionTitleAt = (doc: PDFKit.PDFDocument, title: string, left: number, top: number): number => {
+    doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(11).text(title.toUpperCase(), left, top, { underline: true });
+    return top + 16;
 };
 
-const drawKeyValueAt = (doc: PDFKit.PDFDocument, label: string, value: string, contentLeft: number, contentWidth: number, top: number): number => {
-    const labelWidth = 155;
-    const valueX = contentLeft + labelWidth;
-    const rowY = top;
-    const valueWidth = Math.max(180, contentWidth - labelWidth);
+const drawKeyValueAt = (
+    doc: PDFKit.PDFDocument,
+    label: string,
+    value: string,
+    contentLeft: number,
+    contentWidth: number,
+    top: number
+): number => {
+    const labelWidth = 140;
+    const valueWidth = contentWidth - labelWidth;
+    const fittedValue = fitText(doc, value, valueWidth - 4);
 
-    doc.fillColor('#334155').font('Helvetica-Bold').fontSize(10).text(`${label}:`, contentLeft, rowY, {
-        width: labelWidth - 10,
+    doc.fillColor('#334155').font('Helvetica-Bold').fontSize(9).text(`${label}:`, contentLeft, top, {
+        width: labelWidth - 6,
+        lineBreak: false,
     });
-    doc.fillColor('#111827').font('Helvetica').fontSize(10).text(value, valueX, rowY, {
+    doc.fillColor('#111827').font('Helvetica').fontSize(9).text(fittedValue, contentLeft + labelWidth, top, {
         width: valueWidth,
+        lineBreak: false,
     });
 
-    const labelHeight = doc.heightOfString(`${label}:`, { width: labelWidth - 10 });
-    const valueHeight = doc.heightOfString(value, { width: valueWidth });
-    return rowY + Math.max(labelHeight, valueHeight) + 6;
+    return top + 13;
 };
 
 export const generateAcknowledgementPdf = async (data: AcknowledgementData): Promise<Buffer> => {
@@ -84,6 +92,8 @@ export const generateAcknowledgementPdf = async (data: AcknowledgementData): Pro
         const logoPath = getAcknowledgementLogoPath();
         const contentLeft = doc.page.margins.left;
         const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        const footerY = doc.page.height - 56;
+        const contentBottom = footerY - 14;
 
         doc.rect(0, 0, doc.page.width, 96).fill('#1e3a8a');
         if (logoPath) {
@@ -103,34 +113,38 @@ export const generateAcknowledgementPdf = async (data: AcknowledgementData): Pro
         doc.fillColor('#dbeafe').font('Helvetica-Bold').fontSize(12).text('Autonomous Institute, Affiliated to VTU', 122, 68);
 
         const titleText = `${getRequestTypeLabel(data.requestType)} Acknowledgement`;
-        const titleTop = 118;
+        const titleTop = 110;
         const titleHeight = doc.heightOfString(titleText, { width: contentWidth, align: 'center' });
-        doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(16).text(titleText, contentLeft, titleTop, {
+        doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(15).text(titleText, contentLeft, titleTop, {
             width: contentWidth,
             align: 'center',
+            lineBreak: true,
         });
 
         const subtitleTop = titleTop + titleHeight + 6;
         const subtitleText = 'Official receipt of request submission and payment confirmation.';
         const subtitleHeight = doc.heightOfString(subtitleText, { width: contentWidth, align: 'center' });
-        doc.fillColor('#475569').font('Helvetica').fontSize(10).text(subtitleText, contentLeft, subtitleTop, {
+        doc.fillColor('#475569').font('Helvetica').fontSize(9).text(subtitleText, contentLeft, subtitleTop, {
             width: contentWidth,
             align: 'center',
+            lineBreak: true,
         });
 
-        const referenceTop = subtitleTop + subtitleHeight + 16;
-        const referenceHeight = 58;
+        const referenceTop = subtitleTop + subtitleHeight + 10;
+        const referenceHeight = 42;
         doc.roundedRect(contentLeft, referenceTop, contentWidth, referenceHeight, 6).fill('#f1f5f9');
-        doc.fillColor('#334155').font('Helvetica-Bold').fontSize(9).text('REFERENCE NUMBER', contentLeft + 10, referenceTop + 10, {
+        doc.fillColor('#334155').font('Helvetica-Bold').fontSize(8).text('REFERENCE NUMBER', contentLeft + 10, referenceTop + 8, {
             width: contentWidth - 20,
+            lineBreak: false,
         });
-        doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(14).text(cleanText(data.requestId), contentLeft + 10, referenceTop + 26, {
+        doc.fillColor('#1e3a8a').font('Helvetica-Bold').fontSize(12).text(fitText(doc, cleanText(data.requestId), contentWidth - 20), contentLeft + 10, referenceTop + 20, {
             width: contentWidth - 20,
+            lineBreak: false,
         });
 
-        let cursorY = referenceTop + referenceHeight + 16;
+        let cursorY = referenceTop + referenceHeight + 10;
 
-        cursorY = drawSectionTitleAt(doc, 'Applicant Information', contentLeft, contentWidth, cursorY);
+        cursorY = drawSectionTitleAt(doc, 'Applicant Information', contentLeft, cursorY);
         cursorY = drawKeyValueAt(doc, 'Name', cleanText(data.name) || 'N/A', contentLeft, contentWidth, cursorY);
         cursorY = drawKeyValueAt(doc, 'Email', cleanText(data.email || data.companyEmail) || 'N/A', contentLeft, contentWidth, cursorY);
         if (data.usn) {
@@ -140,40 +154,38 @@ export const generateAcknowledgementPdf = async (data: AcknowledgementData): Pro
             cursorY = drawKeyValueAt(doc, 'Company', cleanText(data.companyName) || 'N/A', contentLeft, contentWidth, cursorY);
         }
 
-        cursorY = drawSectionTitleAt(doc, 'Request Details', contentLeft, contentWidth, cursorY + 4);
+        cursorY = drawSectionTitleAt(doc, 'Request Details', contentLeft, cursorY + 2);
         for (const [key, value] of Object.entries(data.details)) {
+            if (cursorY > contentBottom - 70) break;
             cursorY = drawKeyValueAt(doc, cleanText(key), cleanText(value) || 'N/A', contentLeft, contentWidth, cursorY);
         }
 
-        cursorY = drawSectionTitleAt(doc, 'Payment Information', contentLeft, contentWidth, cursorY + 4);
+        cursorY = drawSectionTitleAt(doc, 'Payment Information', contentLeft, cursorY + 2);
         cursorY = drawKeyValueAt(doc, 'Amount Paid', `INR ${Number(data.amount || 0).toFixed(2)}`, contentLeft, contentWidth, cursorY);
         cursorY = drawKeyValueAt(doc, 'Payment Status', 'PAID', contentLeft, contentWidth, cursorY);
         cursorY = drawKeyValueAt(doc, 'Payment Order ID', cleanText(data.paymentOrderId) || 'N/A', contentLeft, contentWidth, cursorY);
         cursorY = drawKeyValueAt(doc, 'Submitted At', formatDate(new Date(data.createdAt)), contentLeft, contentWidth, cursorY);
         cursorY = drawKeyValueAt(doc, 'Generated At', formatDate(new Date()), contentLeft, contentWidth, cursorY);
 
-        cursorY += 10;
-        const noticeHeight = 92;
+        cursorY += 6;
+        const noticeHeight = 56;
         const noticeText = 'This acknowledgement confirms that your paid request has been received by the institution and queued for processing. Keep this document as proof of successful application submission.';
-        const noticeBodyHeight = doc.heightOfString(noticeText, { width: contentWidth - 20, align: 'left' });
-        const requiredNoticeHeight = Math.max(noticeHeight, noticeBodyHeight + 42);
+        const availableForNotice = Math.max(40, contentBottom - cursorY);
+        const requiredNoticeHeight = Math.min(noticeHeight, availableForNotice);
         doc.roundedRect(contentLeft, cursorY, contentWidth, requiredNoticeHeight, 6).fill('#eff6ff');
-        doc.fillColor('#1e40af').font('Helvetica-Bold').fontSize(10).text('IMPORTANT NOTICE', contentLeft + 10, cursorY + 10, {
+        doc.fillColor('#1e40af').font('Helvetica-Bold').fontSize(9).text('IMPORTANT NOTICE', contentLeft + 10, cursorY + 8, {
             width: contentWidth - 20,
+            lineBreak: false,
         });
-        doc.fillColor('#1e3a8a').font('Helvetica').fontSize(9).text(
-            noticeText,
-            contentLeft + 10,
-            cursorY + 28,
-            { width: contentWidth - 20, align: 'left' }
-        );
-        cursorY += requiredNoticeHeight + 14;
+        doc.fillColor('#1e3a8a').font('Helvetica').fontSize(8).text(fitText(doc, noticeText, contentWidth - 20), contentLeft + 10, cursorY + 22, {
+            width: contentWidth - 20,
+            lineBreak: false,
+        });
 
-        const footerY = doc.page.height - 62;
         doc.rect(0, footerY, doc.page.width, 62).fill('#f8fafc');
-        doc.fillColor('#334155').font('Helvetica-Bold').fontSize(10).text('Global Academy of Technology', 45, footerY + 16);
-        doc.fillColor('#64748b').font('Helvetica').fontSize(8).text('Electronically generated document. Signature not required.', 45, footerY + 31);
-        doc.fillColor('#334155').font('Helvetica').fontSize(8).text('Authorized by: Administrator, Portal System', doc.page.width - 230, footerY + 31);
+        doc.fillColor('#334155').font('Helvetica-Bold').fontSize(9).text('Global Academy of Technology', 45, footerY + 14);
+        doc.fillColor('#64748b').font('Helvetica').fontSize(8).text('Electronically generated document. Signature not required.', 45, footerY + 28);
+        doc.fillColor('#334155').font('Helvetica').fontSize(8).text('Authorized by: Administrator, Portal System', doc.page.width - 230, footerY + 28);
 
         doc.end();
     });
