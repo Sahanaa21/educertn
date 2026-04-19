@@ -11,7 +11,8 @@ import {
     verifyZwitchOrderPaid
 } from '../config/zwitch';
 import { generateVerificationRequestId } from '../utils/generateId';
-import { generateAcknowledgementHtml } from '../utils/acknowledgement';
+import type { AcknowledgementData } from '../utils/acknowledgement';
+import { generateAcknowledgementPdf } from '../utils/acknowledgementPdf';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 const VERIFICATION_FEE = 5000;
@@ -35,8 +36,7 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
     const safeStudentName = escapeHtml(request.studentName);
     const safeUsn = escapeHtml(request.usn);
 
-    // Generate professional acknowledgement
-    const ackHtml = generateAcknowledgementHtml({
+    const ackData: AcknowledgementData = {
         requestId: request.requestId,
         requestType: 'VERIFICATION',
         name: request.companyName,
@@ -51,16 +51,19 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
         amount: VERIFICATION_FEE,
         paymentOrderId: request.paymentOrderId || 'Pending',
         createdAt: request.createdAt
-    });
+    };
 
-    const ackBuffer = Buffer.from(ackHtml, 'utf-8');
-    const attachments = [
-        {
-            filename: `${request.requestId}-acknowledgement.html`,
-            content: ackBuffer,
-            contentType: 'text/html'
-        }
-    ];
+    const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+    try {
+        const ackPdfBuffer = await generateAcknowledgementPdf(ackData);
+        attachments.push({
+            filename: `${request.requestId}-acknowledgement.pdf`,
+            content: ackPdfBuffer,
+            contentType: 'application/pdf'
+        });
+    } catch (pdfErr) {
+        console.error('Failed to generate verification acknowledgement PDF:', pdfErr);
+    }
 
     if (request.companyEmail) {
         const companyHtml = `
@@ -485,7 +488,7 @@ export const downloadVerificationAcknowledgement = async (req: AuthRequest, res:
                         return res.status(400).json({ message: 'Acknowledgement is available after successful payment' });
                 }
 
-                const html = generateAcknowledgementHtml({
+                const ackData: AcknowledgementData = {
                         requestId: request.requestId,
                         requestType: 'VERIFICATION',
                         name: request.companyName,
@@ -501,11 +504,12 @@ export const downloadVerificationAcknowledgement = async (req: AuthRequest, res:
                         amount: VERIFICATION_FEE,
                         paymentOrderId: String(request.paymentOrderId || 'Pending'),
                         createdAt: request.createdAt
-                });
+                    };
 
-                res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                res.setHeader('Content-Disposition', `attachment; filename="${request.requestId}-acknowledgement.html"`);
-                return res.status(200).send(html);
+                    const pdf = await generateAcknowledgementPdf(ackData);
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${request.requestId}-acknowledgement.pdf"`);
+                    return res.status(200).send(pdf);
         } catch (error) {
                 console.error('Error downloading verification acknowledgement:', error);
                 return res.status(500).json({ message: 'Internal server error' });

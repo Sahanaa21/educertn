@@ -3,7 +3,8 @@ import { prisma } from '../config/prisma';
 import { getUploadedFileUrl } from '../utils/fileStorage';
 import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
-import { generateAcknowledgementHtml } from '../utils/acknowledgement';
+import type { AcknowledgementData } from '../utils/acknowledgement';
+import { generateAcknowledgementPdf } from '../utils/acknowledgementPdf';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -117,8 +118,7 @@ const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
     const safeSemester = escapeHtml(String(request.semester || 'N/A'));
     const safeStudentName = escapeHtml(String(request.user?.name || 'Student'));
 
-    // Generate professional acknowledgement
-    const ackHtml = generateAcknowledgementHtml({
+    const ackData: AcknowledgementData = {
         requestId: String(request.requestId || request.id || ''),
         requestType: 'ACADEMIC_SERVICE',
         name: request.user?.name || 'Student',
@@ -132,16 +132,19 @@ const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
         amount: Number(request.amount || 0),
         paymentOrderId: request.paymentOrderId || 'Pending',
         createdAt: request.createdAt
-    });
+    };
 
-    const ackBuffer = Buffer.from(ackHtml, 'utf-8');
-    const attachments = [
-        {
-            filename: `${request.requestId || request.id}-acknowledgement.html`,
-            content: ackBuffer,
-            contentType: 'text/html'
-        }
-    ];
+    const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+    try {
+        const ackPdfBuffer = await generateAcknowledgementPdf(ackData);
+        attachments.push({
+            filename: `${request.requestId || request.id}-acknowledgement.pdf`,
+            content: ackPdfBuffer,
+            contentType: 'application/pdf'
+        });
+    } catch (pdfErr) {
+        console.error('Failed to generate academic acknowledgement PDF:', pdfErr);
+    }
 
     if (request.user?.email) {
         const studentHtml = `
@@ -533,7 +536,7 @@ export const downloadAcademicServiceAcknowledgement = async (req: Request, res: 
             ? request.courseNames.map((name: unknown) => escapeHtml(String(name || ''))).filter(Boolean).join(', ')
             : 'N/A';
 
-        const html = generateAcknowledgementHtml({
+        const ackData: AcknowledgementData = {
             requestId: String(request.requestId || request.id || ''),
             requestType: 'ACADEMIC_SERVICE',
             name: request.user?.name || 'Student',
@@ -550,11 +553,12 @@ export const downloadAcademicServiceAcknowledgement = async (req: Request, res: 
             amount: Number(request.amount || 0),
             paymentOrderId: String(request.paymentOrderId || 'Pending'),
             createdAt: request.createdAt
-        });
+        };
 
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.setHeader('Content-Disposition', `attachment; filename="${String(request.requestId || request.id)}-acknowledgement.html"`);
-        return res.status(200).send(html);
+        const pdf = await generateAcknowledgementPdf(ackData);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${String(request.requestId || request.id)}-acknowledgement.pdf"`);
+        return res.status(200).send(pdf);
     } catch (error) {
         console.error('Failed to download academic service acknowledgement:', error);
         return res.status(500).json({ message: 'Internal server error' });

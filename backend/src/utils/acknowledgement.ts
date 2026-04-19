@@ -1,6 +1,6 @@
 import { escapeHtml } from './html';
 
-interface AcknowledgementData {
+export interface AcknowledgementData {
     requestId: string;
     requestType: 'CERTIFICATE' | 'VERIFICATION' | 'ACADEMIC_SERVICE';
     name: string;

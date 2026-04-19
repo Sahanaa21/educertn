@@ -11,7 +11,8 @@ import {
     verifyZwitchOrderPaid
 } from '../config/zwitch';
 import { generateRequestId } from '../utils/generateId';
-import { generateAcknowledgementHtml } from '../utils/acknowledgement';
+import type { AcknowledgementData } from '../utils/acknowledgement';
+import { generateAcknowledgementPdf } from '../utils/acknowledgementPdf';
 
 const formatEnumValue = (value: string | null | undefined) => {
     return String(value || '')
@@ -42,8 +43,7 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
     const safeType = escapeHtml(formatEnumValue(request.certificateType));
     const safeCopyType = escapeHtml(formatEnumValue(request.copyType));
 
-    // Generate professional acknowledgement
-    const ackHtml = generateAcknowledgementHtml({
+    const ackData: AcknowledgementData = {
         requestId: request.id,
         requestType: 'CERTIFICATE',
         name: request.studentName || request.user?.name || 'Student',
@@ -59,16 +59,19 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
         amount: Number(request.amount || 0),
         paymentOrderId: request.paymentOrderId || 'Pending',
         createdAt: request.createdAt
-    });
+    };
 
-    const ackBuffer = Buffer.from(ackHtml, 'utf-8');
-    const attachments = [
-        {
-            filename: `${request.id}-acknowledgement.html`,
-            content: ackBuffer,
-            contentType: 'text/html'
-        }
-    ];
+    const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+    try {
+        const ackPdfBuffer = await generateAcknowledgementPdf(ackData);
+        attachments.push({
+            filename: `${request.id}-acknowledgement.pdf`,
+            content: ackPdfBuffer,
+            contentType: 'application/pdf'
+        });
+    } catch (pdfErr) {
+        console.error('Failed to generate certificate acknowledgement PDF:', pdfErr);
+    }
 
     if (request.user?.email) {
         const studentHtml = `
@@ -569,7 +572,7 @@ export const downloadCertificateAcknowledgement = async (req: Request, res: Resp
                         return res.status(400).json({ message: 'Acknowledgement is available after successful payment' });
                 }
 
-                const html = generateAcknowledgementHtml({
+                const ackData: AcknowledgementData = {
                         requestId: request.id,
                         requestType: 'CERTIFICATE',
                         name: request.studentName || request.user?.name || 'Student',
@@ -586,11 +589,12 @@ export const downloadCertificateAcknowledgement = async (req: Request, res: Resp
                         amount: Number(request.amount || 0),
                         paymentOrderId: String(request.paymentOrderId || 'Pending'),
                         createdAt: request.createdAt
-                });
+                    };
 
-                res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                res.setHeader('Content-Disposition', `attachment; filename="${request.id}-acknowledgement.html"`);
-                return res.status(200).send(html);
+                    const pdf = await generateAcknowledgementPdf(ackData);
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${request.id}-acknowledgement.pdf"`);
+                    return res.status(200).send(pdf);
         } catch (error) {
                 console.error('Error downloading certificate acknowledgement:', error);
                 return res.status(500).json({ message: 'Internal server error' });
