@@ -13,6 +13,7 @@ import {
 import { generateVerificationRequestId } from '../utils/generateId';
 import type { AcknowledgementData } from '../utils/acknowledgement';
 import { generateAcknowledgementPdf } from '../utils/acknowledgementPdf';
+import { buildEmailBrandShell } from '../utils/emailBranding';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 const VERIFICATION_FEE = 5000;
@@ -66,7 +67,7 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
     }
 
     if (request.companyEmail) {
-        const companyHtml = `
+        const companyHtml = buildEmailBrandShell('Global Academy of Technology', 'Verification Services', `
             <h2>Verification Request Received ✓</h2>
             <p>Hello ${safeContactPerson},</p>
             <p>Your verification request has been successfully received and payment confirmed by our admin team.</p>
@@ -78,7 +79,7 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
             <p><strong>Attached:</strong> Official acknowledgement document for your records.</p>
             <p style="margin-top: 20px; color: #666;">We will process your request soon. Thank you for your patience!</p>
             <p>Best regards,<br/><strong>Global Academy of Technology</strong><br/>Verification Services</p>
-        `;
+        `);
 
         void sendEmail(
             request.companyEmail,
@@ -91,7 +92,7 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
     }
 
     if (adminEmail) {
-        const adminHtml = `
+        const adminHtml = buildEmailBrandShell('Global Academy of Technology', 'Verification Services', `
             <h2>New Paid Verification Request Received</h2>
             <p>A new verification request has been successfully submitted and payment confirmed.</p>
             <p><strong>Request ID:</strong> ${safeRequestId}</p>
@@ -104,7 +105,7 @@ const sendVerificationConfirmationEmails = async (requestDbId: string) => {
             <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
                 <strong>Action Required:</strong> Please review and process this request in the admin dashboard.
             </p>
-        `;
+        `);
 
         void sendEmail(
             adminEmail,

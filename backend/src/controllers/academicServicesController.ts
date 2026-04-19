@@ -5,6 +5,7 @@ import { sendEmail } from '../utils/email';
 import { escapeHtml } from '../utils/html';
 import type { AcknowledgementData } from '../utils/acknowledgement';
 import { generateAcknowledgementPdf } from '../utils/acknowledgementPdf';
+import { buildEmailBrandShell } from '../utils/emailBranding';
 import {
     createZwitchOrder,
     hasZwitchConfig,
@@ -147,7 +148,7 @@ const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
     }
 
     if (request.user?.email) {
-        const studentHtml = `
+        const studentHtml = buildEmailBrandShell('Global Academy of Technology', 'Academic Services', `
             <h2>Academic Service Request Received ✓</h2>
             <p>Hello ${safeStudentName},</p>
             <p>Your academic service request has been successfully received and payment confirmed by our admin team.</p>
@@ -159,7 +160,7 @@ const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
             <p><strong>Attached:</strong> Official acknowledgement document for your records.</p>
             <p style="margin-top: 20px; color: #666;">We will process your request soon. Thank you for your patience!</p>
             <p>Best regards,<br/><strong>Global Academy of Technology</strong><br/>Academic Services</p>
-        `;
+        `);
 
         void sendEmail(
             request.user.email,
@@ -172,7 +173,7 @@ const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
     }
 
     if (adminEmail) {
-        const adminHtml = `
+        const adminHtml = buildEmailBrandShell('Global Academy of Technology', 'Academic Services', `
             <h2>New Paid Academic Service Request Received</h2>
             <p>A student request has been successfully submitted and payment confirmed.</p>
             <p><strong>Request ID:</strong> ${safeRequestId}</p>
@@ -185,7 +186,7 @@ const sendAcademicServiceConfirmationEmails = async (requestId: string) => {
             <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
                 <strong>Action Required:</strong> Please review and process this request in the admin dashboard.
             </p>
-        `;
+        `);
 
         void sendEmail(
             adminEmail,
