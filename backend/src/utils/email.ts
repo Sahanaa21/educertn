@@ -3,6 +3,7 @@ dotenv.config();
 
 import dns from 'dns';
 import nodemailer from 'nodemailer';
+import { getAcknowledgementLogoPath } from './acknowledgementAssets';
 
 const configuredFrom = (process.env.SMTP_FROM_EMAIL || '').trim();
 const smtpUser = (process.env.SMTP_USER || '').trim();
@@ -58,6 +59,19 @@ const resolveSmtpHosts = async () => {
 };
 
 export const sendEmail = async (to: string, subject: string, html: string, attachments?: any[]) => {
+    const preparedAttachments = [...(attachments || [])];
+    if (html.includes('cid:gat-logo')) {
+        const logoPath = getAcknowledgementLogoPath();
+        const hasLogoAttachment = preparedAttachments.some((attachment) => String(attachment?.cid || '') === 'gat-logo');
+        if (logoPath && !hasLogoAttachment) {
+            preparedAttachments.push({
+                filename: 'gat-logo.png',
+                path: logoPath,
+                cid: 'gat-logo',
+            });
+        }
+    }
+
     // Mock email sending in development with localhost SMTP
     if (shouldMockEmail) {
         console.log(`[MOCK EMAIL - Development Mode] Email sent to ${to}:`, {
@@ -65,6 +79,7 @@ export const sendEmail = async (to: string, subject: string, html: string, attac
             to,
             subject,
             html: html.substring(0, 200) + '...',
+            attachments: preparedAttachments.length,
         });
         return {
             messageId: `mock-${Date.now()}-${Math.random().toString(36).substring(7)}@localhost`,
@@ -101,7 +116,7 @@ export const sendEmail = async (to: string, subject: string, html: string, attac
                         to,
                         subject,
                         html,
-                        ...(attachments && attachments.length > 0 ? { attachments } : {}),
+                        ...(preparedAttachments.length > 0 ? { attachments: preparedAttachments } : {}),
                     });
 
                     console.log(`Email sent successfully to ${to} via ${host}:${port}:`, info.messageId);
