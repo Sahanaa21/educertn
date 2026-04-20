@@ -18,18 +18,3 @@ const getFirstExistingPath = (): string | null => {
 export const getAcknowledgementLogoPath = (): string | null => {
     return getFirstExistingPath();
 };
-
-export const getAcknowledgementLogoDataUri = (): string | null => {
-    const logoPath = getFirstExistingPath();
-    if (!logoPath) return null;
-
-    const buffer = fs.readFileSync(logoPath);
-    const extension = path.extname(logoPath).toLowerCase();
-    const mimeType = extension === '.jpg' || extension === '.jpeg'
-        ? 'image/jpeg'
-        : extension === '.svg'
-            ? 'image/svg+xml'
-            : 'image/png';
-
-    return `data:${mimeType};base64,${buffer.toString('base64')}`;
-};
