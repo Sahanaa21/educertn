@@ -2,6 +2,8 @@
   "name": "educertn-workspace",
   "private": true,
   "scripts": {
+    "start": "node scripts/start-production.js",
+    "start:prod": "node scripts/start-production.js",
     "backend:dev": "npm --prefix backend run dev",
     "backend:start": "npm --prefix backend run start",
     "backend:typecheck": "npm --prefix backend run typecheck",
@@ -9,7 +11,9 @@
     "backend:db-ping": "npm --prefix backend run db:ping",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
+    "frontend:start": "npm --prefix frontend run start",
     "frontend:lint": "npm --prefix frontend run lint",
+    "deploy": "npm run backend:build && npm run frontend:build && npm run start:prod",
     "check": "npm run backend:typecheck && npm run frontend:build",
     "check:full": "npm run check && npm run backend:db-ping"
   }
