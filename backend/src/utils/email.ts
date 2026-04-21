@@ -53,7 +53,7 @@ const resolveSmtpHosts = async () => {
             return [smtpHost, ...ipv4List];
         }
     } catch (error) {
-        console.warn(`IPv4 resolution failed for ${smtpHost}. Falling back to hostname.`, error instanceof Error ? error.message : error);
+        cachedSmtpIpv4List = [];
     }
 
     return [smtpHost];

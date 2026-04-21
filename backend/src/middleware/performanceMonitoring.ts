@@ -12,6 +12,10 @@ export interface PerformanceMetrics {
 const SLOW_REQUEST_THRESHOLD_MS = Number(process.env.SLOW_REQUEST_THRESHOLD_MS || '1000');
 const CRITICAL_REQUEST_THRESHOLD_MS = Number(process.env.CRITICAL_REQUEST_THRESHOLD_MS || '5000');
 
+const shouldSuppressSlowRequestLog = (path: string) => {
+    return /(^|\/)(request-otp|verify-unified-otp|verify-otp)$/.test(path);
+};
+
 /**
  * Middleware to track request performance metrics
  * Logs slow and critical requests automatically
@@ -35,14 +39,14 @@ export const performanceMonitoring = (_req: Request, res: Response, next: NextFu
         };
 
         // Log critical responses
-        if (responseTimeMs > CRITICAL_REQUEST_THRESHOLD_MS) {
+        if (responseTimeMs > CRITICAL_REQUEST_THRESHOLD_MS && !shouldSuppressSlowRequestLog(path)) {
             logger.error('slow_request_critical', {
                 ...metrics,
                 message: `Critical: Request took ${responseTimeMs}ms`,
             } as unknown as Record<string, unknown>);
         }
         // Log slow responses
-        else if (responseTimeMs > SLOW_REQUEST_THRESHOLD_MS) {
+        else if (responseTimeMs > SLOW_REQUEST_THRESHOLD_MS && !shouldSuppressSlowRequestLog(path)) {
             logger.warn('slow_request', {
                 ...metrics,
                 message: `Slow: Request took ${responseTimeMs}ms`,
