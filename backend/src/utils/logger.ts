@@ -1,5 +1,15 @@
 type LogLevel = 'INFO' | 'WARN' | 'ERROR';
 
+const levelRank: Record<LogLevel, number> = {
+    ERROR: 0,
+    WARN: 1,
+    INFO: 2,
+};
+
+const configuredLevel = String(process.env.LOG_LEVEL || '').trim().toUpperCase() as LogLevel | '';
+const defaultLevel: LogLevel = String(process.env.NODE_ENV || '').toLowerCase() === 'production' ? 'INFO' : 'WARN';
+const activeLevel: LogLevel = configuredLevel && configuredLevel in levelRank ? configuredLevel : defaultLevel;
+
 type LogPayload = {
     level: LogLevel;
     time: string;
@@ -13,6 +23,10 @@ type LogPayload = {
 };
 
 const write = (payload: LogPayload) => {
+    if (levelRank[payload.level] > levelRank[activeLevel]) {
+        return;
+    }
+
     const line = JSON.stringify(payload);
     if (payload.level === 'ERROR') {
         console.error(line);

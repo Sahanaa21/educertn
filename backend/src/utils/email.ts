@@ -4,6 +4,7 @@ dotenv.config();
 import dns from 'dns';
 import nodemailer from 'nodemailer';
 import { getAcknowledgementLogoPath } from './acknowledgementAssets';
+import { logger } from './logger';
 
 const configuredFrom = (process.env.SMTP_FROM_EMAIL || '').trim();
 const smtpUser = (process.env.SMTP_USER || '').trim();
@@ -74,7 +75,7 @@ export const sendEmail = async (to: string, subject: string, html: string, attac
 
     // Mock email sending in development with localhost SMTP
     if (shouldMockEmail) {
-        console.log(`[MOCK EMAIL - Development Mode] Email sent to ${to}:`, {
+        logger.info('mock_email_sent', {
             from: `"${fromName}" <${fromAddress}>`,
             to,
             subject,
@@ -119,7 +120,12 @@ export const sendEmail = async (to: string, subject: string, html: string, attac
                         ...(preparedAttachments.length > 0 ? { attachments: preparedAttachments } : {}),
                     });
 
-                    console.log(`Email sent successfully to ${to} via ${host}:${port}:`, info.messageId);
+                    logger.info('email_sent_successfully', {
+                        to,
+                        host,
+                        port,
+                        messageId: info.messageId,
+                    });
                     return info;
                 } catch (error) {
                     lastError = error;
