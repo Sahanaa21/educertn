@@ -196,7 +196,6 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
 const startServer = () => {
     if (server) return server;
     server = app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
         logger.info('server_started', { port: PORT });
     });
     return server;
