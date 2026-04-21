@@ -1,8 +1,12 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
 import { ensureUploadsDir } from './utils/fileStorage';
 import authRoutes from './routes/authRoutes';
 import certificateRoutes from './routes/certificateRoutes';
@@ -19,8 +23,6 @@ import { reportServerError, initSentryServer } from './utils/errorReporter';
 import { startDatabaseHealthMonitoring } from './utils/databaseHealth';
 import { prisma } from './config/prisma';
 
-dotenv.config();
-
 // Initialize Sentry early if configured
 initSentryServer();
 
@@ -28,7 +30,7 @@ initSentryServer();
 startDatabaseHealthMonitoring();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT || 5000);
 let server: ReturnType<typeof app.listen> | null = null;
 
 const parseAllowedOrigins = (): string[] => {
@@ -38,7 +40,9 @@ const parseAllowedOrigins = (): string[] => {
         .filter(Boolean);
 
     const singleOrigin = String(process.env.FRONTEND_URL || '').trim();
-    const devOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+    const devOrigins = String(process.env.NODE_ENV || '').toLowerCase() === 'production'
+        ? []
+        : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
     return Array.from(new Set([...configuredOrigins, singleOrigin, ...devOrigins].filter(Boolean)));
 };
@@ -90,6 +94,14 @@ app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
+
+const frontendStaticDir = String(process.env.FRONTEND_STATIC_DIR || '').trim();
+if (frontendStaticDir) {
+    const resolvedFrontendStaticDir = path.resolve(frontendStaticDir);
+    if (fs.existsSync(resolvedFrontendStaticDir)) {
+        app.use(express.static(resolvedFrontendStaticDir));
+    }
+}
 
 app.get('/api/health/live', (_req, res) => {
     res.status(200).json({
@@ -159,8 +171,9 @@ app.use('/api', academicServicesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ops', opsRoutes);
 
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const requestId = String(((_req as any)?.requestId) || 'unknown');
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(err);
+    const requestId = String((req as any)?.requestId || 'unknown');
 
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -171,28 +184,20 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
         return res.status(400).json({ message: err.message, requestId });
     }
 
-    if (err) {
-        const message = typeof err.message === 'string' ? err.message : 'Internal server error';
-        const status = message.toLowerCase().includes('invalid file type') ? 400 : 500;
-        reportServerError(err, {
-            requestId,
-            category: 'express_unhandled_error',
-            message,
-        });
-        return res.status(status).json({ message, requestId });
-    }
-
-    reportServerError(new Error('Unknown express error'), {
+    const message = typeof err?.message === 'string' ? err.message : 'Internal server error';
+    reportServerError(err, {
         requestId,
-        category: 'express_unknown_error',
+        category: 'express_unhandled_error',
+        message,
     });
-    return res.status(500).json({ message: 'Internal server error', requestId });
+    return res.status(500).json({ message, requestId });
 });
 
 const startServer = () => {
     if (server) return server;
-    server = app.listen(Number(port), '0.0.0.0', () => {
-        logger.info('server_started', { port: Number(port) });
+    server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+        logger.info('server_started', { port: PORT });
     });
     return server;
 };

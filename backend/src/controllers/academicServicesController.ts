@@ -30,7 +30,7 @@ const getSettings = async () => {
         create: {
             id: 1,
             supportEmail: 'support@gat.ac.in',
-            frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+            frontendUrl: process.env.FRONTEND_URL || process.env.FRONTEND_URLS?.split(',').map((url) => url.trim()).find(Boolean) || '',
             maintenanceMode: false,
             allowCompanySignup: true,
             smtpFromName: 'Global Academy of Technology',
@@ -805,7 +805,7 @@ export const updateAcademicServiceSettingsAdmin = async (req: Request, res: Resp
             create: {
                 id: 1,
                 supportEmail: 'support@gat.ac.in',
-                frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+                frontendUrl: process.env.FRONTEND_URL || process.env.FRONTEND_URLS?.split(',').map((url) => url.trim()).find(Boolean) || '',
                 maintenanceMode: false,
                 allowCompanySignup: true,
                 smtpFromName: 'Global Academy of Technology',
