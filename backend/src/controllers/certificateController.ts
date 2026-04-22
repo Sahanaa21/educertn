@@ -74,6 +74,8 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
         console.error('Failed to generate certificate acknowledgement PDF:', pdfErr);
     }
 
+    const mailTasks: Promise<void>[] = [];
+
     if (request.user?.email) {
         const studentHtml = buildEmailBrandShell('Global Academy of Technology', 'Academic and Student Services Division', `
             <h2>Certificate Request Received ✓</h2>
@@ -89,14 +91,16 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
             <p>Best regards,<br/><strong>Global Academy of Technology</strong><br/>Academic Services</p>
         `);
 
-        void sendEmail(
-            request.user.email,
-            `Certificate Request Confirmation - ${request.id}`,
-            studentHtml,
-            attachments
-        ).catch((emailErr) => {
-            console.error('Failed to send certificate confirmation email to student:', emailErr);
-        });
+        mailTasks.push(
+            sendEmail(
+                request.user.email,
+                `Certificate Request Confirmation - ${request.id}`,
+                studentHtml,
+                attachments
+            ).catch((emailErr) => {
+                console.error('Failed to send certificate confirmation email to student:', emailErr);
+            }) as Promise<void>
+        );
     }
 
     if (adminEmail) {
@@ -116,13 +120,19 @@ const sendCertificateConfirmationEmails = async (requestId: string) => {
             </p>
         `);
 
-        void sendEmail(
-            adminEmail,
-            `New Paid Certificate Request - ${request.id}`,
-            adminHtml
-        ).catch((emailErr) => {
-            console.error('Failed to send certificate confirmation email to admin:', emailErr);
-        });
+        mailTasks.push(
+            sendEmail(
+                adminEmail,
+                `New Paid Certificate Request - ${request.id}`,
+                adminHtml
+            ).catch((emailErr) => {
+                console.error('Failed to send certificate confirmation email to admin:', emailErr);
+            }) as Promise<void>
+        );
+    }
+
+    if (mailTasks.length > 0) {
+        await Promise.allSettled(mailTasks);
     }
 };
 
@@ -481,9 +491,11 @@ export const completeCertificateRequest = async (req: Request, res: Response): P
                 <p>Global Academy of Technology</p>
             `;
 
-            void sendEmail(updated.user.email, 'Certificate Request Completed', emailHtml).catch((emailErr) => {
+            try {
+                await sendEmail(updated.user.email, 'Certificate Request Completed', emailHtml);
+            } catch (emailErr) {
                 console.error('Failed to send certificate completion email:', emailErr);
-            });
+            }
         }
 
         res.json(updated);

@@ -30,7 +30,16 @@ if (!configuredFrom && !smtpUser) {
 }
 
 const configuredPrimaryPort = Number(process.env.SMTP_PORT) || 587;
-const smtpPorts = Array.from(new Set([configuredPrimaryPort, 2525, 465]));
+const configuredFallbackPorts = String(process.env.SMTP_FALLBACK_PORTS || '')
+    .split(',')
+    .map((port) => Number(port.trim()))
+    .filter((port) => Number.isFinite(port) && port > 0);
+
+const defaultFallbackPorts = smtpHost.includes('gmail.com')
+    ? [465]
+    : [2525, 465];
+
+const smtpPorts = Array.from(new Set([configuredPrimaryPort, ...configuredFallbackPorts, ...defaultFallbackPorts]));
 
 const isLocalhost = smtpHost.toLowerCase() === 'localhost' || smtpHost === '127.0.0.1';
 const isDevelopment = String(process.env.NODE_ENV || '').toLowerCase() === 'development';
