@@ -1,5 +1,11 @@
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: './.env' });
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
+
+if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL missing in .env');
+    throw new Error('DATABASE_URL missing in .env');
+}
 
 import express from 'express';
 import cors from 'cors';
@@ -193,11 +199,17 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
     return res.status(500).json({ message, requestId });
 });
 
-const startServer = () => {
+const startServer = async () => {
     if (server) return server;
+
+    console.log('Connecting to DB...');
+    await prisma.$connect();
+
     server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
         logger.info('server_started', { port: PORT });
     });
+
     return server;
 };
 
@@ -207,13 +219,11 @@ const shutdown = async (signal: string) => {
         try {
             await prisma.$disconnect();
             logger.info('server_shutdown_complete_without_listener', { signal });
-            process.exit(0);
         } catch (error) {
             logger.error('server_shutdown_failed', {
                 signal,
                 message: error instanceof Error ? error.message : 'unknown_error',
             });
-            process.exit(1);
         }
         return;
     }
@@ -222,13 +232,11 @@ const shutdown = async (signal: string) => {
         try {
             await prisma.$disconnect();
             logger.info('server_shutdown_complete', { signal });
-            process.exit(0);
         } catch (error) {
             logger.error('server_shutdown_failed', {
                 signal,
                 message: error instanceof Error ? error.message : 'unknown_error',
             });
-            process.exit(1);
         }
     });
 };
@@ -242,19 +250,26 @@ process.on('SIGINT', () => {
 });
 
 process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
     reportServerError(error, {
         category: 'uncaught_exception',
     });
 });
 
 process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
     reportServerError(reason, {
         category: 'unhandled_promise_rejection',
     });
 });
 
 if (require.main === module) {
-    startServer();
+    void startServer().catch((error) => {
+        console.error('Failed to start server:', error);
+        reportServerError(error, {
+            category: 'server_start_failure',
+        });
+    });
 }
 
 export { app, startServer };
