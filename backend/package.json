@@ -44,6 +44,6 @@
     "@types/pdfkit": "^0.17.6",
     "prisma": "^6.19.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
